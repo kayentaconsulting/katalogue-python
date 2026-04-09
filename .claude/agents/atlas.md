@@ -1,4 +1,5 @@
 ---
+name: atlas
 description: "[ATLAS] API Cartographer — maps endpoints, documents response shapes, flags gaps and assumptions"
 ---
 

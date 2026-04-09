@@ -5,8 +5,10 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
+from requests.exceptions import HTTPError
 
 from katalogue.client.api import KatalogueClient, AuthError, ApiError
+from katalogue.config.settings import Settings
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -27,10 +29,14 @@ def error_400_response():
 
 
 def _make_response(status_code: int, json_data=None):
-    """Create a mock response object."""
+    """Create a mock response object with raise_for_status behaviour."""
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_data
+    if status_code >= 400:
+        resp.raise_for_status.side_effect = HTTPError(response=resp)
+    else:
+        resp.raise_for_status.return_value = None
     return resp
 
 
@@ -49,12 +55,13 @@ def client():
     with patch("katalogue.client.api.OAuth2Session") as MockSession:
         mock_session = MockSession.return_value
         mock_session.authorized = True  # Skip token fetch in tests
-        c = KatalogueClient(
+        settings = Settings(
             client_id="test-id",
             client_secret="test-secret",
             base_url="https://api.example.com",
             token_url="https://api.example.com/oauth/token",
         )
+        c = KatalogueClient(settings)
         # Pre-set current scope so _ensure_token doesn't re-fetch
         c._current_scope = "system.read"
     return c

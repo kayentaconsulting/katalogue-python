@@ -12,6 +12,7 @@ from katalogue.cli.export import export
 from katalogue.cli.field import field
 from katalogue.cli.glossary import glossary
 from katalogue.cli.system import system
+from katalogue.config.settings import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
 
 load_dotenv()
 
@@ -20,8 +21,8 @@ load_dotenv()
 @click.version_option("0.1.0", prog_name="katalogue")
 @click.option("--client-id", envvar="KATALOGUE_CLIENT_ID", default=None, show_envvar=True, help="OAuth2 client ID.")
 @click.option("--client-secret", envvar="KATALOGUE_CLIENT_SECRET", default=None, show_envvar=True, help="OAuth2 client secret.")
-@click.option("--base-url", envvar="KATALOGUE_URL", default="https://demo-api.katalogue.se", show_envvar=True, help="API base URL.")
-@click.option("--token-url", envvar="KATALOGUE_TOKEN_URL", default="https://demo-api.katalogue.se/oidc/token", show_envvar=True, help="OAuth2 token URL.")
+@click.option("--base-url", envvar="KATALOGUE_URL", default=DEFAULT_BASE_URL, show_envvar=True, help="API base URL.")
+@click.option("--token-url", envvar="KATALOGUE_TOKEN_URL", default=DEFAULT_TOKEN_URL, show_envvar=True, help="OAuth2 token URL.")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Show request details on stderr.")
 @click.pass_context
 def cli(ctx: click.Context, client_id: str | None, client_secret: str | None, base_url: str, token_url: str, verbose: bool) -> None:

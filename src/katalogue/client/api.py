@@ -7,7 +7,10 @@ from typing import Any, Final
 from urllib.parse import quote, urljoin
 
 from oauthlib.oauth2 import BackendApplicationClient
+from requests.exceptions import HTTPError
 from requests_oauthlib import OAuth2Session
+
+from katalogue.config.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +24,12 @@ class ApiError(Exception):
 
 
 class KatalogueClient:
-    def __init__(
-        self,
-        client_id: str,
-        client_secret: str,
-        base_url: str,
-        token_url: str,
-    ) -> None:
-        self._base_url: Final[str] = base_url.rstrip("/")
-        self._client_id: Final[str] = client_id
-        self._client_secret: Final[str] = client_secret
-        self._token_url: Final[str] = token_url
-        self._client = BackendApplicationClient(client_id=client_id)
+    def __init__(self, settings: Settings) -> None:
+        self._base_url: Final[str] = settings.base_url.rstrip("/")
+        self._client_id: Final[str] = settings.client_id
+        self._client_secret: Final[str] = settings.client_secret.get_secret_value()
+        self._token_url: Final[str] = settings.token_url
+        self._client = BackendApplicationClient(client_id=settings.client_id)
         self._session: Final = OAuth2Session(client=self._client)
         self._current_scope: str | None = None
 
@@ -85,20 +82,19 @@ class KatalogueClient:
         return self._request("GET", url, scope="glossary.read")
 
     def _handle_response(self, response: Any) -> Any:
-        if response.status_code == 401:
-            try:
-                body = response.json()
-                msg = body.get("message") or body.get("error") or "Unauthorized"
-            except Exception:
-                msg = "Unauthorized"
-            raise AuthError(msg)
-
-        if response.status_code >= 400:
-            try:
-                body = response.json()
-                msg = body.get("error") or f"API error (HTTP {response.status_code})"
-            except Exception:
-                msg = f"API error (HTTP {response.status_code})"
-            raise ApiError(msg)
-
+        try:
+            response.raise_for_status()
+        except HTTPError:
+            msg = self._extract_error_message(response)
+            if response.status_code == 401:
+                raise AuthError(msg) from None
+            raise ApiError(msg) from None
         return response.json()
+
+    @staticmethod
+    def _extract_error_message(response: Any) -> str:
+        try:
+            body = response.json()
+            return body.get("message") or body.get("error") or f"API error (HTTP {response.status_code})"
+        except Exception:
+            return f"API error (HTTP {response.status_code})"
