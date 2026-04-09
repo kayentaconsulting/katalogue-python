@@ -121,6 +121,28 @@ class TestListResource:
         client._session.request.assert_called_with("GET", "https://api.example.com/api/system/all")
 
 
+class TestUrlEncoding:
+    def test_resource_id_with_slash_is_encoded(self, client):
+        client._session.request.return_value = _make_response(200, {"id": "1"})
+        client.get_resource("system", "abc/def")
+        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/abc%2Fdef")
+
+    def test_resource_id_with_dotdot_is_encoded(self, client):
+        client._session.request.return_value = _make_response(200, {"id": "1"})
+        client.get_resource("system", "../../etc")
+        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/..%2F..%2Fetc")
+
+    def test_parent_id_with_slash_is_encoded(self, client):
+        client._session.request.return_value = _make_response(200, [])
+        client.list_by_parent("datasource", "system", "abc/def")
+        client._session.request.assert_called_with("GET", "https://api.example.com/api/datasource/system/abc%2Fdef")
+
+    def test_normal_id_is_unchanged(self, client):
+        client._session.request.return_value = _make_response(200, {"id": "1"})
+        client.get_resource("system", "abc-123")
+        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/abc-123")
+
+
 class TestListByParent:
     def test_returns_parsed_list(self, client):
         data = [{"datasource_id": 1, "datasource_name": "katalogue"}]

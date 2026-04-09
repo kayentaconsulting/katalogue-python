@@ -66,19 +66,19 @@ class KatalogueClient:
         return self._request("GET", url, scope=f"{resource}.read")
 
     def get_resource(self, resource: str, resource_id: str) -> dict[str, Any]:
-        url = f"{self._base_url}/api/{resource}/{resource_id}"
+        url = f"{self._base_url}/api/{resource}/{quote(str(resource_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
     def list_by_parent(self, resource: str, parent_resource: str, parent_id: str) -> list[dict[str, Any]]:
-        url = f"{self._base_url}/api/{resource}/{parent_resource}/{parent_id}"
+        url = f"{self._base_url}/api/{resource}/{parent_resource}/{quote(str(parent_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
     def get_system_export(self, system_id: str) -> dict[str, Any]:
-        url = f"{self._base_url}/api/export/system/{system_id}"
+        url = f"{self._base_url}/api/export/system/{quote(str(system_id), safe='')}"
         return self._request("GET", url, scope="system.read")
 
     def get_glossary_export(self, glossary_id: str) -> dict[str, Any]:
-        url = f"{self._base_url}/api/export/glossary/{glossary_id}"
+        url = f"{self._base_url}/api/export/glossary/{quote(str(glossary_id), safe='')}"
         return self._request("GET", url, scope="glossary.read")
 
     def _handle_response(self, response: Any) -> Any:
