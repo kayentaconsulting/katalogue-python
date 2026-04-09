@@ -1,12 +1,16 @@
 """Unit tests for shared CLI helpers - filter_fields, parse_where_value, where_option."""
 
 import json
+from unittest.mock import patch
 
 import click
 import pytest
 from click.testing import CliRunner
 
 from katalogue.cli.common import filter_fields, parse_where_value, where_option
+from katalogue.cli.main import cli
+
+CLI_AUTH = ["--client-id", "test-id", "--client-secret", "test-secret"]
 
 
 @click.command()
@@ -135,3 +139,25 @@ class TestWhereOptionCallback:
         result = runner.invoke(_where_cmd, ["--where", "status="])
         assert result.exit_code == 0
         assert json.loads(result.output) == [["status", ""]]
+
+
+class TestLazyClientResolution:
+    """Client credentials are only accessed when an API call is actually made."""
+
+    def test_get_client_not_in_public_api(self):
+        """get_client is removed — commands no longer call it directly."""
+        import katalogue.cli.common as common
+        assert not hasattr(common, "get_client")
+
+    def test_client_created_exactly_once_per_invocation(self, runner):
+        """One KatalogueClient instance is shared across handle_api_call calls."""
+        with patch("katalogue.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = []
+            runner.invoke(cli, [*CLI_AUTH, "system", "list"])
+        assert MockClient.call_count == 1
+
+    def test_client_not_constructed_without_api_call(self, runner):
+        """KatalogueClient is not instantiated when --help is shown (no API call)."""
+        with patch("katalogue.cli.common.KatalogueClient") as MockClient:
+            runner.invoke(cli, [*CLI_AUTH, "system", "--help"])
+        MockClient.assert_not_called()

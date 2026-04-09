@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from katalogue.cli.common import fields_option, get_client, handle_api_call
+from katalogue.cli.common import fields_option, handle_api_call
 
 
 @click.group()
@@ -19,10 +19,7 @@ def export() -> None:
 @click.pass_context
 def export_system(ctx: click.Context, fields: list[str] | None, system_id: str, fmt: str) -> None:
     """Export a full system tree by system ID."""
-    client = get_client(ctx)
-    if not client:
-        return
-    handle_api_call(ctx, lambda: client.get_system_export(system_id), fmt, fields=fields)
+    handle_api_call(ctx, lambda c: c.get_system_export(system_id), fmt, fields=fields)
 
 
 @export.command("glossary")
@@ -32,7 +29,4 @@ def export_system(ctx: click.Context, fields: list[str] | None, system_id: str, 
 @click.pass_context
 def export_glossary(ctx: click.Context, fields: list[str] | None, glossary_id: str, fmt: str) -> None:
     """Export glossary entries by glossary ID."""
-    client = get_client(ctx)
-    if not client:
-        return
-    handle_api_call(ctx, lambda: client.get_glossary_export(glossary_id), fmt, fields=fields)
+    handle_api_call(ctx, lambda c: c.get_glossary_export(glossary_id), fmt, fields=fields)
