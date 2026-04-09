@@ -12,30 +12,46 @@ uv run pytest -k system    # filter by name
 uv run katalogue --help    # try the CLI
 ```
 
-## Current Status
+## Directory Structure
 
-| Milestone | Status | Notes |
-|-----------|--------|-------|
-| M1: Foundation + `system get` | **DONE** | 21 tests passing |
-| M2: Generic CRUD client | **DONE** | `list_resource`, `get_resource`, `list_by_parent` all implemented |
-| M3: System + Datasource commands | **DONE** | list/get/children all implemented and tested |
-| M4: Dataset group + Dataset + Field | **DONE** | list/get/children all implemented and tested |
-| M5: Export + Task/Job commands | **Partial** | export done; task/job not started |
-| M6: Polish and Package | **DONE** | help text reviewed, README updated, `--version` done |
-
-**Bonus (unplanned)**: `glossary list/get` implemented and tested.
-
-Full milestone details in `PROJECT_PLAN.md`.
+```
+src/katalogue/
+  cli/          # Click commands — arg parsing, error handling, output formatting
+  client/       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
+  config/       # resolve_settings() — CLI flag > env var > default (Pydantic)
+  formatters/   # format_json, format_table, format_compact_json
+tests/
+  conftest.py   # runner, cli_auth, mock_client fixtures
+  fixtures/     # JSON response fixtures
+```
 
 ## TDD Workflow (Non-Negotiable)
 
-Every feature slice:
-1. **Atlas** maps endpoints → **Mira** designs UX → **Kai** proposes structure → **Vera** writes test plan
-2. Write all tests first — they must fail (RED)
-3. Implement until tests pass (GREEN)
-4. **Reed** reviews layering → **Dana** reviews UX → declare done
+Every feature slice follows this order — **no exceptions**:
+
+1. **Atlas** maps endpoints → **Mira** designs UX → **Kai** proposes structure → **Sven** flags security risks → **Vera** writes test plan
+2. Write tests first (RED) → implement (GREEN)
+3. **Reed** reviews layering → **Dana** reviews UX → **Sven** signs off security → declare done
+
+**Before writing any code**, narrate each agent's verdict explicitly in the response. No implementation until Atlas → Vera have signed off. No slice is done until Reed, Dana, and Sven have reviewed.
 
 **Never write implementation before tests exist and are failing.**
+
+### Agent Narration Format
+
+Each agent verdict must use this format so they're scannable:
+
+```
+🗺️ [ATLAS]  — <endpoint/data finding>
+🎨 [MIRA]   — <UX decision>
+🏗️ [KAI]    — <structure/approach>
+🛡️ [SVEN]   — <security assessment>
+✅ [VERA]   — <test plan>
+--- implement ---
+🔧 [REED]   — <layering verdict>
+💬 [DANA]   — <DX/done verdict>
+🛡️ [SVEN]   — <security sign-off>
+```
 
 Agent definitions: `.claude/agents/<name>.md`
 
@@ -72,6 +88,8 @@ def test_something(runner, cli_auth, mock_client):
 
 Cover per slice: happy path (json + table), auth failure, API error, empty results, missing config.
 
+Mock is patched at `katalogue.cli.common.KatalogueClient` — not at the import site in each command file.
+
 ## Architecture Layers
 
 | Layer | Does | Does Not |
@@ -81,9 +99,12 @@ Cover per slice: happy path (json + table), auth failure, API error, empty resul
 | `config/` | Resolve settings from flags/env/defaults | Make HTTP calls |
 | `formatters/` | Turn dicts into strings | Know about HTTP, Click, or config |
 
+## Code Preferences
+
+- **Pydantic for all data models** — use `BaseModel` instead of `@dataclass`. Use `SecretStr` for secrets, `field_validator` for validation. Never introduce a plain dataclass when Pydantic can do the job.
+
 ## Working Style
 
 - Be opinionated — push back on weak design
 - Small reviewable steps — no big code dumps
 - Wait for input before generating large amounts of code
-- Agent team is a lens, not separate participants — present one recommendation

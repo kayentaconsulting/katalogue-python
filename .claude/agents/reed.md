@@ -1,4 +1,8 @@
 ---
+name: Reed
+emoji: 🔧
+color: teal
+label: "[REED]"
 description: "[REED] Refactoring Guardian — reviews layering, coupling and duplication after each slice is implemented"
 ---
 

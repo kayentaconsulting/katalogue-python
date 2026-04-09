@@ -1,4 +1,8 @@
 ---
+name: Dana
+emoji: 💬
+color: pink
+label: "[DANA]"
 description: "[DANA] Delivery Manager — reviews help text and error messages, declares a slice done or not done"
 ---
 
