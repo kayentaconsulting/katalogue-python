@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 import click
 
@@ -11,21 +11,22 @@ from katalogue.config.settings import resolve_settings, ConfigError
 from katalogue.formatters.output import format_compact_json, format_json, format_list_table, format_table
 
 
-def get_client(ctx: click.Context) -> KatalogueClient | None:
-    """Resolve settings and return a client, or print error and return None."""
-    try:
-        settings = resolve_settings(
-            client_id=ctx.obj["client_id"],
-            client_secret=ctx.obj["client_secret"],
-            base_url=ctx.obj["base_url"],
-            token_url=ctx.obj["token_url"],
-        )
-    except ConfigError as e:
-        click.echo(f"Error: {e}", err=True)
-        ctx.exit(1)
-        return None
-
-    return KatalogueClient(settings)
+def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
+    """Return the cached client for this invocation, creating it on first call."""
+    if "_client" not in ctx.obj:
+        try:
+            settings = resolve_settings(
+                client_id=ctx.obj["client_id"],
+                client_secret=ctx.obj["client_secret"],
+                base_url=ctx.obj["base_url"],
+                token_url=ctx.obj["token_url"],
+            )
+        except ConfigError as e:
+            click.echo(f"Error: {e}", err=True)
+            ctx.exit(1)
+            return None
+        ctx.obj["_client"] = KatalogueClient(settings)
+    return ctx.obj["_client"]
 
 
 def filter_fields(data: Any, fields: list[str] | None) -> Any:
@@ -103,13 +104,16 @@ def _parse_where_callback(
 
 def handle_api_call(
     ctx: click.Context,
-    call: Any,
+    call: Callable[[KatalogueClient], Any],
     fmt: str,
     fields: list[str] | None = None,
     where: list[tuple[str, Any]] = (),
 ) -> None:
     """Execute an API call, handle errors, apply field filtering, and format output."""
-    data = _fetch_or_exit(ctx, call)
+    client = _get_or_create_client(ctx)
+    if client is None:
+        return
+    data = _fetch_or_exit(ctx, lambda: call(client))
     if data is None:
         return
 
@@ -142,9 +146,12 @@ def _fetch_or_exit(ctx: click.Context, call: Any) -> Any:
         return None
 
 
-def show_keys(ctx: click.Context, call: Any, fmt: str) -> None:
+def show_keys(ctx: click.Context, call: Callable[[KatalogueClient], Any], fmt: str) -> None:
     """Fetch the first record from a list call and print its sorted keys."""
-    data = _fetch_or_exit(ctx, call)
+    client = _get_or_create_client(ctx)
+    if client is None:
+        return
+    data = _fetch_or_exit(ctx, lambda: call(client))
     if data is None:
         return
 
