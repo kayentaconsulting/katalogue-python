@@ -18,16 +18,6 @@ def system_export_response():
     return json.loads((FIXTURES / "system_export.json").read_text())
 
 
-@pytest.fixture
-def error_401_response():
-    return json.loads((FIXTURES / "error_401.json").read_text())
-
-
-@pytest.fixture
-def error_400_response():
-    return json.loads((FIXTURES / "error_400.json").read_text())
-
-
 def _make_response(status_code: int, json_data=None):
     """Create a mock response object with raise_for_status behaviour."""
     resp = MagicMock()
@@ -75,14 +65,13 @@ class TestGetSystemExport:
         assert "meta" in result
         assert "data" in result
 
-    def test_401_raises_auth_error(self, client, error_401_response):
-        # First call returns 401, retry after refresh also 401
-        client._session.request.return_value = _make_response(401, error_401_response)
-        with pytest.raises(AuthError, match="[Uu]nauthorized|[Tt]oken"):
+    def test_401_raises_auth_error(self, client):
+        client._session.request.return_value = _make_response(401, {"message": "Unauthorized"})
+        with pytest.raises(AuthError, match="Unauthorized"):
             client.get_system_export("abc123")
 
-    def test_400_raises_api_error(self, client, error_400_response):
-        client._session.request.return_value = _make_response(400, error_400_response)
+    def test_400_raises_api_error(self, client):
+        client._session.request.return_value = _make_response(400, {"error": "Invalid system ID format"})
         with pytest.raises(ApiError, match="Invalid system ID"):
             client.get_system_export("abc123")
 
@@ -105,9 +94,9 @@ class TestListResource:
         assert result == data
         assert len(result) == 2
 
-    def test_401_raises_auth_error(self, client, error_401_response):
-        client._session.request.return_value = _make_response(401, error_401_response)
-        with pytest.raises(AuthError):
+    def test_401_raises_auth_error(self, client):
+        client._session.request.return_value = _make_response(401, {"message": "Unauthorized"})
+        with pytest.raises(AuthError, match="Unauthorized"):
             client.list_resource("system")
 
     def test_empty_list(self, client):
