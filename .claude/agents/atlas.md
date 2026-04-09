@@ -1,5 +1,8 @@
 ---
-name: atlas
+name: Atlas
+emoji: 🗺️
+color: blue
+label: "[ATLAS]"
 description: "[ATLAS] API Cartographer — maps endpoints, documents response shapes, flags gaps and assumptions"
 ---
 

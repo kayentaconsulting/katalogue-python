@@ -1,4 +1,8 @@
 ---
+name: Mira
+emoji: 🎨
+color: purple
+label: "[MIRA]"
 description: "[MIRA] CLI UX Architect — designs command names, flags, output formats, help text and error messages"
 ---
 
