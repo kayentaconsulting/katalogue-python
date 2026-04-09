@@ -30,13 +30,13 @@ class TestClientSecretResolution:
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
         settings = resolve_settings()
-        assert settings.client_secret == "env-secret"
+        assert settings.client_secret.get_secret_value() == "env-secret"
 
     def test_client_secret_from_explicit_value_overrides_env(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
         settings = resolve_settings(client_secret="explicit-secret")
-        assert settings.client_secret == "explicit-secret"
+        assert settings.client_secret.get_secret_value() == "explicit-secret"
 
     def test_missing_client_secret_raises_config_error(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
@@ -83,3 +83,24 @@ class TestTokenUrlResolution:
         monkeypatch.delenv("KATALOGUE_TOKEN_URL", raising=False)
         settings = resolve_settings()
         assert settings.token_url
+
+
+class TestSettingsSecurity:
+    def test_repr_hides_secret(self, monkeypatch):
+        monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
+        monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "super-secret-value")
+        settings = resolve_settings()
+        assert "super-secret-value" not in repr(settings)
+        assert "super-secret-value" not in str(settings)
+
+    def test_invalid_base_url_raises_config_error(self, monkeypatch):
+        monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
+        monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        with pytest.raises(ConfigError, match="[Uu]rl|URL"):
+            resolve_settings(base_url="not-a-url")
+
+    def test_invalid_token_url_raises_config_error(self, monkeypatch):
+        monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
+        monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        with pytest.raises(ConfigError, match="[Uu]rl|URL"):
+            resolve_settings(token_url="not-a-url")

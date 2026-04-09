@@ -5,6 +5,7 @@ description = "CLI for the Katalogue Data Catalog API"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.1",
+    "pydantic>=2.0",
     "python-dotenv>=1.0",
     "requests>=2.31",
     "requests-oauthlib>=1.3",

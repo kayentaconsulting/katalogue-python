@@ -25,12 +25,7 @@ def get_client(ctx: click.Context) -> KatalogueClient | None:
         ctx.exit(1)
         return None
 
-    return KatalogueClient(
-        client_id=settings.client_id,
-        client_secret=settings.client_secret,
-        base_url=settings.base_url,
-        token_url=settings.token_url,
-    )
+    return KatalogueClient(settings)
 
 
 def filter_fields(data: Any, fields: list[str] | None) -> Any:
