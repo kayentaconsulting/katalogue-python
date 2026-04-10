@@ -98,6 +98,7 @@ class TestCompactJsonFormatter:
 
     def test_is_valid_json(self):
         import json
+
         data = [{"system_id": 1}, {"system_id": 2}]
         output = format_compact_json(data)
         assert json.loads(output) == data

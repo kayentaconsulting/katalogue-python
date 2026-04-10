@@ -6,19 +6,38 @@ from katalogue.cli.main import cli
 from katalogue.client.api import AuthError, ApiError
 
 SYSTEM_EXPORT = {
-    "meta": {"katalogue_env": "PROD", "katalogue_version": "1.0.0", "created_timestamp": "2026-01-01T00:00:00Z"},
-    "data": {"system": {"system_id": "abc", "system_name": "Finance", "datasources": []}},
+    "meta": {
+        "katalogue_env": "PROD",
+        "katalogue_version": "1.0.0",
+        "created_timestamp": "2026-01-01T00:00:00Z",
+    },
+    "data": {
+        "system": {"system_id": "abc", "system_name": "Finance", "datasources": []}
+    },
 }
 GLOSSARY_EXPORT = {
-    "meta": {"katalogue_env": "PROD", "katalogue_version": "1.0.0", "created_timestamp": "2026-01-01T00:00:00Z"},
-    "data": [{"glossary_name": "Business Terms", "name": "Revenue", "description": "Total income", "is_pii": False}],
+    "meta": {
+        "katalogue_env": "PROD",
+        "katalogue_version": "1.0.0",
+        "created_timestamp": "2026-01-01T00:00:00Z",
+    },
+    "data": [
+        {
+            "glossary_name": "Business Terms",
+            "name": "Revenue",
+            "description": "Total income",
+            "is_pii": False,
+        }
+    ],
 }
 
 
 class TestExportSystem:
     def test_happy_path_json(self, runner, cli_auth, mock_client):
         mock_client.get_system_export.return_value = SYSTEM_EXPORT
-        result = runner.invoke(cli, [*cli_auth, "export", "system", "abc", "--format", "json"])
+        result = runner.invoke(
+            cli, [*cli_auth, "export", "system", "abc", "--format", "json"]
+        )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert parsed["data"]["system"]["system_name"] == "Finance"
@@ -26,7 +45,9 @@ class TestExportSystem:
 
     def test_happy_path_table(self, runner, cli_auth, mock_client):
         mock_client.get_system_export.return_value = SYSTEM_EXPORT
-        result = runner.invoke(cli, [*cli_auth, "export", "system", "abc", "--format", "table"])
+        result = runner.invoke(
+            cli, [*cli_auth, "export", "system", "abc", "--format", "table"]
+        )
         assert result.exit_code == 0
         assert "Finance" in result.output
 
@@ -51,7 +72,9 @@ class TestExportSystem:
 class TestExportGlossary:
     def test_happy_path_json(self, runner, cli_auth, mock_client):
         mock_client.get_glossary_export.return_value = GLOSSARY_EXPORT
-        result = runner.invoke(cli, [*cli_auth, "export", "glossary", "42", "--format", "json"])
+        result = runner.invoke(
+            cli, [*cli_auth, "export", "glossary", "42", "--format", "json"]
+        )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert parsed["data"][0]["name"] == "Revenue"
@@ -59,7 +82,9 @@ class TestExportGlossary:
 
     def test_happy_path_table(self, runner, cli_auth, mock_client):
         mock_client.get_glossary_export.return_value = GLOSSARY_EXPORT
-        result = runner.invoke(cli, [*cli_auth, "export", "glossary", "42", "--format", "table"])
+        result = runner.invoke(
+            cli, [*cli_auth, "export", "glossary", "42", "--format", "table"]
+        )
         assert result.exit_code == 0
         assert "Revenue" in result.output
 

@@ -22,7 +22,9 @@ class TestDatasetGroupList:
         data = [{"dataset_group_id": 11, "dataset_group_name": "public"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset-group", "list", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset-group", "list", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["dataset_group_name"] == "public"
 
@@ -30,9 +32,22 @@ class TestDatasetGroupList:
         data = [{"dataset_group_id": 11, "dataset_group_name": "public"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset-group", "list", "--datasource", "1", "--format", "json"])
+            result = runner.invoke(
+                cli,
+                [
+                    *CLI_AUTH,
+                    "dataset-group",
+                    "list",
+                    "--datasource",
+                    "1",
+                    "--format",
+                    "json",
+                ],
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("dataset_group", "datasource", "1")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "dataset_group", "datasource", "1"
+        )
 
 
 class TestDatasetGroupGet:
@@ -40,7 +55,9 @@ class TestDatasetGroupGet:
         data = {"dataset_group_id": 11, "dataset_group_name": "public"}
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset-group", "get", "11", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset-group", "get", "11", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)["dataset_group_name"] == "public"
 
@@ -50,7 +67,9 @@ class TestDatasetList:
         data = [{"dataset_id": 1, "dataset_name": "users"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset", "list", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset", "list", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["dataset_name"] == "users"
 
@@ -58,9 +77,22 @@ class TestDatasetList:
         data = [{"dataset_id": 1, "dataset_name": "users"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset", "list", "--dataset-group", "11", "--format", "json"])
+            result = runner.invoke(
+                cli,
+                [
+                    *CLI_AUTH,
+                    "dataset",
+                    "list",
+                    "--dataset-group",
+                    "11",
+                    "--format",
+                    "json",
+                ],
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("dataset", "dataset_group", "11")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "dataset", "dataset_group", "11"
+        )
 
 
 class TestDatasetGet:
@@ -68,7 +100,9 @@ class TestDatasetGet:
         data = {"dataset_id": 1, "dataset_name": "users", "dataset_type": "TABLE"}
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset", "get", "1", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset", "get", "1", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)["dataset_name"] == "users"
 
@@ -84,9 +118,13 @@ class TestDatasetGroupChildren:
         data = [{"dataset_id": 1, "dataset_name": "users"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset-group", "children", "11", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset-group", "children", "11", "--format", "json"]
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("dataset", "dataset_group", "11")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "dataset", "dataset_group", "11"
+        )
         assert json.loads(result.output)[0]["dataset_name"] == "users"
 
     def test_api_error(self, runner):
@@ -102,9 +140,13 @@ class TestDatasetChildren:
         data = [{"field_id": 1, "field_name": "user_id"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "dataset", "children", "1", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "dataset", "children", "1", "--format", "json"]
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("field", "dataset", "1")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "field", "dataset", "1"
+        )
         assert json.loads(result.output)[0]["field_name"] == "user_id"
 
     def test_api_error(self, runner):

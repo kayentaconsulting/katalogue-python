@@ -32,7 +32,9 @@ class Settings(BaseModel):
     @classmethod
     def _validate_url(cls, v: str) -> str:
         if not _URL_PATTERN.match(v):
-            raise ValueError(f"Invalid URL: {v!r} — must start with http:// or https://")
+            raise ValueError(
+                f"Invalid URL: {v!r} — must start with http:// or https://"
+            )
         return v
 
 
@@ -55,7 +57,9 @@ def resolve_settings(
         )
 
     resolved_base_url = base_url or os.environ.get("KATALOGUE_URL") or DEFAULT_BASE_URL
-    resolved_token_url = token_url or os.environ.get("KATALOGUE_TOKEN_URL") or DEFAULT_TOKEN_URL
+    resolved_token_url = (
+        token_url or os.environ.get("KATALOGUE_TOKEN_URL") or DEFAULT_TOKEN_URL
+    )
 
     try:
         return Settings(

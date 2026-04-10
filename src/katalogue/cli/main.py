@@ -19,13 +19,50 @@ load_dotenv()
 
 @click.group()
 @click.version_option("0.1.0", prog_name="katalogue")
-@click.option("--client-id", envvar="KATALOGUE_CLIENT_ID", default=None, show_envvar=True, help="OAuth2 client ID.")
-@click.option("--client-secret", envvar="KATALOGUE_CLIENT_SECRET", default=None, show_envvar=True, help="OAuth2 client secret.")
-@click.option("--base-url", envvar="KATALOGUE_URL", default=DEFAULT_BASE_URL, show_envvar=True, help="API base URL.")
-@click.option("--token-url", envvar="KATALOGUE_TOKEN_URL", default=DEFAULT_TOKEN_URL, show_envvar=True, help="OAuth2 token URL.")
-@click.option("--verbose", "-v", is_flag=True, default=False, help="Show request details on stderr.")
+@click.option(
+    "--client-id",
+    envvar="KATALOGUE_CLIENT_ID",
+    default=None,
+    show_envvar=True,
+    help="OAuth2 client ID.",
+)
+@click.option(
+    "--client-secret",
+    envvar="KATALOGUE_CLIENT_SECRET",
+    default=None,
+    show_envvar=True,
+    help="OAuth2 client secret.",
+)
+@click.option(
+    "--base-url",
+    envvar="KATALOGUE_URL",
+    default=DEFAULT_BASE_URL,
+    show_envvar=True,
+    help="API base URL.",
+)
+@click.option(
+    "--token-url",
+    envvar="KATALOGUE_TOKEN_URL",
+    default=DEFAULT_TOKEN_URL,
+    show_envvar=True,
+    help="OAuth2 token URL.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Show request details on stderr.",
+)
 @click.pass_context
-def cli(ctx: click.Context, client_id: str | None, client_secret: str | None, base_url: str, token_url: str, verbose: bool) -> None:
+def cli(
+    ctx: click.Context,
+    client_id: str | None,
+    client_secret: str | None,
+    base_url: str,
+    token_url: str,
+    verbose: bool,
+) -> None:
     """Interact with the Katalogue Data Catalog API."""
     ctx.ensure_object(dict)
     ctx.obj["client_id"] = client_id

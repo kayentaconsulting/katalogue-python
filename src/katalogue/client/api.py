@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Final
-from urllib.parse import quote, urljoin
+from urllib.parse import quote
 
 from oauthlib.oauth2 import BackendApplicationClient
 from requests.exceptions import HTTPError
@@ -69,7 +69,9 @@ class KatalogueClient:
         url = f"{self._base_url}/api/{resource}/{quote(str(resource_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
-    def list_by_parent(self, resource: str, parent_resource: str, parent_id: str) -> list[dict[str, Any]]:
+    def list_by_parent(
+        self, resource: str, parent_resource: str, parent_id: str
+    ) -> list[dict[str, Any]]:
         url = f"{self._base_url}/api/{resource}/{parent_resource}/{quote(str(parent_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
@@ -95,6 +97,10 @@ class KatalogueClient:
     def _extract_error_message(response: Any) -> str:
         try:
             body = response.json()
-            return body.get("message") or body.get("error") or f"API error (HTTP {response.status_code})"
+            return (
+                body.get("message")
+                or body.get("error")
+                or f"API error (HTTP {response.status_code})"
+            )
         except Exception:
             return f"API error (HTTP {response.status_code})"

@@ -64,7 +64,9 @@ class TestSystemList:
     def test_happy_path_json(self, runner, system_list_data):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = system_list_data
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "json"]
+            )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert len(parsed) == 3
@@ -72,7 +74,9 @@ class TestSystemList:
     def test_happy_path_table(self, runner, system_list_data):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = system_list_data
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "table"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
+            )
         assert result.exit_code == 0
         assert "Customer Data Platform" in result.output
 
@@ -86,7 +90,9 @@ class TestSystemList:
     def test_empty_results(self, runner):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "table"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
+            )
         assert result.exit_code == 0
         assert "No results" in result.output
 
@@ -98,29 +104,66 @@ class TestSystemList:
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
             result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--fields", "system_id,system_name", "--format", "json"]
+                cli,
+                [
+                    *CLI_AUTH,
+                    "system",
+                    "list",
+                    "--fields",
+                    "system_id,system_name",
+                    "--format",
+                    "json",
+                ],
             )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        assert parsed == [{"system_id": 1, "system_name": "Katalogue"}, {"system_id": 2, "system_name": "Kayenta"}]
+        assert parsed == [
+            {"system_id": 1, "system_name": "Katalogue"},
+            {"system_id": 2, "system_name": "Kayenta"},
+        ]
 
     def test_fields_filter_table(self, runner):
-        data = [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}]
+        data = [
+            {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}
+        ]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
             result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--fields", "system_id,system_name", "--format", "table"]
+                cli,
+                [
+                    *CLI_AUTH,
+                    "system",
+                    "list",
+                    "--fields",
+                    "system_id,system_name",
+                    "--format",
+                    "table",
+                ],
             )
         assert result.exit_code == 0
         assert "system_name" in result.output
         assert "system_type" not in result.output
 
     def test_fields_filter_get(self, runner):
-        data = {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}
+        data = {
+            "system_id": 1,
+            "system_name": "Katalogue",
+            "system_type": "Data Catalog",
+        }
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.get_resource.return_value = data
             result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "get", "1", "--fields", "system_id,system_name", "--format", "json"]
+                cli,
+                [
+                    *CLI_AUTH,
+                    "system",
+                    "get",
+                    "1",
+                    "--fields",
+                    "system_id,system_name",
+                    "--format",
+                    "json",
+                ],
             )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
@@ -134,7 +177,9 @@ class TestSystemList:
         ]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "compact"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "compact"]
+            )
         assert result.exit_code == 0
         output = result.output.strip()
         assert "\n" not in output
@@ -142,10 +187,16 @@ class TestSystemList:
         assert len(parsed) == 2
 
     def test_get_compact(self, runner):
-        data = {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}
+        data = {
+            "system_id": 1,
+            "system_name": "Katalogue",
+            "system_type": "Data Catalog",
+        }
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "get", "1", "--format", "compact"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "get", "1", "--format", "compact"]
+            )
         assert result.exit_code == 0
         output = result.output.strip()
         assert "\n" not in output
@@ -156,15 +207,25 @@ class TestSystemList:
 class TestSystemKeys:
     def test_returns_sorted_keys_as_lines(self, runner):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = [{"system_id": 1, "system_name": "X", "active": True}]
+            MockClient.return_value.list_resource.return_value = [
+                {"system_id": 1, "system_name": "X", "active": True}
+            ]
             result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
         assert result.exit_code == 0
-        assert result.output.strip().splitlines() == ["active", "system_id", "system_name"]
+        assert result.output.strip().splitlines() == [
+            "active",
+            "system_id",
+            "system_name",
+        ]
 
     def test_returns_json_array(self, runner):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = [{"system_id": 1, "system_name": "X"}]
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "keys", "--format", "json"])
+            MockClient.return_value.list_resource.return_value = [
+                {"system_id": 1, "system_name": "X"}
+            ]
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "keys", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output) == ["system_id", "system_name"]
 
@@ -178,7 +239,9 @@ class TestSystemKeys:
     def test_empty_list_json(self, runner):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "keys", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "keys", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output) == []
 
@@ -195,9 +258,13 @@ class TestSystemChildren:
         data = [{"datasource_id": 1, "datasource_name": "prod-db"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "children", "1", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "children", "1", "--format", "json"]
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("datasource", "system", "1")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "datasource", "system", "1"
+        )
         assert json.loads(result.output)[0]["datasource_name"] == "prod-db"
 
     def test_api_error(self, runner):

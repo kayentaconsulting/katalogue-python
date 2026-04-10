@@ -8,14 +8,20 @@ from katalogue.client.api import ApiError
 
 class TestFieldList:
     def test_list_all(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"field_id": 1, "field_name": "user_id", "is_pii": False}]
+        mock_client.list_resource.return_value = [
+            {"field_id": 1, "field_name": "user_id", "is_pii": False}
+        ]
         result = runner.invoke(cli, [*cli_auth, "field", "list", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["field_name"] == "user_id"
 
     def test_list_by_dataset(self, runner, cli_auth, mock_client):
-        mock_client.list_by_parent.return_value = [{"field_id": 1, "field_name": "user_id"}]
-        result = runner.invoke(cli, [*cli_auth, "field", "list", "--dataset", "1", "--format", "json"])
+        mock_client.list_by_parent.return_value = [
+            {"field_id": 1, "field_name": "user_id"}
+        ]
+        result = runner.invoke(
+            cli, [*cli_auth, "field", "list", "--dataset", "1", "--format", "json"]
+        )
         assert result.exit_code == 0
         mock_client.list_by_parent.assert_called_once_with("field", "dataset", "1")
 
@@ -24,7 +30,10 @@ class TestFieldList:
             {"field_id": 1, "field_name": "email", "is_pii": True},
             {"field_id": 2, "field_name": "created_at", "is_pii": False},
         ]
-        result = runner.invoke(cli, [*cli_auth, "field", "list", "--where", "is_pii=true", "--format", "json"])
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "field", "list", "--where", "is_pii=true", "--format", "json"],
+        )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert len(parsed) == 1
@@ -34,11 +43,26 @@ class TestFieldList:
         mock_client.list_resource.return_value = [
             {"field_id": 1, "field_name": "email", "is_pii": True, "status": "active"},
             {"field_id": 2, "field_name": "age", "is_pii": True, "status": "inactive"},
-            {"field_id": 3, "field_name": "created_at", "is_pii": False, "status": "active"},
+            {
+                "field_id": 3,
+                "field_name": "created_at",
+                "is_pii": False,
+                "status": "active",
+            },
         ]
         result = runner.invoke(
             cli,
-            [*cli_auth, "field", "list", "--where", "is_pii=true", "--where", "status=active", "--format", "json"],
+            [
+                *cli_auth,
+                "field",
+                "list",
+                "--where",
+                "is_pii=true",
+                "--where",
+                "status=active",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
@@ -52,7 +76,17 @@ class TestFieldList:
         ]
         result = runner.invoke(
             cli,
-            [*cli_auth, "field", "list", "--dataset", "42", "--where", "is_pii=true", "--format", "json"],
+            [
+                *cli_auth,
+                "field",
+                "list",
+                "--dataset",
+                "42",
+                "--where",
+                "is_pii=true",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         mock_client.list_by_parent.assert_called_once_with("field", "dataset", "42")
@@ -75,13 +109,21 @@ class TestFieldList:
 
 class TestFieldKeys:
     def test_returns_sorted_keys_as_lines(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"field_id": 1, "field_name": "email", "is_pii": True}]
+        mock_client.list_resource.return_value = [
+            {"field_id": 1, "field_name": "email", "is_pii": True}
+        ]
         result = runner.invoke(cli, [*cli_auth, "field", "keys"])
         assert result.exit_code == 0
-        assert result.output.strip().splitlines() == ["field_id", "field_name", "is_pii"]
+        assert result.output.strip().splitlines() == [
+            "field_id",
+            "field_name",
+            "is_pii",
+        ]
 
     def test_returns_json_array(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"field_id": 1, "field_name": "email"}]
+        mock_client.list_resource.return_value = [
+            {"field_id": 1, "field_name": "email"}
+        ]
         result = runner.invoke(cli, [*cli_auth, "field", "keys", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output) == ["field_id", "field_name"]
@@ -101,8 +143,14 @@ class TestFieldKeys:
 
 class TestFieldGet:
     def test_happy_path(self, runner, cli_auth, mock_client):
-        mock_client.get_resource.return_value = {"field_id": 1, "field_name": "email", "is_pii": True}
-        result = runner.invoke(cli, [*cli_auth, "field", "get", "1", "--format", "json"])
+        mock_client.get_resource.return_value = {
+            "field_id": 1,
+            "field_name": "email",
+            "is_pii": True,
+        }
+        result = runner.invoke(
+            cli, [*cli_auth, "field", "get", "1", "--format", "json"]
+        )
         assert result.exit_code == 0
         assert json.loads(result.output)["field_name"] == "email"
 
