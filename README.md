@@ -1,6 +1,6 @@
 # katalogue
 
-Python monorepo for the Katalogue Data Catalog API. Contains two packages:
+Python monorepo for the [Katalogue](https://katalogue.se) Data Catalog API. Contains two packages:
 
 | Package | Description | When to use |
 |---------|-------------|-------------|

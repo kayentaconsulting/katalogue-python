@@ -1,6 +1,6 @@
 # katalogue-sdk
 
-Python client for the [Katalogue](https://katalogue.se) Data Catalog API. No CLI dependency — importable directly in scripts, notebooks, and agents.
+Python client for the [Katalogue](https://katalogue.se) Data Catalog API. 
 
 ## Installation
 
