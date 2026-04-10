@@ -1,6 +1,6 @@
 # katalogue-sdk
 
-Python client for the [Katalogue](https://katalogue.se) Data Catalog API. 
+Python client for [Katalogue](https://katalogue.se), based on the Katalogue REST API. 
 
 ## Installation
 
@@ -30,6 +30,9 @@ systems = client.list_resource("system")
 ```
 
 ## Credentials
+
+### Get Katalogue Credentials
+[Create an OAuth2 client](https://docs.katalogue.se/using-katalogue/katalogue_cli_and_sdk/#granting-access-to-katalogue) in Katalogue to get the client credentials referred to in the following section.
 
 ### Production — Azure Key Vault (recommended)
 
