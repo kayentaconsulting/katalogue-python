@@ -1,6 +1,6 @@
 # katalogue-cli
 
-CLI for the Katalogue Data Catalog API.
+CLI for [Katalogue](https://katalogue.se), based on the Katalogue REST API.
 
 ## Installation
 
@@ -26,7 +26,7 @@ katalogue --version
 
 ## Configuration
 
-The CLI authenticates using OAuth2 client credentials. Set these environment variables (or pass them as flags):
+The CLI authenticates using [OAuth2 client credentials from Katalogue](https://docs.katalogue.se/using-katalogue/katalogue_cli_and_sdk/#granting-access-to-katalogue). Set these environment variables (or pass them as flags):
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|

@@ -1,6 +1,6 @@
-# katalogue
+# Katalogue
 
-Python monorepo for the [Katalogue](https://katalogue.se) Data Catalog API. Contains two packages:
+Monorepo with Python utility tools for [Katalogue](https://katalogue.se). These tools build upon the Katalogue REST API. Contains two packages:
 
 | Package | Description | When to use |
 |---------|-------------|-------------|
@@ -23,3 +23,10 @@ uv run katalogue --help    # smoke test the CLI entry point
 
 - [katalogue-sdk](packages/katalogue-sdk/README.md) — installation, credentials, client methods, error handling
 - [katalogue-cli](packages/katalogue-cli/README.md) — commands, filtering, output formats, global flags
+
+## Usage
+
+### Setup Katalog API Access
+The SDK (which is also used by the CLI) requires the Katalogue REST API to be enabled and a Katalogue OIDC client with necessary scopes.
+
+[Grant Access to Katalogue](https://docs.katalogue.se/using-katalogue/katalogue_cli_and_sdk/#granting-access-to-katalogue)
