@@ -6,9 +6,17 @@ from collections.abc import Sequence
 from typing import Any, Callable
 
 import click
+import keyring
 
+from katalogue_cli.auth import DiskTokenCache
+from katalogue_cli.config.file import load_config_file
 from katalogue_sdk.client.api import KatalogueClient, AuthError, ApiError
-from katalogue_sdk.config.settings import resolve_settings, ConfigError
+from katalogue_sdk.config.settings import (
+    DEFAULT_BASE_URL,
+    DEFAULT_TOKEN_URL,
+    resolve_settings,
+    ConfigError,
+)
 from katalogue_cli.formatters.output import (
     format_compact_json,
     format_json,
@@ -33,17 +41,30 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
     """
     if "_client" not in ctx.obj:
         try:
+            file_cfg = load_config_file()
+            client_id = ctx.obj["client_id"] or file_cfg.get("client_id")
+            client_secret = ctx.obj["client_secret"]
+            if not client_secret and client_id:
+                client_secret = keyring.get_password("katalogue", client_id)
             settings = resolve_settings(
-                client_id=ctx.obj["client_id"],
-                client_secret=ctx.obj["client_secret"],
-                base_url=ctx.obj["base_url"],
-                token_url=ctx.obj["token_url"],
+                client_id=client_id,
+                client_secret=client_secret,
+                base_url=(
+                    ctx.obj["base_url"]
+                    if ctx.obj["base_url"] != DEFAULT_BASE_URL
+                    else file_cfg.get("base_url")
+                ),
+                token_url=(
+                    ctx.obj["token_url"]
+                    if ctx.obj["token_url"] != DEFAULT_TOKEN_URL
+                    else file_cfg.get("token_url")
+                ),
             )
         except ConfigError as e:
             click.echo(f"Error: {e}", err=True)
             ctx.exit(1)
             return None
-        ctx.obj["_client"] = KatalogueClient(settings)
+        ctx.obj["_client"] = KatalogueClient(settings, token_cache=DiskTokenCache())
     return ctx.obj["_client"]
 
 

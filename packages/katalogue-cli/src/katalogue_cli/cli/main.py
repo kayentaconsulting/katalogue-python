@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+
 import click
 from dotenv import load_dotenv
 
+from katalogue_cli.cli.auth import auth
 from katalogue_cli.cli.dataset import dataset
 from katalogue_cli.cli.dataset_group import dataset_group
 from katalogue_cli.cli.datasource import datasource
@@ -70,8 +73,13 @@ def cli(
     ctx.obj["base_url"] = base_url
     ctx.obj["token_url"] = token_url
     ctx.obj["verbose"] = verbose
+    if verbose:
+        logging.basicConfig(
+            level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s"
+        )
 
 
+cli.add_command(auth)
 cli.add_command(system)
 cli.add_command(datasource)
 cli.add_command(dataset_group)

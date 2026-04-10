@@ -7,6 +7,8 @@ dependencies = [
     "katalogue-sdk",
     "click>=8.1",
     "python-dotenv>=1.0",
+    "platformdirs>=4.0",
+    "keyring>=24.0",
 ]
 
 [project.scripts]
