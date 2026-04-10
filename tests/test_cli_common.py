@@ -4,8 +4,6 @@ import json
 from unittest.mock import patch
 
 import click
-import pytest
-from click.testing import CliRunner
 
 from katalogue.cli.common import filter_fields, parse_where_value, where_option
 from katalogue.cli.main import cli
@@ -27,10 +25,17 @@ class TestFilterFields:
             {"system_id": 2, "system_name": "Kayenta", "system_type": "Intranet"},
         ]
         result = filter_fields(rows, ["system_id", "system_name"])
-        assert result == [{"system_id": 1, "system_name": "Katalogue"}, {"system_id": 2, "system_name": "Kayenta"}]
+        assert result == [
+            {"system_id": 1, "system_name": "Katalogue"},
+            {"system_id": 2, "system_name": "Kayenta"},
+        ]
 
     def test_filter_fields_on_dict(self):
-        data = {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}
+        data = {
+            "system_id": 1,
+            "system_name": "Katalogue",
+            "system_type": "Data Catalog",
+        }
         result = filter_fields(data, ["system_id", "system_name"])
         assert result == {"system_id": 1, "system_name": "Katalogue"}
 
@@ -50,7 +55,15 @@ class TestFilterFields:
 
     def test_filter_fields_unwraps_resource_key(self):
         """Wrapped response like {"systems": [...]} is unwrapped when fields are requested."""
-        wrapped = {"systems": [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}]}
+        wrapped = {
+            "systems": [
+                {
+                    "system_id": 1,
+                    "system_name": "Katalogue",
+                    "system_type": "Data Catalog",
+                }
+            ]
+        }
         result = filter_fields(wrapped, ["system_id", "system_name"])
         assert result == [{"system_id": 1, "system_name": "Katalogue"}]
 
@@ -121,7 +134,9 @@ class TestWhereOptionCallback:
         assert json.loads(result.output) == [["dataset_id", 7]]
 
     def test_multiple_flags_produce_list(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "is_pii=true", "--where", "dataset_id=7"])
+        result = runner.invoke(
+            _where_cmd, ["--where", "is_pii=true", "--where", "dataset_id=7"]
+        )
         assert result.exit_code == 0
         assert json.loads(result.output) == [["is_pii", True], ["dataset_id", 7]]
 
@@ -147,6 +162,7 @@ class TestLazyClientResolution:
     def test_get_client_not_in_public_api(self):
         """get_client is removed — commands no longer call it directly."""
         import katalogue.cli.common as common
+
         assert not hasattr(common, "get_client")
 
     def test_client_created_exactly_once_per_invocation(self, runner):

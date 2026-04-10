@@ -8,7 +8,12 @@ import click
 
 from katalogue.client.api import KatalogueClient, AuthError, ApiError
 from katalogue.config.settings import resolve_settings, ConfigError
-from katalogue.formatters.output import format_compact_json, format_json, format_list_table, format_table
+from katalogue.formatters.output import (
+    format_compact_json,
+    format_json,
+    format_list_table,
+    format_table,
+)
 
 
 def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
@@ -146,7 +151,9 @@ def _fetch_or_exit(ctx: click.Context, call: Any) -> Any:
         return None
 
 
-def show_keys(ctx: click.Context, call: Callable[[KatalogueClient], Any], fmt: str) -> None:
+def show_keys(
+    ctx: click.Context, call: Callable[[KatalogueClient], Any], fmt: str
+) -> None:
     """Fetch the first record from a list call and print its sorted keys."""
     client = _get_or_create_client(ctx)
     if client is None:

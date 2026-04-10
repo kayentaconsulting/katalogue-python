@@ -59,31 +59,43 @@ def client():
 
 class TestGetSystemExport:
     def test_success_returns_parsed_dict(self, client, system_export_response):
-        client._session.request.return_value = _make_response(200, system_export_response)
+        client._session.request.return_value = _make_response(
+            200, system_export_response
+        )
         result = client.get_system_export("abc123")
         assert result == system_export_response
         assert "meta" in result
         assert "data" in result
 
     def test_401_raises_auth_error(self, client):
-        client._session.request.return_value = _make_response(401, {"message": "Unauthorized"})
+        client._session.request.return_value = _make_response(
+            401, {"message": "Unauthorized"}
+        )
         with pytest.raises(AuthError, match="Unauthorized"):
             client.get_system_export("abc123")
 
     def test_400_raises_api_error(self, client):
-        client._session.request.return_value = _make_response(400, {"error": "Invalid system ID format"})
+        client._session.request.return_value = _make_response(
+            400, {"error": "Invalid system ID format"}
+        )
         with pytest.raises(ApiError, match="Invalid system ID"):
             client.get_system_export("abc123")
 
     def test_500_raises_api_error(self, client):
-        client._session.request.return_value = _make_response(500, {"error": "Internal server error"})
+        client._session.request.return_value = _make_response(
+            500, {"error": "Internal server error"}
+        )
         with pytest.raises(ApiError):
             client.get_system_export("abc123")
 
     def test_request_url_is_correct(self, client, system_export_response):
-        client._session.request.return_value = _make_response(200, system_export_response)
+        client._session.request.return_value = _make_response(
+            200, system_export_response
+        )
         client.get_system_export("abc123")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/export/system/abc123")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/export/system/abc123"
+        )
 
 
 class TestListResource:
@@ -95,7 +107,9 @@ class TestListResource:
         assert len(result) == 2
 
     def test_401_raises_auth_error(self, client):
-        client._session.request.return_value = _make_response(401, {"message": "Unauthorized"})
+        client._session.request.return_value = _make_response(
+            401, {"message": "Unauthorized"}
+        )
         with pytest.raises(AuthError, match="Unauthorized"):
             client.list_resource("system")
 
@@ -107,29 +121,39 @@ class TestListResource:
     def test_request_url_is_correct(self, client):
         client._session.request.return_value = _make_response(200, [])
         client.list_resource("system")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/all")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/system/all"
+        )
 
 
 class TestUrlEncoding:
     def test_resource_id_with_slash_is_encoded(self, client):
         client._session.request.return_value = _make_response(200, {"id": "1"})
         client.get_resource("system", "abc/def")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/abc%2Fdef")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/system/abc%2Fdef"
+        )
 
     def test_resource_id_with_dotdot_is_encoded(self, client):
         client._session.request.return_value = _make_response(200, {"id": "1"})
         client.get_resource("system", "../../etc")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/..%2F..%2Fetc")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/system/..%2F..%2Fetc"
+        )
 
     def test_parent_id_with_slash_is_encoded(self, client):
         client._session.request.return_value = _make_response(200, [])
         client.list_by_parent("datasource", "system", "abc/def")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/datasource/system/abc%2Fdef")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/datasource/system/abc%2Fdef"
+        )
 
     def test_normal_id_is_unchanged(self, client):
         client._session.request.return_value = _make_response(200, {"id": "1"})
         client.get_resource("system", "abc-123")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/system/abc-123")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/system/abc-123"
+        )
 
 
 class TestListByParent:
@@ -142,7 +166,9 @@ class TestListByParent:
     def test_request_url_is_correct(self, client):
         client._session.request.return_value = _make_response(200, [])
         client.list_by_parent("datasource", "system", "1")
-        client._session.request.assert_called_with("GET", "https://api.example.com/api/datasource/system/1")
+        client._session.request.assert_called_with(
+            "GET", "https://api.example.com/api/datasource/system/1"
+        )
 
     def test_uses_child_resource_scope(self, client):
         client._current_scope = None

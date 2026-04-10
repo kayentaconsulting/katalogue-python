@@ -8,14 +8,18 @@ from katalogue.client.api import ApiError
 
 class TestGlossaryList:
     def test_list_all(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"glossary_id": 1, "glossary_name": "Business Terms"}]
+        mock_client.list_resource.return_value = [
+            {"glossary_id": 1, "glossary_name": "Business Terms"}
+        ]
         result = runner.invoke(cli, [*cli_auth, "glossary", "list", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["glossary_name"] == "Business Terms"
 
     def test_empty_results(self, runner, cli_auth, mock_client):
         mock_client.list_resource.return_value = []
-        result = runner.invoke(cli, [*cli_auth, "glossary", "list", "--format", "table"])
+        result = runner.invoke(
+            cli, [*cli_auth, "glossary", "list", "--format", "table"]
+        )
         assert result.exit_code == 0
         assert "No results" in result.output
 
@@ -28,13 +32,17 @@ class TestGlossaryList:
 
 class TestGlossaryKeys:
     def test_returns_sorted_keys_as_lines(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"glossary_id": 1, "glossary_name": "Business Terms"}]
+        mock_client.list_resource.return_value = [
+            {"glossary_id": 1, "glossary_name": "Business Terms"}
+        ]
         result = runner.invoke(cli, [*cli_auth, "glossary", "keys"])
         assert result.exit_code == 0
         assert result.output.strip().splitlines() == ["glossary_id", "glossary_name"]
 
     def test_returns_json_array(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [{"glossary_id": 1, "glossary_name": "Business Terms"}]
+        mock_client.list_resource.return_value = [
+            {"glossary_id": 1, "glossary_name": "Business Terms"}
+        ]
         result = runner.invoke(cli, [*cli_auth, "glossary", "keys", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output) == ["glossary_id", "glossary_name"]
@@ -48,8 +56,13 @@ class TestGlossaryKeys:
 
 class TestGlossaryGet:
     def test_happy_path(self, runner, cli_auth, mock_client):
-        mock_client.get_resource.return_value = {"glossary_id": 1, "glossary_name": "Business Terms"}
-        result = runner.invoke(cli, [*cli_auth, "glossary", "get", "1", "--format", "json"])
+        mock_client.get_resource.return_value = {
+            "glossary_id": 1,
+            "glossary_name": "Business Terms",
+        }
+        result = runner.invoke(
+            cli, [*cli_auth, "glossary", "get", "1", "--format", "json"]
+        )
         assert result.exit_code == 0
         assert json.loads(result.output)["glossary_name"] == "Business Terms"
 

@@ -22,7 +22,9 @@ class TestDatasourceList:
         data = [{"datasource_id": 1, "datasource_name": "katalogue"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "datasource", "list", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "datasource", "list", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["datasource_name"] == "katalogue"
 
@@ -30,24 +32,37 @@ class TestDatasourceList:
         data = [{"datasource_id": 1, "datasource_name": "katalogue"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "datasource", "list", "--system", "1", "--format", "json"])
+            result = runner.invoke(
+                cli,
+                [*CLI_AUTH, "datasource", "list", "--system", "1", "--format", "json"],
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("datasource", "system", "1")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "datasource", "system", "1"
+        )
 
     def test_empty_results(self, runner):
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(cli, [*CLI_AUTH, "datasource", "list", "--format", "table"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "datasource", "list", "--format", "table"]
+            )
         assert result.exit_code == 0
         assert "No results" in result.output
 
 
 class TestDatasourceGet:
     def test_happy_path(self, runner):
-        data = {"datasource_id": 1, "datasource_name": "katalogue", "datasource_type_name": "PostgreSQL"}
+        data = {
+            "datasource_id": 1,
+            "datasource_name": "katalogue",
+            "datasource_type_name": "PostgreSQL",
+        }
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "datasource", "get", "1", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "datasource", "get", "1", "--format", "json"]
+            )
         assert result.exit_code == 0
         assert json.loads(result.output)["datasource_type_name"] == "PostgreSQL"
 
@@ -64,9 +79,13 @@ class TestDatasourceChildren:
         data = [{"dataset_group_id": 11, "dataset_group_name": "public"}]
         with patch("katalogue.cli.common.KatalogueClient") as MockClient:
             MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(cli, [*CLI_AUTH, "datasource", "children", "1", "--format", "json"])
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "datasource", "children", "1", "--format", "json"]
+            )
         assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with("dataset_group", "datasource", "1")
+        MockClient.return_value.list_by_parent.assert_called_once_with(
+            "dataset_group", "datasource", "1"
+        )
         assert json.loads(result.output)[0]["dataset_group_name"] == "public"
 
     def test_api_error(self, runner):
