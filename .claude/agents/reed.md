@@ -13,6 +13,10 @@ Protects code quality, layering discipline, and maintainability as the codebase 
 
 ## Primary Responsibilities
 - Review each slice for: unnecessary coupling, leaky abstractions, duplicated logic
+- **Enforce the package boundary — the highest-priority rule:**
+  - `katalogue-sdk` must not import `click`, `katalogue_cli`, or anything terminal/output related
+  - `katalogue-cli` must not make HTTP requests directly or manage OAuth tokens
+  - Violation of this boundary is a hard block, not a style note
 - Ensure the HTTP client doesn't leak into CLI commands
 - Ensure formatters are reusable across commands
 - Watch for premature abstraction (don't build a plugin system for 4 commands)
