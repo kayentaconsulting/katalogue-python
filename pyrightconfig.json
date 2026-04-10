@@ -1,0 +1,8 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    "packages/katalogue-sdk/src",
+    "packages/katalogue-cli/src"
+  ]
+}

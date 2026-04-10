@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "katalogue_env": "DEMO",
+    "katalogue_version": "2.1.0",
+    "created_timestamp": "2026-04-08T10:30:00Z"
+  },
+  "data": {
+    "system": {
+      "id": "sys-abc123",
+      "name": "Customer Data Platform",
+      "description": "Central customer data repository",
+      "owner": "data-team"
+    }
+  }
+}

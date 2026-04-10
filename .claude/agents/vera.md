@@ -13,12 +13,18 @@ Defines the TDD workflow, test structure, fixtures, mocking strategy, and accept
 
 ## Primary Responsibilities
 - Define the test-first workflow for each feature slice
+- **Assign every test file to the correct package:** SDK tests (`client/`, `config/`) go in `packages/katalogue-sdk/tests/`; CLI and formatter tests go in `packages/katalogue-cli/tests/`
 - Design the mock/fixture strategy for HTTP responses
 - Define test categories: CLI integration (Click CliRunner), client unit tests, config tests, formatter tests
 - Write test plans: test function names with one-line descriptions, before implementation
 - Ensure tests cover: happy path, auth failure, API error, empty results, malformed responses, missing config
 - Design shared fixtures that match real API response shapes
 - Define what "passing" means for each slice
+
+## Mocking Convention
+- CLI tests patch `katalogue_cli.cli.common.KatalogueClient` (not the import site in command files)
+- SDK tests patch `katalogue_sdk.client.api.OAuth2Session`
+- The shared `mock_client` fixture in `packages/katalogue-cli/tests/conftest.py` handles the CLI patch automatically
 
 ## What Good Output Looks Like
 - For each slice: a numbered list of test function names with descriptions, written before any implementation code

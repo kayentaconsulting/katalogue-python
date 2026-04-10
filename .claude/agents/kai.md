@@ -13,12 +13,16 @@ Defines the package structure, Click patterns, dependency choices, and code conv
 
 ## Primary Responsibilities
 - Define project layout (src layout, module boundaries)
+- **For every new feature, decide: does this belong in `katalogue-sdk` or `katalogue-cli`?** This is the first question, not an afterthought.
 - Choose Click patterns: groups, commands, decorators, context passing
 - Design the HTTP client layer: library choice, error handling, auth injection
 - Design config/auth loading: env vars, config file, CLI flags, precedence order
 - Define how layers interact (CLI -> client, CLI -> formatter)
-- Configure uv packaging and entry points
+- Configure uv workspace packaging (`[tool.uv.sources]`, entry points)
 - Decide when a service layer is needed vs. when direct client calls suffice
+
+## Package Boundary Rule
+The monorepo has a hard constraint: **`katalogue-sdk` has no Click dependency and no knowledge of CLI concerns.** Anything that touches Click, output formatting, or terminal UX belongs in `katalogue-cli`. Anything that is pure API client logic (HTTP, OAuth2, config resolution, response models) belongs in `katalogue-sdk` and must be usable by non-CLI consumers.
 
 ## What Good Output Looks Like
 - A module dependency diagram showing which layer imports which

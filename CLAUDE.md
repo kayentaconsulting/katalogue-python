@@ -1,28 +1,64 @@
-# Katalogue CLI
+# Katalogue — Monorepo
 
-Python Click CLI for the Katalogue Data Catalog API. Works for both human developers and AI agents.
+Python uv workspace containing two packages:
+- **`katalogue-sdk`** — standalone HTTP client + OAuth2, usable without Click
+- **`katalogue-cli`** — Click CLI that wraps the SDK
+
+## Prerequisites
+
+You need OAuth2 client credentials for a Katalogue instance. Set these before running any command:
+
+```bash
+export KATALOGUE_CLIENT_ID=your-client-id
+export KATALOGUE_CLIENT_SECRET=your-client-secret
+export KATALOGUE_URL=https://your-instance.katalogue.se        # optional, defaults to demo
+export KATALOGUE_TOKEN_URL=https://your-instance.katalogue.se/oidc/token  # optional
+```
+
+Or put them in a `.env` file at the repo root — the CLI loads it automatically via `python-dotenv`.
+
+With env vars set, both of these work:
+```python
+from katalogue_sdk import KatalogueClient
+client = KatalogueClient()          # reads env vars
+client = KatalogueClient(settings)  # explicit settings object
+```
 
 ## Quick Commands
 
 ```bash
-uv sync                    # install deps
-uv run pytest              # run all tests
+uv sync                    # install all workspace deps
+uv run pytest              # run all tests (both packages)
 uv run pytest -v           # verbose
 uv run pytest -k system    # filter by name
+uv run pytest packages/katalogue-sdk/tests   # SDK only
+uv run pytest packages/katalogue-cli/tests   # CLI only
 uv run katalogue --help    # try the CLI
 ```
 
 ## Directory Structure
 
 ```
-src/katalogue/
-  cli/          # Click commands — arg parsing, error handling, output formatting
-  client/       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
-  config/       # resolve_settings() — CLI flag > env var > default (Pydantic)
-  formatters/   # format_json, format_table, format_compact_json
-tests/
-  conftest.py   # runner, cli_auth, mock_client fixtures
-  fixtures/     # JSON response fixtures
+packages/
+  katalogue-sdk/
+    src/katalogue_sdk/
+      client/api.py       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
+      config/settings.py  # resolve_settings() — explicit > env var > default (Pydantic)
+      __init__.py         # public API surface
+    tests/
+      conftest.py
+      fixtures/           # JSON response fixtures
+  katalogue-cli/
+    src/katalogue_cli/
+      cli/                # Click commands — arg parsing, error handling, output formatting
+        main.py           # Root Click group, global options, group registration
+        common.py         # handle_api_call(), filter_fields(), shared decorators
+      formatters/         # format_json, format_table, format_compact_json
+    tests/
+      conftest.py         # runner, cli_auth, mock_client fixtures
+      fixtures/           # JSON response fixtures
+pyproject.toml            # uv workspace root — no code, just workspace + pytest config
+pyrightconfig.json        # IDE static analysis config
 ```
 
 ## TDD Workflow (Non-Negotiable)
@@ -59,12 +95,13 @@ Agent definitions: `.claude/agents/<name>.md`
 
 | File | Purpose |
 |------|---------|
-| `src/katalogue/cli/main.py` | Root Click group, global options, group registration |
-| `src/katalogue/cli/common.py` | `get_client()`, `handle_api_call()`, `filter_fields()`, shared decorators |
-| `src/katalogue/client/api.py` | `KatalogueClient` — HTTP + OAuth2 client credentials |
-| `src/katalogue/config/settings.py` | `resolve_settings()` — CLI flag > env var > default |
-| `src/katalogue/formatters/output.py` | `format_json`, `format_table`, `format_compact_json` |
-| `tests/conftest.py` | Shared fixtures: `runner`, `cli_auth`, `mock_client` |
+| `packages/katalogue-sdk/src/katalogue_sdk/client/api.py` | `KatalogueClient` — HTTP + OAuth2 client credentials; `KatalogueClient()` reads env vars |
+| `packages/katalogue-sdk/src/katalogue_sdk/config/settings.py` | `resolve_settings()` — explicit > env var > default |
+| `packages/katalogue-sdk/src/katalogue_sdk/__init__.py` | Public SDK API: `KatalogueClient`, `Settings`, `resolve_settings`, errors |
+| `packages/katalogue-cli/src/katalogue_cli/cli/main.py` | Root Click group, global options, group registration |
+| `packages/katalogue-cli/src/katalogue_cli/cli/common.py` | `handle_api_call()`, `filter_fields()`, shared decorators |
+| `packages/katalogue-cli/src/katalogue_cli/formatters/output.py` | `format_json`, `format_table`, `format_compact_json` |
+| `packages/katalogue-cli/tests/conftest.py` | Shared fixtures: `runner`, `cli_auth`, `mock_client` |
 
 ## CLI Design Rules
 
@@ -88,16 +125,19 @@ def test_something(runner, cli_auth, mock_client):
 
 Cover per slice: happy path (json + table), auth failure, API error, empty results, missing config.
 
-Mock is patched at `katalogue.cli.common.KatalogueClient` — not at the import site in each command file.
+Mock is patched at `katalogue_cli.cli.common.KatalogueClient` — not at the import site in each command file.
+
+SDK tests go in `packages/katalogue-sdk/tests/`, CLI tests in `packages/katalogue-cli/tests/`.
+`katalogue-sdk` has no Click dependency — keep it that way. Any Click import belongs in `katalogue-cli`.
 
 ## Architecture Layers
 
-| Layer | Does | Does Not |
-|-------|------|----------|
-| `cli/` | Parse args, call client, format output, handle errors | Construct URLs, manage HTTP |
-| `client/` | HTTP requests, parse responses, raise typed errors | Format output, know about Click |
-| `config/` | Resolve settings from flags/env/defaults | Make HTTP calls |
-| `formatters/` | Turn dicts into strings | Know about HTTP, Click, or config |
+| Package | Layer | Does | Does Not |
+|---------|-------|------|----------|
+| `katalogue-sdk` | `client/` | HTTP requests, parse responses, raise typed errors | Format output, know about Click |
+| `katalogue-sdk` | `config/` | Resolve settings from env/defaults | Make HTTP calls |
+| `katalogue-cli` | `cli/` | Parse args, call client, format output, handle errors | Construct URLs, manage HTTP |
+| `katalogue-cli` | `formatters/` | Turn dicts into strings | Know about HTTP, Click, or config |
 
 ## Code Preferences
 
@@ -108,3 +148,14 @@ Mock is patched at `katalogue.cli.common.KatalogueClient` — not at the import 
 - Be opinionated — push back on weak design
 - Small reviewable steps — no big code dumps
 - Wait for input before generating large amounts of code
+
+## Code Quality (Mandatory After Every Python Edit)
+
+After finishing editing or creating any `.py` file, always run:
+
+```bash
+uv run ruff check --fix && uv run ruff format   # lint + format
+uv run pytest -q                                 # verify nothing broke
+```
+
+Run ruff and pytest **once per logical unit of work** (after all related edits are done), not after every individual file edit. If tests fail, fix before declaring the task complete.
