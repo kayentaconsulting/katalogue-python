@@ -64,7 +64,7 @@ def resolve_settings(
     try:
         return Settings(
             client_id=resolved_client_id,
-            client_secret=resolved_client_secret,
+            client_secret=SecretStr(resolved_client_secret),
             base_url=resolved_base_url,
             token_url=resolved_token_url,
         )

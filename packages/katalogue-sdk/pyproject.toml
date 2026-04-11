@@ -22,4 +22,5 @@ dev = [
     "pytest-mock>=3.12",
     "requests-mock>=1.11",
     "ruff>=0.15.10",
+    "pyright>=1.1",
 ]

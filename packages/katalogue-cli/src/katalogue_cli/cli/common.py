@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Callable
 
 import click
@@ -124,7 +125,7 @@ def handle_api_call(
     call: Callable[[KatalogueClient], Any],
     fmt: str,
     fields: list[str] | None = None,
-    where: list[tuple[str, Any]] = (),
+    where: Sequence[tuple[str, Any]] = (),
 ) -> None:
     """Execute an API call, handle errors, apply field filtering, and format output."""
     client = _get_or_create_client(ctx)
