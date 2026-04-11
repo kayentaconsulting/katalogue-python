@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
 
 from katalogue_cli.auth import DiskTokenCache
 from katalogue_sdk.client.cache import TokenEntry
@@ -19,12 +20,14 @@ def _entry(
     access_token: str = "tok-abc",
 ) -> TokenEntry:
     return TokenEntry(
-        access_token=access_token, expires_at=time.time() + ttl, scope=scope
+        access_token=SecretStr(access_token), expires_at=time.time() + ttl, scope=scope
     )
 
 
 def _expired_entry(scope: str = "system.read") -> TokenEntry:
-    return TokenEntry(access_token="tok-old", expires_at=time.time() - 1, scope=scope)
+    return TokenEntry(
+        access_token=SecretStr("tok-old"), expires_at=time.time() - 1, scope=scope
+    )
 
 
 @pytest.fixture
@@ -64,7 +67,9 @@ class TestDiskTokenCache:
     def test_get_returns_none_within_30s_buffer(self, cache: DiskTokenCache) -> None:
         # 20 seconds in the future — inside the 30s expiry buffer
         entry = TokenEntry(
-            access_token="tok", expires_at=time.time() + 20, scope="system.read"
+            access_token=SecretStr("tok"),
+            expires_at=time.time() + 20,
+            scope="system.read",
         )
         cache.set("k", entry)
         assert cache.get("k") is None
@@ -72,7 +77,9 @@ class TestDiskTokenCache:
     def test_get_returns_entry_outside_30s_buffer(self, cache: DiskTokenCache) -> None:
         # 60 seconds in the future — outside the 30s buffer
         entry = TokenEntry(
-            access_token="tok", expires_at=time.time() + 60, scope="system.read"
+            access_token=SecretStr("tok"),
+            expires_at=time.time() + 60,
+            scope="system.read",
         )
         cache.set("k", entry)
         assert cache.get("k") is not None

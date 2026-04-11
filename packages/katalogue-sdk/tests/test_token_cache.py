@@ -13,7 +13,7 @@ def _entry(
     scope: str = "system.read", ttl: float = 3600, access_token: str = "tok-abc"
 ) -> TokenEntry:
     return TokenEntry(
-        access_token=access_token, expires_at=time.time() + ttl, scope=scope
+        access_token=SecretStr(access_token), expires_at=time.time() + ttl, scope=scope
     )
 
 

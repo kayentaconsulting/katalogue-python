@@ -6,6 +6,7 @@ import os
 
 import click
 import keyring
+from keyring.errors import PasswordDeleteError
 
 from katalogue_cli.auth import DiskTokenCache
 from katalogue_cli.config.file import (
@@ -64,22 +65,24 @@ def login(
         raise SystemExit(1)
 
     # 2. Prompt for any values not supplied via flags.
-    if client_id is None:
-        client_id = click.prompt("Client ID")
-    if client_secret is None:
-        client_secret = click.prompt("Client Secret", hide_input=True)
-    if base_url is None:
-        base_url = click.prompt("Base URL", default=DEFAULT_BASE_URL)
-    if token_url is None:
-        token_url = click.prompt("Token URL", default=DEFAULT_TOKEN_URL)
+    resolved_client_id: str = client_id or click.prompt("Client ID")
+    resolved_client_secret: str = client_secret or click.prompt(
+        "Client Secret", hide_input=True
+    )
+    resolved_base_url: str = base_url or click.prompt(
+        "Base URL", default=DEFAULT_BASE_URL
+    )
+    resolved_token_url: str = token_url or click.prompt(
+        "Token URL", default=DEFAULT_TOKEN_URL
+    )
 
     # 3. Validate credentials by fetching a token via a probe API call.
     try:
         settings = resolve_settings(
-            client_id=client_id,
-            client_secret=client_secret,
-            base_url=base_url,
-            token_url=token_url,
+            client_id=resolved_client_id,
+            client_secret=resolved_client_secret,
+            base_url=resolved_base_url,
+            token_url=resolved_token_url,
         )
         client = KatalogueClient(settings)
         client.list_resource("system")
@@ -93,8 +96,12 @@ def login(
         pass  # Valid credentials; API-level error is not an auth failure.
 
     # 4. Persist non-secret fields to config file, then store secret in keychain.
-    write_config_file(client_id=client_id, base_url=base_url, token_url=token_url)
-    keyring.set_password(_KEYRING_SERVICE, client_id, client_secret)
+    write_config_file(
+        client_id=resolved_client_id,
+        base_url=resolved_base_url,
+        token_url=resolved_token_url,
+    )
+    keyring.set_password(_KEYRING_SERVICE, resolved_client_id, resolved_client_secret)
 
     click.echo("Logged in. Run `katalogue system list` to get started.")
 
@@ -157,7 +164,7 @@ def logout(ctx: click.Context) -> None:
     DiskTokenCache().clear()
     try:
         keyring.delete_password(_KEYRING_SERVICE, client_id)
-    except keyring.errors.PasswordDeleteError:
+    except PasswordDeleteError:
         pass
     clear_client_id()
     click.echo("Logged out. Token cache cleared and keychain entry removed.")

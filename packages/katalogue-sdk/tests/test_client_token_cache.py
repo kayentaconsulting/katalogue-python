@@ -6,6 +6,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import SecretStr
 
 from katalogue_sdk.client.cache import InMemoryTokenCache, TokenEntry
 from katalogue_sdk.config.settings import Settings, DEFAULT_TOKEN_URL, DEFAULT_BASE_URL
@@ -14,7 +15,7 @@ from katalogue_sdk.config.settings import Settings, DEFAULT_TOKEN_URL, DEFAULT_B
 def _settings() -> Settings:
     return Settings(
         client_id="test-id",
-        client_secret="test-secret",
+        client_secret=SecretStr("test-secret"),
         base_url=DEFAULT_BASE_URL,
         token_url=DEFAULT_TOKEN_URL,
     )
@@ -22,7 +23,7 @@ def _settings() -> Settings:
 
 def _valid_entry(scope: str = "system.read") -> TokenEntry:
     return TokenEntry(
-        access_token="cached-token",
+        access_token=SecretStr("cached-token"),
         expires_at=time.time() + 3600,
         scope=scope,
     )
@@ -85,7 +86,7 @@ class TestClientTokenCache:
 
     def test_expired_entry_triggers_refetch(self, client, mock_session, cache) -> None:
         expired = TokenEntry(
-            access_token="old-token",
+            access_token=SecretStr("old-token"),
             expires_at=time.time() - 1,
             scope="system.read",
         )
