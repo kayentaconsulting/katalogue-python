@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import logging
-
 import click
 from dotenv import load_dotenv
 
 from katalogue_cli.cli.auth import auth
+from katalogue_cli.logging import configure_logging
 from katalogue_cli.cli.dataset import dataset
 from katalogue_cli.cli.dataset_group import dataset_group
 from katalogue_cli.cli.datasource import datasource
@@ -73,15 +72,7 @@ def cli(
     ctx.obj["base_url"] = base_url
     ctx.obj["token_url"] = token_url
     ctx.obj["verbose"] = verbose
-    if verbose:
-        logging.basicConfig(
-            level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s"
-        )
-        # oauthlib and requests log full token responses at DEBUG — suppress them
-        # to prevent access tokens from appearing in stderr output.
-        logging.getLogger("oauthlib").setLevel(logging.WARNING)
-        logging.getLogger("requests_oauthlib").setLevel(logging.WARNING)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
+    configure_logging(verbose)
 
 
 cli.add_command(auth)
