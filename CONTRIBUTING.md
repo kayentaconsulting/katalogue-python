@@ -45,7 +45,6 @@ CI runs the same checks. PRs that fail CI will not be merged.
 - Title: short imperative (`add system list command`, `fix auth error message`)
 - Body: fill in the PR template — what, why, linked issue, checklist
 - One approving review required before merge
-- Squash or rebase — no merge commits on `main`
 
 ## Code style
 
