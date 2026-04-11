@@ -34,7 +34,7 @@ load_dotenv()
     envvar="KATALOGUE_CLIENT_SECRET",
     default=None,
     show_envvar=True,
-    help="OAuth2 client secret.",
+    help="OAuth2 client secret. Prefer KATALOGUE_CLIENT_SECRET env var — flags appear in shell history.",
 )
 @click.option(
     "--base-url",
@@ -77,6 +77,11 @@ def cli(
         logging.basicConfig(
             level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s"
         )
+        # oauthlib and requests log full token responses at DEBUG — suppress them
+        # to prevent access tokens from appearing in stderr output.
+        logging.getLogger("oauthlib").setLevel(logging.WARNING)
+        logging.getLogger("requests_oauthlib").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 cli.add_command(auth)

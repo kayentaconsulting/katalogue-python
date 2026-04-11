@@ -8,6 +8,7 @@ from typing import Any, Final
 from urllib.parse import quote
 
 from oauthlib.oauth2 import BackendApplicationClient
+from pydantic import SecretStr
 from requests.exceptions import HTTPError
 from requests_oauthlib import OAuth2Session
 
@@ -52,7 +53,7 @@ class KatalogueClient:
             settings = resolve_settings()
         self._base_url: Final[str] = settings.base_url.rstrip("/")
         self._client_id: Final[str] = settings.client_id
-        self._client_secret: Final = settings.client_secret
+        self._client_secret: Final[SecretStr] = settings.client_secret
         self._token_url: Final[str] = settings.token_url
         self._client = BackendApplicationClient(client_id=settings.client_id)
         self._session: Final = OAuth2Session(client=self._client)
@@ -67,7 +68,7 @@ class KatalogueClient:
         self._session.fetch_token(
             token_url=self._token_url,
             client_id=self._client_id,
-            client_secret=quote(self._client_secret.get_secret_value()),
+            client_secret=self._client_secret.get_secret_value(),
             scope=scope,
         )
         self._current_scope = scope
