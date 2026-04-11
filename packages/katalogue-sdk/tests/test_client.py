@@ -8,6 +8,8 @@ import pytest
 from requests.exceptions import HTTPError
 
 from katalogue_sdk.client.api import KatalogueClient, AuthError, ApiError
+from pydantic import SecretStr
+
 from katalogue_sdk.config.settings import Settings
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -47,7 +49,7 @@ def client():
         mock_session.authorized = True  # Skip token fetch in tests
         settings = Settings(
             client_id="test-id",
-            client_secret="test-secret",
+            client_secret=SecretStr("test-secret"),
             base_url="https://api.example.com",
             token_url="https://api.example.com/oauth/token",
         )
