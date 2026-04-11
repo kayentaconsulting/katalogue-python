@@ -1,6 +1,6 @@
-# Contributing to Katalogue CLI
+# Contributing to Katalogue CLI & SDK
 
-Thanks for your interest in contributing to Katalogue CLI!
+Thanks for your interest in contributing to Katalogue CLI & SDK!
 
 We welcome bug fixes, features, and documentation improvements.
 
