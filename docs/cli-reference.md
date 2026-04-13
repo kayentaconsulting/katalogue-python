@@ -260,7 +260,7 @@ katalogue dataset-group list --datasource "$DATASOURCE_ID" --format json \
 
 - **Response wrappers**: List responses are wrapped in a resource-named key (e.g. `{"systems": [...]}`, `{"datasets": [...]}`). When piping to `jq`, use `.systems[]`, `.datasets[]`, etc.
 - **IDs**: All IDs are integers. Use the `list` commands to discover them.
-- **Verbose mode**: Add `-v` before the resource name to see the HTTP request details on stderr, which is useful for debugging.
+- **Verbose mode**: Add `-v` before the resource name to see the HTTP request details on stderr, which is useful for debugging. ASSAD
 
 ```bash
 katalogue -v datasource list --system 10
