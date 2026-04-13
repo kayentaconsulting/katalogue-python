@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import SecretStr
 
-from katalogue_sdk.client.cache import InMemoryTokenCache, TokenEntry
-from katalogue_sdk.config.settings import Settings, DEFAULT_TOKEN_URL, DEFAULT_BASE_URL
+from katalogue.client.cache import InMemoryTokenCache, TokenEntry
+from katalogue.config.settings import Settings, DEFAULT_TOKEN_URL, DEFAULT_BASE_URL
 
 
 def _settings() -> Settings:
@@ -35,7 +35,7 @@ def _cache_key(scope: str = "system.read") -> str:
 
 @pytest.fixture
 def mock_session():
-    with patch("katalogue_sdk.client.api.OAuth2Session") as MockSession:
+    with patch("katalogue.client.api.OAuth2Session") as MockSession:
         session = MagicMock()
         session.authorized = False
         session.token = {}
@@ -60,7 +60,7 @@ def cache():
 
 @pytest.fixture
 def client(mock_session, cache):
-    from katalogue_sdk.client.api import KatalogueClient
+    from katalogue.client.api import KatalogueClient
 
     return KatalogueClient(_settings(), token_cache=cache)
 
@@ -107,8 +107,8 @@ class TestClientTokenCache:
         assert cache.get(expected_key) is not None
 
     def test_no_cache_arg_defaults_to_in_memory_cache(self) -> None:
-        with patch("katalogue_sdk.client.api.OAuth2Session"):
-            from katalogue_sdk.client.api import KatalogueClient
+        with patch("katalogue.client.api.OAuth2Session"):
+            from katalogue.client.api import KatalogueClient
 
             c = KatalogueClient(_settings())
             assert isinstance(c._cache, InMemoryTokenCache)

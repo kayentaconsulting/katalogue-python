@@ -13,7 +13,7 @@ from katalogue_cli.cli.export import export
 from katalogue_cli.cli.field import field
 from katalogue_cli.cli.glossary import glossary
 from katalogue_cli.cli.system import system
-from katalogue_sdk import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
+from katalogue import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
 
 
 @click.group()

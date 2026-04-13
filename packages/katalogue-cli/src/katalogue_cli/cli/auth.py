@@ -14,8 +14,8 @@ from katalogue_cli.config.file import (
     load_config_file,
     write_config_file,
 )
-from katalogue_sdk.client.api import ApiError, AuthError, KatalogueClient
-from katalogue_sdk.config.settings import (
+from katalogue.client.api import ApiError, AuthError, KatalogueClient
+from katalogue.config.settings import (
     DEFAULT_BASE_URL,
     DEFAULT_TOKEN_URL,
     ConfigError,

@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from katalogue_cli.cli.main import cli
-from katalogue_sdk.client.api import ApiError
+from katalogue.client.api import ApiError
 
 CLI_AUTH = ["--client-id", "id", "--client-secret", "secret"]
 

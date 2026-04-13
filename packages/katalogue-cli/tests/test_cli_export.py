@@ -3,7 +3,7 @@
 import json
 
 from katalogue_cli.cli.main import cli
-from katalogue_sdk.client.api import AuthError, ApiError
+from katalogue.client.api import AuthError, ApiError
 
 SYSTEM_EXPORT = {
     "meta": {

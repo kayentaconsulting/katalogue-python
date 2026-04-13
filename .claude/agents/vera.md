@@ -23,7 +23,7 @@ Defines the TDD workflow, test structure, fixtures, mocking strategy, and accept
 
 ## Mocking Convention
 - CLI tests patch `katalogue_cli.cli.common.KatalogueClient` (not the import site in command files)
-- SDK tests patch `katalogue_sdk.client.api.OAuth2Session`
+- SDK tests patch `katalogue.client.api.OAuth2Session`
 - The shared `mock_client` fixture in `packages/katalogue-cli/tests/conftest.py` handles the CLI patch automatically
 
 ## What Good Output Looks Like

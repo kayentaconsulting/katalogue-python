@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 from katalogue_cli.cli.main import cli
-from katalogue_sdk.client.api import AuthError, ApiError
+from katalogue.client.api import AuthError, ApiError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

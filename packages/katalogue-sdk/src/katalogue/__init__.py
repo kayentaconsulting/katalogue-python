@@ -1,6 +1,6 @@
-from katalogue_sdk.client.api import ApiError, AuthError, KatalogueClient
-from katalogue_sdk.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
-from katalogue_sdk.config.settings import (
+from katalogue.client.api import ApiError, AuthError, KatalogueClient
+from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
+from katalogue.config.settings import (
     ConfigError,
     DEFAULT_BASE_URL,
     DEFAULT_TOKEN_URL,
