@@ -6,7 +6,7 @@ import time
 
 from pydantic import SecretStr
 
-from katalogue_sdk.client.cache import InMemoryTokenCache, TokenEntry
+from katalogue.client.cache import InMemoryTokenCache, TokenEntry
 
 
 def _entry(

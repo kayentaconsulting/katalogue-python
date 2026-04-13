@@ -6,7 +6,7 @@ import pytest
 from click.testing import CliRunner
 
 from katalogue_cli.cli.main import cli
-from katalogue_sdk.config.settings import DEFAULT_BASE_URL
+from katalogue.config.settings import DEFAULT_BASE_URL
 
 
 @pytest.fixture
@@ -113,7 +113,7 @@ class TestAuthLogin:
     def test_bad_credentials_exits_writes_nothing(
         self, runner: CliRunner, mocker
     ) -> None:
-        from katalogue_sdk.client.api import AuthError
+        from katalogue.client.api import AuthError
 
         mocker.patch(
             "katalogue_cli.cli.auth.keyring.get_keyring", return_value=_usable_keyring()

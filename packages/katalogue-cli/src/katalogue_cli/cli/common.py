@@ -10,8 +10,8 @@ import keyring
 
 from katalogue_cli.auth import DiskTokenCache
 from katalogue_cli.config.file import load_config_file
-from katalogue_sdk.client.api import KatalogueClient, AuthError, ApiError
-from katalogue_sdk.config.settings import (
+from katalogue.client.api import KatalogueClient, AuthError, ApiError
+from katalogue.config.settings import (
     DEFAULT_BASE_URL,
     DEFAULT_TOKEN_URL,
     resolve_settings,

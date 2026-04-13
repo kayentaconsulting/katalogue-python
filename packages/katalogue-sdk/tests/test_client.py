@@ -8,10 +8,10 @@ from unittest.mock import patch, MagicMock
 import pytest
 from requests.exceptions import HTTPError
 
-from katalogue_sdk.client.api import KatalogueClient, AuthError, ApiError
+from katalogue.client.api import KatalogueClient, AuthError, ApiError
 from pydantic import SecretStr
 
-from katalogue_sdk.config.settings import Settings
+from katalogue.config.settings import Settings
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -45,7 +45,7 @@ def _make_token_response():
 @pytest.fixture
 def client():
     """Create a KatalogueClient with mocked OAuth2 token fetch."""
-    with patch("katalogue_sdk.client.api.OAuth2Session") as MockSession:
+    with patch("katalogue.client.api.OAuth2Session") as MockSession:
         mock_session = MockSession.return_value
         mock_session.authorized = True
         mock_session.token = {
@@ -67,12 +67,12 @@ class TestNoArgsConstructor:
     def test_reads_credentials_from_env_vars(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "env-id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
-        with patch("katalogue_sdk.client.api.OAuth2Session"):
+        with patch("katalogue.client.api.OAuth2Session"):
             client = KatalogueClient()
         assert client._client_id == "env-id"
 
     def test_missing_credentials_raises_config_error(self, monkeypatch):
-        from katalogue_sdk import ConfigError
+        from katalogue import ConfigError
 
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)

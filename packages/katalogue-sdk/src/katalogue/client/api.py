@@ -12,8 +12,8 @@ from pydantic import SecretStr
 from requests.exceptions import HTTPError
 from requests_oauthlib import OAuth2Session
 
-from katalogue_sdk.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
-from katalogue_sdk.config.settings import Settings, resolve_settings
+from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
+from katalogue.config.settings import Settings, resolve_settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class KatalogueClient:
             client = KatalogueClient()
 
             # Explicit settings
-            from katalogue_sdk import resolve_settings
+            from katalogue import resolve_settings
             client = KatalogueClient(resolve_settings(client_id="id", client_secret="secret"))
         """
         if settings is None:

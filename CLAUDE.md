@@ -19,7 +19,7 @@ For per-project dev credentials, use [`direnv`](https://direnv.net/) with an `.e
 
 With env vars set, both of these work:
 ```python
-from katalogue_sdk import KatalogueClient
+from katalogue import KatalogueClient
 client = KatalogueClient()          # reads env vars
 client = KatalogueClient(settings)  # explicit settings object
 ```
@@ -41,7 +41,7 @@ uv run katalogue --help    # try the CLI
 ```
 packages/
   katalogue-sdk/
-    src/katalogue_sdk/
+    src/katalogue/
       client/api.py       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
       config/settings.py  # resolve_settings() — explicit > env var > default (Pydantic)
       __init__.py         # public API surface
@@ -95,9 +95,9 @@ Agent definitions: `.claude/agents/<name>.md`
 
 | File | Purpose |
 |------|---------|
-| `packages/katalogue-sdk/src/katalogue_sdk/client/api.py` | `KatalogueClient` — HTTP + OAuth2 client credentials; `KatalogueClient()` reads env vars |
-| `packages/katalogue-sdk/src/katalogue_sdk/config/settings.py` | `resolve_settings()` — explicit > env var > default |
-| `packages/katalogue-sdk/src/katalogue_sdk/__init__.py` | Public SDK API: `KatalogueClient`, `Settings`, `resolve_settings`, errors |
+| `packages/katalogue-sdk/src/katalogue/client/api.py` | `KatalogueClient` — HTTP + OAuth2 client credentials; `KatalogueClient()` reads env vars |
+| `packages/katalogue-sdk/src/katalogue/config/settings.py` | `resolve_settings()` — explicit > env var > default |
+| `packages/katalogue-sdk/src/katalogue/__init__.py` | Public SDK API: `KatalogueClient`, `Settings`, `resolve_settings`, errors |
 | `packages/katalogue-cli/src/katalogue_cli/cli/main.py` | Root Click group, global options, group registration |
 | `packages/katalogue-cli/src/katalogue_cli/cli/common.py` | `handle_api_call()`, `filter_fields()`, shared decorators |
 | `packages/katalogue-cli/src/katalogue_cli/formatters/output.py` | `format_json`, `format_table`, `format_compact_json` |

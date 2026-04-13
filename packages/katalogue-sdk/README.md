@@ -15,7 +15,7 @@ uv add katalogue-sdk
 ```python
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-from katalogue_sdk import KatalogueClient, resolve_settings
+from katalogue import KatalogueClient, resolve_settings
 
 vault = SecretClient(
     vault_url="https://your-vault.vault.azure.net",
@@ -41,7 +41,7 @@ Fetch credentials from Key Vault at startup using `DefaultAzureCredential` (work
 ```python
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-from katalogue_sdk import KatalogueClient, resolve_settings
+from katalogue import KatalogueClient, resolve_settings
 
 vault = SecretClient(
     vault_url="https://your-vault.vault.azure.net",
@@ -74,7 +74,7 @@ KATALOGUE_TOKEN_URL=https://your-instance.katalogue.se/oidc/token  # optional
 ```
 
 ```python
-from katalogue_sdk import KatalogueClient
+from katalogue import KatalogueClient
 
 client = KatalogueClient()   # reads env vars
 ```
@@ -93,7 +93,7 @@ KATALOGUE_TOKEN_URL=https://your-instance.katalogue.se/oidc/token
 
 ```python
 from dotenv import load_dotenv
-from katalogue_sdk import KatalogueClient
+from katalogue import KatalogueClient
 
 load_dotenv()
 client = KatalogueClient()
@@ -164,10 +164,10 @@ export = client.get_glossary_export("gl-001")
 
 ## Error Handling
 
-All three exception types are importable from `katalogue_sdk`:
+All three exception types are importable from `katalogue`:
 
 ```python
-from katalogue_sdk import KatalogueClient, ConfigError, AuthError, ApiError
+from katalogue import KatalogueClient, ConfigError, AuthError, ApiError
 
 try:
     client = KatalogueClient()

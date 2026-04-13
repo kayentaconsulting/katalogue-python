@@ -2,7 +2,7 @@
 
 import pytest
 
-from katalogue_sdk.config.settings import resolve_settings, ConfigError
+from katalogue.config.settings import resolve_settings, ConfigError
 
 
 class TestClientIdResolution:

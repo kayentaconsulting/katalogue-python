@@ -10,7 +10,7 @@ from pathlib import Path
 
 import platformdirs
 
-from katalogue_sdk.client.cache import TOKEN_EXPIRY_BUFFER_SECONDS, TokenEntry
+from katalogue.client.cache import TOKEN_EXPIRY_BUFFER_SECONDS, TokenEntry
 
 logger = logging.getLogger(__name__)
 

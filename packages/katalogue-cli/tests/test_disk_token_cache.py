@@ -11,7 +11,7 @@ import pytest
 from pydantic import SecretStr
 
 from katalogue_cli.auth import DiskTokenCache
-from katalogue_sdk.client.cache import TokenEntry
+from katalogue.client.cache import TokenEntry
 
 
 def _entry(
