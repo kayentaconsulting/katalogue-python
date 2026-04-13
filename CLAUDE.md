@@ -15,7 +15,7 @@ export KATALOGUE_URL=https://your-instance.katalogue.se        # optional, defau
 export KATALOGUE_TOKEN_URL=https://your-instance.katalogue.se/oidc/token  # optional
 ```
 
-Or put them in a `.env` file at the repo root — the CLI loads it automatically via `python-dotenv`.
+For per-project dev credentials, use [`direnv`](https://direnv.net/) with an `.envrc` file — the CLI reads standard environment variables and does not load `.env` files.
 
 With env vars set, both of these work:
 ```python
@@ -155,7 +155,8 @@ After finishing editing or creating any `.py` file, always run:
 
 ```bash
 uv run ruff check --fix && uv run ruff format   # lint + format
+uv run pyright                                   # type-check
 uv run pytest -q                                 # verify nothing broke
 ```
 
-Run ruff and pytest **once per logical unit of work** (after all related edits are done), not after every individual file edit. If tests fail, fix before declaring the task complete.
+Run all three **once per logical unit of work** (after all related edits are done), not after every individual file edit. If any check fails, fix before declaring the task complete.

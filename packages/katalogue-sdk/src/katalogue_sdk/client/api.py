@@ -8,9 +8,11 @@ from typing import Any, Final
 from urllib.parse import quote
 
 from oauthlib.oauth2 import BackendApplicationClient
+from pydantic import SecretStr
 from requests.exceptions import HTTPError
 from requests_oauthlib import OAuth2Session
 
+from katalogue_sdk.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
 from katalogue_sdk.config.settings import Settings, resolve_settings
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,9 @@ class ApiError(Exception):
 
 
 class KatalogueClient:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self, settings: Settings | None = None, token_cache: TokenCache | None = None
+    ) -> None:
         """Create a client.
 
         Args:
@@ -33,6 +37,9 @@ class KatalogueClient:
                 resolved from environment variables (KATALOGUE_CLIENT_ID,
                 KATALOGUE_CLIENT_SECRET) and URL defaults. Raises ConfigError
                 if required credentials cannot be found.
+            token_cache: Cache for OAuth2 access tokens. Defaults to an
+                in-memory cache (no persistence across process restarts).
+                Pass any TokenCache implementation for cross-invocation persistence.
 
         Examples:
             # From environment variables
@@ -46,11 +53,14 @@ class KatalogueClient:
             settings = resolve_settings()
         self._base_url: Final[str] = settings.base_url.rstrip("/")
         self._client_id: Final[str] = settings.client_id
-        self._client_secret: Final = settings.client_secret
+        self._client_secret: Final[SecretStr] = settings.client_secret
         self._token_url: Final[str] = settings.token_url
         self._client = BackendApplicationClient(client_id=settings.client_id)
         self._session: Final = OAuth2Session(client=self._client)
         self._current_scope: str | None = None
+        self._cache: TokenCache = (
+            token_cache if token_cache is not None else InMemoryTokenCache()
+        )
 
     def _fetch_token(self, scope: str) -> None:
         logger.info("Fetching OAuth2 token with scope=%s", scope)
@@ -58,14 +68,31 @@ class KatalogueClient:
         self._session.fetch_token(
             token_url=self._token_url,
             client_id=self._client_id,
-            client_secret=quote(self._client_secret.get_secret_value()),
+            client_secret=self._client_secret.get_secret_value(),
             scope=scope,
         )
         self._current_scope = scope
+        key = f"{self._token_url}|{self._client_id}|{scope}"
+        expires_at = self._session.token.get("expires_at", 0.0)
+        access_token = self._session.token.get("access_token", "")
+        self._cache.set(
+            key,
+            TokenEntry(access_token=access_token, expires_at=expires_at, scope=scope),
+        )
 
     def _ensure_token(self, scope: str) -> None:
-        if not self._session.authorized or self._current_scope != scope:
-            self._fetch_token(scope)
+        key = f"{self._token_url}|{self._client_id}|{scope}"
+        cached = self._cache.get(key)
+        if cached is not None:
+            logger.debug("Using cached token for scope=%s", scope)
+            self._session.token = {
+                "access_token": cached.access_token.get_secret_value(),
+                "token_type": "Bearer",
+                "expires_at": cached.expires_at,
+            }
+            self._current_scope = scope
+            return
+        self._fetch_token(scope)
 
     def _request(self, method: str, url: str, scope: str, **kwargs: Any) -> Any:
         self._ensure_token(scope)

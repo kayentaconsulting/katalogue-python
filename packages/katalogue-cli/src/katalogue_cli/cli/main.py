@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import click
-from dotenv import load_dotenv
 
+from katalogue_cli.cli.auth import auth
+from katalogue_cli.logging import configure_logging
 from katalogue_cli.cli.dataset import dataset
 from katalogue_cli.cli.dataset_group import dataset_group
 from katalogue_cli.cli.datasource import datasource
@@ -13,8 +14,6 @@ from katalogue_cli.cli.field import field
 from katalogue_cli.cli.glossary import glossary
 from katalogue_cli.cli.system import system
 from katalogue_sdk import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
-
-load_dotenv()
 
 
 @click.group()
@@ -31,7 +30,7 @@ load_dotenv()
     envvar="KATALOGUE_CLIENT_SECRET",
     default=None,
     show_envvar=True,
-    help="OAuth2 client secret.",
+    help="OAuth2 client secret. Prefer KATALOGUE_CLIENT_SECRET env var — flags appear in shell history.",
 )
 @click.option(
     "--base-url",
@@ -70,8 +69,10 @@ def cli(
     ctx.obj["base_url"] = base_url
     ctx.obj["token_url"] = token_url
     ctx.obj["verbose"] = verbose
+    configure_logging(verbose)
 
 
+cli.add_command(auth)
 cli.add_command(system)
 cli.add_command(datasource)
 cli.add_command(dataset_group)

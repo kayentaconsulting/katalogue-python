@@ -1,6 +1,7 @@
 """Tests for client/api - OAuth2 HTTP client for Katalogue API."""
 
 import json
+import time
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -46,7 +47,12 @@ def client():
     """Create a KatalogueClient with mocked OAuth2 token fetch."""
     with patch("katalogue_sdk.client.api.OAuth2Session") as MockSession:
         mock_session = MockSession.return_value
-        mock_session.authorized = True  # Skip token fetch in tests
+        mock_session.authorized = True
+        mock_session.token = {
+            "access_token": "mock-token",
+            "token_type": "Bearer",
+            "expires_at": time.time() + 3600,
+        }
         settings = Settings(
             client_id="test-id",
             client_secret=SecretStr("test-secret"),
@@ -54,8 +60,6 @@ def client():
             token_url="https://api.example.com/oauth/token",
         )
         c = KatalogueClient(settings)
-        # Pre-set current scope so _ensure_token doesn't re-fetch
-        c._current_scope = "system.read"
     return c
 
 
