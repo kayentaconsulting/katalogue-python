@@ -4,10 +4,24 @@ CLI for [Katalogue](https://katalogue.se), based on the Katalogue REST API.
 
 ## Installation
 
-**From git (no PyPI required):**
+```bash
+pip install katalogue-cli
+# or with uv
+uv add katalogue-cli
+```
+
+Before the package is published to PyPI, install directly from GitHub. The CLI depends on `katalogue-sdk`, so both must be provided together:
 
 ```bash
-pip install git+https://github.com/your-org/katalogue-cli.git
+# with uv
+uv pip install \
+  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk" \
+  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-cli"
+
+# or with pip
+pip install \
+  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk" \
+  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-cli"
 ```
 
 **For development:**
