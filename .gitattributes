@@ -1,0 +1,2 @@
+# Git on Windows defaults to CRLF checkout, which breaks bash inside Linux containers.
+* text=auto eol=lf
