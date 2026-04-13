@@ -24,6 +24,8 @@ from katalogue_cli.formatters.output import (
     format_table,
 )
 
+_NULL_BACKENDS = {"Keyring", "NullKeyring"}
+
 
 def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
     """Return the cached client for this invocation, creating it on first call.
@@ -46,6 +48,22 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
             client_secret = ctx.obj["client_secret"]
             if not client_secret and client_id:
                 client_secret = keyring.get_password("katalogue", client_id)
+                if client_secret is None:
+                    backend_name = type(keyring.get_keyring()).__name__
+                    if backend_name in _NULL_BACKENDS:
+                        click.echo(
+                            "Error: No keyring backend is available on this system. "
+                            "Run 'katalogue auth login' or set KATALOGUE_CLIENT_SECRET.",
+                            err=True,
+                        )
+                    else:
+                        click.echo(
+                            "Error: No stored credentials found in keyring. "
+                            "Run 'katalogue auth login' or set KATALOGUE_CLIENT_SECRET.",
+                            err=True,
+                        )
+                    ctx.exit(1)
+                    return None
             settings = resolve_settings(
                 client_id=client_id,
                 client_secret=client_secret,

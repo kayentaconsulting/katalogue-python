@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import click
-from dotenv import load_dotenv
 
 from katalogue_cli.cli.auth import auth
 from katalogue_cli.logging import configure_logging
@@ -15,8 +14,6 @@ from katalogue_cli.cli.field import field
 from katalogue_cli.cli.glossary import glossary
 from katalogue_cli.cli.system import system
 from katalogue_sdk import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
-
-load_dotenv()
 
 
 @click.group()

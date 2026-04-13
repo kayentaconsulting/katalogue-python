@@ -75,9 +75,12 @@ class TestKeyringFallback:
 
         mock_keyring.assert_not_called()
 
-    def test_keyring_miss_falls_through_to_config_error(
+    def test_keyring_miss_null_backend_exits_1(
         self, runner: CliRunner, mocker, monkeypatch
     ) -> None:
+        class NullKeyring:
+            pass
+
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
         mocker.patch(
@@ -85,8 +88,34 @@ class TestKeyringFallback:
             return_value={"client_id": "cid"},
         )
         mocker.patch("katalogue_cli.cli.common.keyring.get_password", return_value=None)
+        mocker.patch(
+            "katalogue_cli.cli.common.keyring.get_keyring", return_value=NullKeyring()
+        )
 
         result = runner.invoke(cli, ["system", "list"])
 
         assert result.exit_code == 1
-        assert "secret" in result.output.lower()
+        assert "no keyring backend" in result.output.lower()
+
+    def test_keyring_miss_no_entry_exits_1(
+        self, runner: CliRunner, mocker, monkeypatch
+    ) -> None:
+        class SecretService:
+            pass
+
+        monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
+        monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
+        mocker.patch(
+            "katalogue_cli.cli.common.load_config_file",
+            return_value={"client_id": "cid"},
+        )
+        mocker.patch("katalogue_cli.cli.common.keyring.get_password", return_value=None)
+        mocker.patch(
+            "katalogue_cli.cli.common.keyring.get_keyring",
+            return_value=SecretService(),
+        )
+
+        result = runner.invoke(cli, ["system", "list"])
+
+        assert result.exit_code == 1
+        assert "no stored credentials" in result.output.lower()
