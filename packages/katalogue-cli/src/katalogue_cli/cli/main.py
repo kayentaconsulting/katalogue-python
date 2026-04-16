@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.metadata
+
 import click
 
 from katalogue_cli.cli.auth import auth
@@ -17,7 +19,9 @@ from katalogue import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
 
 
 @click.group()
-@click.version_option("0.1.0", prog_name="katalogue")
+@click.version_option(
+    importlib.metadata.version("katalogue-cli"), prog_name="katalogue"
+)
 @click.option(
     "--client-id",
     envvar="KATALOGUE_CLIENT_ID",

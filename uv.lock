@@ -315,7 +315,6 @@ wheels = [
 
 [[package]]
 name = "katalogue-cli"
-version = "0.1.0"
 source = { editable = "packages/katalogue-cli" }
 dependencies = [
     { name = "click" },
@@ -350,7 +349,6 @@ dev = [
 
 [[package]]
 name = "katalogue-sdk"
-version = "0.1.0"
 source = { editable = "packages/katalogue-sdk" }
 dependencies = [
     { name = "pydantic" },
