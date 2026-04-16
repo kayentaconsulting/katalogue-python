@@ -80,29 +80,6 @@ def get(
     )
 
 
-@dataset_group.command()
-@fields_option
-@click.argument("dataset_group_id")
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["json", "table", "compact"]),
-    default="json",
-    help="Output format.",
-)
-@click.pass_context
-def children(
-    ctx: click.Context, fields: list[str] | None, dataset_group_id: str, fmt: str
-) -> None:
-    """List datasets belonging to this dataset group."""
-    handle_api_call(
-        ctx,
-        lambda c: c.list_by_parent("dataset", "dataset_group", dataset_group_id),
-        fmt,
-        fields=fields,
-    )
-
-
 @dataset_group.command("keys")
 @click.option(
     "--format",

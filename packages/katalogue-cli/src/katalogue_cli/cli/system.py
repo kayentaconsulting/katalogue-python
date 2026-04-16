@@ -55,29 +55,6 @@ def get(ctx: click.Context, fields: list[str] | None, system_id: str, fmt: str) 
     )
 
 
-@system.command()
-@fields_option
-@click.argument("system_id")
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["json", "table", "compact"]),
-    default="json",
-    help="Output format.",
-)
-@click.pass_context
-def children(
-    ctx: click.Context, fields: list[str] | None, system_id: str, fmt: str
-) -> None:
-    """List datasources belonging to this system."""
-    handle_api_call(
-        ctx,
-        lambda c: c.list_by_parent("datasource", "system", system_id),
-        fmt,
-        fields=fields,
-    )
-
-
 @system.command("keys")
 @click.option(
     "--format",

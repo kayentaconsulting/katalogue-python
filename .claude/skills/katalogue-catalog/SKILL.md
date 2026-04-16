@@ -29,13 +29,41 @@ system
        └─ dataset_group  (a schema, e.g. "public", "raw", "analytics")
             └─ dataset   (a table or view, e.g. "orders", "customers")
                  └─ field (a column, with name, type, description, is_pii)
+
+glossary                 (independent — business term definitions)
 ```
 
-You almost always start at **datasource** and work down.
+---
+
+## Complete Command Reference
+
+Every valid command at a glance:
+
+| Resource       | Commands           | Parent filter flag       |
+|----------------|--------------------|--------------------------|
+| `system`       | `list` `get` `keys` | —                       |
+| `datasource`   | `list` `get` `keys` | `--system <id>`         |
+| `dataset-group`| `list` `get` `keys` | `--datasource <id>`     |
+| `dataset`      | `list` `get` `keys` | `--dataset-group <id>`  |
+| `field`        | `list` `get` `keys` | `--dataset <id>`        |
+| `glossary`     | `list` `get` `keys` | —                       |
+| `export`       | `system <id>` `glossary <id>` | —            |
+
+All `list` commands accept `--fields`, `--where`, and `--format`. All `get` commands accept `--fields` and `--format`.
 
 ---
 
 ## Discovery Workflow
+
+### Step 0 — Orient: list systems (skip if you already know the datasource)
+
+```bash
+katalogue system list --fields system_id,system_name
+```
+
+You need a `system_id` to use `--system` filters or `export system`. If the catalog has only one system, this is a one-time lookup.
+
+---
 
 ### Step 1 — Find the datasource
 
@@ -55,11 +83,6 @@ Pick the right datasource and note its `datasource_id`.
 ### Step 2 — List schemas (dataset groups)
 
 ```bash
-katalogue datasource children <datasource_id>
-```
-
-Or equivalently:
-```bash
 katalogue dataset-group list --datasource <datasource_id> --fields dataset_group_id,dataset_group_name,description
 ```
 
@@ -69,11 +92,6 @@ Note the `dataset_group_id` for the schema you care about.
 
 ### Step 3 — List tables in a schema
 
-```bash
-katalogue dataset-group children <dataset_group_id>
-```
-
-Or with explicit fields:
 ```bash
 katalogue dataset list --dataset-group <dataset_group_id> \
   --fields dataset_id,dataset_name,dataset_type,description
@@ -85,11 +103,6 @@ katalogue dataset list --dataset-group <dataset_group_id> \
 
 ### Step 4 — Get columns for a table
 
-```bash
-katalogue dataset children <dataset_id>
-```
-
-Or scoped:
 ```bash
 katalogue field list --dataset <dataset_id> \
   --fields field_name,field_type,is_pii,description
@@ -107,15 +120,39 @@ Before using `--where` or `--fields`, check what the API actually returns:
 katalogue field keys        # one key per line
 katalogue dataset keys
 katalogue dataset-group keys
+katalogue system keys
+katalogue glossary keys
 ```
 
 ---
 
-## Common Patterns for Data Modeling
+## `--where` Syntax
+
+Filter list results by field value. The flag is repeatable — multiple `--where` clauses are ANDed together.
+
+```bash
+# Single condition
+katalogue field list --dataset <id> --where is_pii=true
+
+# Multiple conditions (AND)
+katalogue field list --dataset <id> --where is_pii=true --where field_type=VARCHAR
+
+# String match
+katalogue dataset list --dataset-group <id> --where dataset_name=orders
+```
+
+**Type coercion** (automatic):
+- `true` / `false` → boolean
+- Pure integer string → integer
+- Anything else → string (no quotes needed)
+
+Use the `keys` command for a resource first if you're unsure which field names are available.
+
+---
+
+## Common Patterns
 
 ### Get all tables and columns in a schema at once
-
-When you need a full picture of a schema to start modeling:
 
 ```bash
 # 1. Get all tables
@@ -151,6 +188,20 @@ katalogue dataset list --dataset-group <id> --where dataset_name=orders
 
 ---
 
+### Fetch a single resource by ID
+
+When you already have an ID and need its full details without listing:
+
+```bash
+katalogue system get <system_id>
+katalogue datasource get <datasource_id>
+katalogue dataset-group get <dataset_group_id>
+katalogue dataset get <dataset_id>
+katalogue field get <field_id>
+```
+
+---
+
 ### Get a rich column list for dbt model documentation
 
 ```bash
@@ -161,12 +212,31 @@ Pipe into your dbt YAML template — `field_name` → column name, `description`
 
 ---
 
-### Generate a dbt sources.yml (if the generate command is available)
+### Get a full system tree in one shot
+
+When you need broad discovery across an entire system (all datasources, schemas, tables, and fields), skip the step-by-step traversal and export the full tree:
 
 ```bash
-katalogue generate dbt-sources --datasource-id <id>
-katalogue generate dbt-sources --datasource-id <id> --dataset-group-id <id>
-katalogue generate dbt-sources --datasource-id <id> --split --output ./models/sources/
+katalogue export system <system_id>
+```
+
+Returns a nested JSON document with everything. Useful as a first pass before drilling into specific tables.
+
+---
+
+### Explore the business glossary
+
+The glossary is independent of the system hierarchy and contains business term definitions. Useful for mapping terms to column descriptions or validating dbt docs against business language.
+
+```bash
+# List all glossaries
+katalogue glossary list --fields glossary_id,glossary_name
+
+# Get a single glossary's metadata
+katalogue glossary get <glossary_id>
+
+# Export a full glossary with all terms and definitions
+katalogue export glossary <glossary_id>
 ```
 
 ---
@@ -175,7 +245,8 @@ katalogue generate dbt-sources --datasource-id <id> --split --output ./models/so
 
 - **Default format is JSON** — good for programmatic use. Parse with `json.loads()` or `jq`.
 - Use `--fields` to scope output to only the keys you need — reduces noise.
-- Use `--format table` if you want a quick human-readable overview.
+- Use `--format table` for a quick human-readable overview.
+- Use `--format compact` for NDJSON (one JSON object per line) — efficient for piping large result sets to `jq` or processing line-by-line in scripts.
 - Exit code `0` = success, `1` = API/auth error, `2` = bad arguments.
 
 ---
@@ -185,8 +256,12 @@ katalogue generate dbt-sources --datasource-id <id> --split --output ./models/so
 > "I need to write a dbt staging model for the `orders` table in the production Postgres."
 
 ```bash
+# 0. Find the system (if needed)
+katalogue system list --fields system_id,system_name
+# → system_id: 1, system_name: Production
+
 # 1. Find the datasource
-katalogue datasource list --fields datasource_id,datasource_name
+katalogue datasource list --system 1 --fields datasource_id,datasource_name
 # → datasource_id: 3, datasource_name: production_postgres
 
 # 2. Find the schema

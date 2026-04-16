@@ -41,7 +41,11 @@ class TestSystemGet:
     def test_missing_credentials_shows_error(self, runner, monkeypatch):
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
-        result = runner.invoke(cli, ["system", "get", "1"])
+        with (
+            patch("katalogue_cli.cli.common.load_config_file", return_value={}),
+            patch("katalogue_cli.cli.common.keyring.get_password", return_value=None),
+        ):
+            result = runner.invoke(cli, ["system", "get", "1"])
         assert result.exit_code == 1
         assert "client" in result.output.lower()
 
@@ -83,7 +87,11 @@ class TestSystemList:
     def test_missing_credentials_shows_error(self, runner, monkeypatch):
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
-        result = runner.invoke(cli, ["system", "list"])
+        with (
+            patch("katalogue_cli.cli.common.load_config_file", return_value={}),
+            patch("katalogue_cli.cli.common.keyring.get_password", return_value=None),
+        ):
+            result = runner.invoke(cli, ["system", "list"])
         assert result.exit_code == 1
         assert "client" in result.output.lower()
 
@@ -251,25 +259,3 @@ class TestSystemKeys:
             result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
         assert result.exit_code == 1
         assert "Server error" in result.output
-
-
-class TestSystemChildren:
-    def test_lists_datasources_for_system(self, runner):
-        data = [{"datasource_id": 1, "datasource_name": "prod-db"}]
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_by_parent.return_value = data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "children", "1", "--format", "json"]
-            )
-        assert result.exit_code == 0
-        MockClient.return_value.list_by_parent.assert_called_once_with(
-            "datasource", "system", "1"
-        )
-        assert json.loads(result.output)[0]["datasource_name"] == "prod-db"
-
-    def test_api_error(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_by_parent.side_effect = ApiError("Not found")
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "children", "1"])
-        assert result.exit_code == 1
-        assert "Not found" in result.output
