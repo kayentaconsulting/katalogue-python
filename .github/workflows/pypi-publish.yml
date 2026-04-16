@@ -1,0 +1,85 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Publish mode"
+        required: true
+        default: "dry-run"
+        type: choice
+        options:
+          - dry-run       # build only, no publish
+          - test-pypi     # publish to test.pypi.org
+          - pypi          # publish to pypi.org
+
+jobs:
+  publish-sdk:
+    name: Build & publish katalogue-sdk
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref_type == 'tag' || inputs.mode == 'pypi') && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
+    permissions:
+      id-token: write  # required for Trusted Publisher (OIDC)
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so hatch-vcs can read tags
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build katalogue-sdk
+        working-directory: packages/katalogue-sdk
+        run: uv build
+
+      - name: Publish katalogue-sdk to TestPyPI
+        if: inputs.mode == 'test-pypi'
+        run: echo "Would publish to TestPyPI — $(ls packages/katalogue-sdk/dist/)"
+        # uses: pypa/gh-action-pypi-publish@release/v1
+        # with:
+        #   repository-url: https://upload.test.pypi.org/legacy/
+        #   packages-dir: packages/katalogue-sdk/dist/
+
+      - name: Publish katalogue-sdk to PyPI
+        if: github.ref_type == 'tag' || inputs.mode == 'pypi'
+        run: echo "Would publish to PyPI — $(ls packages/katalogue-sdk/dist/)"
+        # uses: pypa/gh-action-pypi-publish@release/v1
+        # with:
+        #   packages-dir: packages/katalogue-sdk/dist/
+
+  publish-cli:
+    name: Build & publish katalogue-cli
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref_type == 'tag' || inputs.mode == 'pypi') && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
+    permissions:
+      id-token: write
+    needs: publish-sdk  # SDK must be on PyPI before CLI can resolve it
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build katalogue-cli
+        working-directory: packages/katalogue-cli
+        run: uv build
+
+      - name: Publish katalogue-cli to TestPyPI
+        if: inputs.mode == 'test-pypi'
+        run: echo "Would publish to TestPyPI — $(ls packages/katalogue-cli/dist/)"
+        # uses: pypa/gh-action-pypi-publish@release/v1
+        # with:
+        #   repository-url: https://upload.test.pypi.org/legacy/
+        #   packages-dir: packages/katalogue-cli/dist/
+
+      - name: Publish katalogue-cli to PyPI
+        if: github.ref_type == 'tag' || inputs.mode == 'pypi'
+        run: echo "Would publish to PyPI — $(ls packages/katalogue-cli/dist/)"
+        # uses: pypa/gh-action-pypi-publish@release/v1
+        # with:
+        #   packages-dir: packages/katalogue-cli/dist/
