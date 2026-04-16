@@ -38,18 +38,18 @@ jobs:
 
       - name: Publish katalogue-sdk to TestPyPI
         if: inputs.mode == 'test-pypi'
-        run: echo "Would publish to TestPyPI — $(ls packages/katalogue-sdk/dist/)"
+        run: echo "Would publish to TestPyPI — $(ls dist/katalogue_sdk*)"
         # uses: pypa/gh-action-pypi-publish@release/v1
         # with:
         #   repository-url: https://upload.test.pypi.org/legacy/
-        #   packages-dir: packages/katalogue-sdk/dist/
+        #   packages-dir: dist/
 
       - name: Publish katalogue-sdk to PyPI
         if: github.ref_type == 'tag' || inputs.mode == 'pypi'
-        run: echo "Would publish to PyPI — $(ls packages/katalogue-sdk/dist/)"
+        run: echo "Would publish to PyPI — $(ls dist/katalogue_sdk*)"
         # uses: pypa/gh-action-pypi-publish@release/v1
         # with:
-        #   packages-dir: packages/katalogue-sdk/dist/
+        #   packages-dir: dist/
 
   publish-cli:
     name: Build & publish katalogue-cli
@@ -73,15 +73,15 @@ jobs:
 
       - name: Publish katalogue-cli to TestPyPI
         if: inputs.mode == 'test-pypi'
-        run: echo "Would publish to TestPyPI — $(ls packages/katalogue-cli/dist/)"
+        run: echo "Would publish to TestPyPI — $(ls dist/katalogue_cli*)"
         # uses: pypa/gh-action-pypi-publish@release/v1
         # with:
         #   repository-url: https://upload.test.pypi.org/legacy/
-        #   packages-dir: packages/katalogue-cli/dist/
+        #   packages-dir: dist/
 
       - name: Publish katalogue-cli to PyPI
         if: github.ref_type == 'tag' || inputs.mode == 'pypi'
-        run: echo "Would publish to PyPI — $(ls packages/katalogue-cli/dist/)"
+        run: echo "Would publish to PyPI — $(ls dist/katalogue_cli*)"
         # uses: pypa/gh-action-pypi-publish@release/v1
         # with:
-        #   packages-dir: packages/katalogue-cli/dist/
+        #   packages-dir: dist/
