@@ -76,29 +76,6 @@ def get(
     )
 
 
-@dataset.command()
-@fields_option
-@click.argument("dataset_id")
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["json", "table", "compact"]),
-    default="json",
-    help="Output format.",
-)
-@click.pass_context
-def children(
-    ctx: click.Context, fields: list[str] | None, dataset_id: str, fmt: str
-) -> None:
-    """List fields belonging to this dataset."""
-    handle_api_call(
-        ctx,
-        lambda c: c.list_by_parent("field", "dataset", dataset_id),
-        fmt,
-        fields=fields,
-    )
-
-
 @dataset.command("keys")
 @click.option(
     "--format",

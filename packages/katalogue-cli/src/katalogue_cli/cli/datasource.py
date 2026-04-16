@@ -75,29 +75,6 @@ def get(
     )
 
 
-@datasource.command()
-@fields_option
-@click.argument("datasource_id")
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["json", "table", "compact"]),
-    default="json",
-    help="Output format.",
-)
-@click.pass_context
-def children(
-    ctx: click.Context, fields: list[str] | None, datasource_id: str, fmt: str
-) -> None:
-    """List dataset groups belonging to this datasource."""
-    handle_api_call(
-        ctx,
-        lambda c: c.list_by_parent("dataset_group", "datasource", datasource_id),
-        fmt,
-        fields=fields,
-    )
-
-
 @datasource.command("keys")
 @click.option(
     "--format",
