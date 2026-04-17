@@ -46,8 +46,8 @@ The CLI authenticates using [OAuth2 client credentials from Katalogue](https://d
 |----------|----------|---------|-------------|
 | `KATALOGUE_CLIENT_ID` | Yes | — | OAuth2 client ID |
 | `KATALOGUE_CLIENT_SECRET` | Yes | — | OAuth2 client secret |
-| `KATALOGUE_URL` | No | `https://demo-api.katalogue.se` | API base URL |
-| `KATALOGUE_TOKEN_URL` | No | `https://demo-api.katalogue.se/oidc/token` | OAuth2 token endpoint |
+| `KATALOGUE_URL` | No | `https://your-instance.katalogue.se` | API base URL |
+| `KATALOGUE_TOKEN_URL` | No | `https://your-instance.katalogue.se/oidc/token` | OAuth2 token endpoint |
 
 Copy the example env file and fill in your values:
 

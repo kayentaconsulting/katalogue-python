@@ -33,8 +33,8 @@ The CLI uses OAuth2 client credentials. Set these environment variables (or use 
 ```
 KATALOGUE_CLIENT_ID=your-client-id
 KATALOGUE_CLIENT_SECRET=your-client-secret
-KATALOGUE_TOKEN_URL=https://demo-api.katalogue.se/oidc/token   # optional, has default
-KATALOGUE_URL=https://demo-api.katalogue.se                    # optional, has default
+KATALOGUE_TOKEN_URL=https://your-instance.katalogue.se/oidc/token   # optional, has default
+KATALOGUE_URL=https://your-instance.katalogue.se                    # optional, has default
 ```
 
 OAuth2 scopes are derived automatically per command (e.g. `system.read`, `datasource.read`). You don't set them manually.

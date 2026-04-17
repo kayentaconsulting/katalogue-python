@@ -6,7 +6,6 @@ import pytest
 from click.testing import CliRunner
 
 from katalogue_cli.cli.main import cli
-from katalogue.config.settings import DEFAULT_BASE_URL
 
 
 @pytest.fixture
@@ -75,7 +74,7 @@ class TestAuthLogin:
         result = runner.invoke(
             cli,
             ["auth", "login"],
-            input="cid\ncsecret\n\n\n",
+            input="cid\ncsecret\nhttps://my.katalogue.se\n\n",
         )
 
         assert result.exit_code == 0, result.output
@@ -134,6 +133,8 @@ class TestAuthLogin:
                 "bad",
                 "--client-secret",
                 "wrong",
+                "--base-url",
+                "https://my.katalogue.se",
             ],
         )
 
@@ -141,7 +142,7 @@ class TestAuthLogin:
         mock_write.assert_not_called()
         mock_set.assert_not_called()
 
-    def test_base_url_default_shown_in_prompt(self, runner: CliRunner, mocker) -> None:
+    def test_base_url_prompted_when_not_set(self, runner: CliRunner, mocker) -> None:
         mocker.patch(
             "katalogue_cli.cli.auth.keyring.get_keyring", return_value=_usable_keyring()
         )
@@ -150,9 +151,11 @@ class TestAuthLogin:
         mock_client_cls = mocker.patch("katalogue_cli.cli.auth.KatalogueClient")
         mock_client_cls.return_value.list_resource.return_value = []
 
-        result = runner.invoke(cli, ["auth", "login"], input="cid\ncsecret\n\n\n")
+        result = runner.invoke(
+            cli, ["auth", "login"], input="cid\ncsecret\nhttps://my.katalogue.se\n\n"
+        )
 
-        assert DEFAULT_BASE_URL in result.output
+        assert "Base URL" in result.output
 
     def test_flags_bypass_prompts(self, runner: CliRunner, mocker) -> None:
         mocker.patch(

@@ -147,7 +147,7 @@ Desktop.ini
 
 # local tools
 .mcp.json
-.claude/settings.local.json
+.claude/
 
 # coverage.py
 .coverage
