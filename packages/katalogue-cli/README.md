@@ -185,5 +185,3 @@ uv sync           # install dependencies
 uv run pytest     # run all tests
 uv run katalogue --help
 ```
-
-See `PROJECT_PLAN.md` for architecture details and roadmap.
