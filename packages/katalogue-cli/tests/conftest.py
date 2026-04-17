@@ -13,7 +13,14 @@ def runner():
 @pytest.fixture
 def cli_auth():
     """Standard CLI auth args for tests that need a valid client."""
-    return ["--client-id", "test-id", "--client-secret", "test-secret"]
+    return [
+        "--client-id",
+        "test-id",
+        "--client-secret",
+        "test-secret",
+        "--base-url",
+        "https://test.katalogue.se",
+    ]
 
 
 @pytest.fixture

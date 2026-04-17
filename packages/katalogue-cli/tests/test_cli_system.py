@@ -12,7 +12,14 @@ from katalogue.client.api import AuthError, ApiError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
-CLI_AUTH = ["--client-id", "id", "--client-secret", "secret"]
+CLI_AUTH = [
+    "--client-id",
+    "id",
+    "--client-secret",
+    "secret",
+    "--base-url",
+    "https://test.katalogue.se",
+]
 
 
 @pytest.fixture

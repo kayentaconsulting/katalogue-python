@@ -9,7 +9,14 @@ from click.testing import CliRunner
 from katalogue_cli.cli.main import cli
 from katalogue.client.api import ApiError
 
-CLI_AUTH = ["--client-id", "id", "--client-secret", "secret"]
+CLI_AUTH = [
+    "--client-id",
+    "id",
+    "--client-secret",
+    "secret",
+    "--base-url",
+    "https://test.katalogue.se",
+]
 
 
 @pytest.fixture
