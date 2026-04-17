@@ -9,12 +9,14 @@ class TestClientIdResolution:
     def test_client_id_from_env_var(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "env-id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         settings = resolve_settings()
         assert settings.client_id == "env-id"
 
     def test_client_id_from_explicit_value_overrides_env(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "env-id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         settings = resolve_settings(client_id="explicit-id")
         assert settings.client_id == "explicit-id"
 
@@ -29,12 +31,14 @@ class TestClientSecretResolution:
     def test_client_secret_from_env_var(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         settings = resolve_settings()
         assert settings.client_secret.get_secret_value() == "env-secret"
 
     def test_client_secret_from_explicit_value_overrides_env(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         settings = resolve_settings(client_secret="explicit-secret")
         assert settings.client_secret.get_secret_value() == "explicit-secret"
 
@@ -72,6 +76,7 @@ class TestTokenUrlResolution:
     def test_token_url_from_env_var(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         monkeypatch.setenv("KATALOGUE_TOKEN_URL", "https://auth.example.com/token")
         settings = resolve_settings()
         assert settings.token_url == "https://auth.example.com/token"
@@ -79,15 +84,17 @@ class TestTokenUrlResolution:
     def test_token_url_has_sensible_default(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         monkeypatch.delenv("KATALOGUE_TOKEN_URL", raising=False)
         settings = resolve_settings()
-        assert settings.token_url
+        assert settings.token_url == "https://test.katalogue.se/oidc/token"
 
 
 class TestSettingsSecurity:
     def test_repr_hides_secret(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "super-secret-value")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         settings = resolve_settings()
         assert "super-secret-value" not in repr(settings)
         assert "super-secret-value" not in str(settings)
@@ -101,5 +108,6 @@ class TestSettingsSecurity:
     def test_invalid_token_url_raises_config_error(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         with pytest.raises(ConfigError, match="[Uu]rl|URL"):
             resolve_settings(token_url="not-a-url")
