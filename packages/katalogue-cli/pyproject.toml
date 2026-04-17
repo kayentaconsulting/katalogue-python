@@ -1,14 +1,36 @@
 [project]
 name = "katalogue-cli"
 dynamic = ["version"]
-description = "CLI for the Katalogue Data Catalog API"
+description = "CLI for Katalogue"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Kayenta Consulting AB", email = "hello@katalogue.se" }]
+keywords = ["katalogue", "data catalog", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+    "Topic :: Utilities",
+    "Topic :: Database",
+]
 dependencies = [
-    "katalogue-sdk",
+    "katalogue-sdk>=0.1.0",
     "click>=8.1",
     "platformdirs>=4.0",
     "keyring>=24.0",
 ]
+
+[project.urls]
+Homepage = "https://katalogue.se"
+Repository = "https://github.com/kayentaconsulting/katalogue-cli"
+"Bug Tracker" = "https://github.com/kayentaconsulting/katalogue-cli/issues"
 
 [project.scripts]
 katalogue = "katalogue_cli.cli.main:cli"

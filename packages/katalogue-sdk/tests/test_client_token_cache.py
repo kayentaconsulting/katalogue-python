@@ -9,15 +9,18 @@ import pytest
 from pydantic import SecretStr
 
 from katalogue.client.cache import InMemoryTokenCache, TokenEntry
-from katalogue.config.settings import Settings, DEFAULT_TOKEN_URL, DEFAULT_BASE_URL
+from katalogue.config.settings import Settings
+
+_BASE_URL = "https://test.katalogue.se"
+_TOKEN_URL = "https://test.katalogue.se/oidc/token"
 
 
 def _settings() -> Settings:
     return Settings(
         client_id="test-id",
         client_secret=SecretStr("test-secret"),
-        base_url=DEFAULT_BASE_URL,
-        token_url=DEFAULT_TOKEN_URL,
+        base_url=_BASE_URL,
+        token_url=_TOKEN_URL,
     )
 
 
@@ -30,7 +33,7 @@ def _valid_entry(scope: str = "system.read") -> TokenEntry:
 
 
 def _cache_key(scope: str = "system.read") -> str:
-    return f"{DEFAULT_TOKEN_URL}|test-id|{scope}"
+    return f"{_TOKEN_URL}|test-id|{scope}"
 
 
 @pytest.fixture

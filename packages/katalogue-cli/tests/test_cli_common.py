@@ -8,7 +8,14 @@ import click
 from katalogue_cli.cli.common import filter_fields, parse_where_value, where_option
 from katalogue_cli.cli.main import cli
 
-CLI_AUTH = ["--client-id", "test-id", "--client-secret", "test-secret"]
+CLI_AUTH = [
+    "--client-id",
+    "test-id",
+    "--client-secret",
+    "test-secret",
+    "--base-url",
+    "https://test.katalogue.se",
+]
 
 
 @click.command()

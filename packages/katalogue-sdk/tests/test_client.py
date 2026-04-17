@@ -67,6 +67,7 @@ class TestNoArgsConstructor:
     def test_reads_credentials_from_env_vars(self, monkeypatch):
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "env-id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
+        monkeypatch.setenv("KATALOGUE_URL", "https://test.katalogue.se")
         with patch("katalogue.client.api.OAuth2Session"):
             client = KatalogueClient()
         assert client._client_id == "env-id"

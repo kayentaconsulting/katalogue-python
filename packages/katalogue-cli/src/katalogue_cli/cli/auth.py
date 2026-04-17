@@ -16,8 +16,6 @@ from katalogue_cli.config.file import (
 )
 from katalogue.client.api import ApiError, AuthError, KatalogueClient
 from katalogue.config.settings import (
-    DEFAULT_BASE_URL,
-    DEFAULT_TOKEN_URL,
     ConfigError,
     resolve_settings,
 )
@@ -40,12 +38,14 @@ def auth() -> None:
     help="OAuth2 client secret.",
 )
 @click.option(
-    "--base-url", default=None, help=f"API base URL (default: {DEFAULT_BASE_URL})."
+    "--base-url",
+    default=None,
+    help="API base URL. Required — set KATALOGUE_URL or pass --base-url.",
 )
 @click.option(
     "--token-url",
     default=None,
-    help=f"OAuth2 token URL (default: {DEFAULT_TOKEN_URL}).",
+    help="OAuth2 token URL. Defaults to <base-url>/oidc/token if not set.",
 )
 def login(
     client_id: str | None,
@@ -69,11 +69,10 @@ def login(
     resolved_client_secret: str = client_secret or click.prompt(
         "Client Secret", hide_input=True
     )
-    resolved_base_url: str = base_url or click.prompt(
-        "Base URL", default=DEFAULT_BASE_URL
-    )
+    resolved_base_url: str = base_url or click.prompt("Base URL")
     resolved_token_url: str = token_url or click.prompt(
-        "Token URL", default=DEFAULT_TOKEN_URL
+        "Token URL",
+        default=f"{resolved_base_url.rstrip('/')}/oidc/token",
     )
 
     # 3. Validate credentials by fetching a token via a probe API call.

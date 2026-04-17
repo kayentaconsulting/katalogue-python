@@ -10,9 +10,6 @@ import re
 
 from pydantic import BaseModel, ConfigDict, SecretStr, ValidationError, field_validator
 
-DEFAULT_BASE_URL = "https://demo-api.katalogue.se"
-DEFAULT_TOKEN_URL = "https://demo-api.katalogue.se/oidc/token"
-
 _URL_PATTERN = re.compile(r"^https?://\S+$")
 
 
@@ -56,9 +53,14 @@ def resolve_settings(
             "No client secret provided. Set KATALOGUE_CLIENT_SECRET or pass --client-secret."
         )
 
-    resolved_base_url = base_url or os.environ.get("KATALOGUE_URL") or DEFAULT_BASE_URL
+    resolved_base_url = base_url or os.environ.get("KATALOGUE_URL")
+    if not resolved_base_url:
+        raise ConfigError("No base URL provided. Set KATALOGUE_URL or pass --base-url.")
+
     resolved_token_url = (
-        token_url or os.environ.get("KATALOGUE_TOKEN_URL") or DEFAULT_TOKEN_URL
+        token_url
+        or os.environ.get("KATALOGUE_TOKEN_URL")
+        or f"{resolved_base_url.rstrip('/')}/oidc/token"
     )
 
     try:

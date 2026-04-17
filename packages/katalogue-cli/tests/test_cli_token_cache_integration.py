@@ -11,7 +11,14 @@ from katalogue_cli.auth import DiskTokenCache
 
 
 def _auth_args() -> list[str]:
-    return ["--client-id", "test-id", "--client-secret", "test-secret"]
+    return [
+        "--client-id",
+        "test-id",
+        "--client-secret",
+        "test-secret",
+        "--base-url",
+        "https://test.katalogue.se",
+    ]
 
 
 def test_client_receives_disk_token_cache(runner: CliRunner, mocker) -> None:
