@@ -214,5 +214,5 @@ You never need to manage tokens manually.
 | `ConfigError` | exception | Missing credentials or invalid URL at construction time |
 | `AuthError` | exception | HTTP 401 — authentication failed |
 | `ApiError` | exception | Any other HTTP error (4xx, 5xx) |
-| `DEFAULT_BASE_URL` | `str` | `"https://demo-api.katalogue.se"` |
-| `DEFAULT_TOKEN_URL` | `str` | `"https://demo-api.katalogue.se/oidc/token"` |
+| `DEFAULT_BASE_URL` | `str` | `"https://your-instance.katalogue.se"` |
+| `DEFAULT_TOKEN_URL` | `str` | `"https://your-instance.katalogue.se/oidc/token"` |

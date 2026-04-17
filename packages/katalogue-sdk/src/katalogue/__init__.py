@@ -2,8 +2,6 @@ from katalogue.client.api import ApiError, AuthError, KatalogueClient
 from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
 from katalogue.config.settings import (
     ConfigError,
-    DEFAULT_BASE_URL,
-    DEFAULT_TOKEN_URL,
     Settings,
     resolve_settings,
 )
@@ -15,8 +13,6 @@ __all__ = [
     "InMemoryTokenCache",
     "Settings",
     "resolve_settings",
-    "DEFAULT_BASE_URL",
-    "DEFAULT_TOKEN_URL",
     "AuthError",
     "ApiError",
     "ConfigError",

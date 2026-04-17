@@ -65,8 +65,9 @@ class TestConfigFilePrecedence:
         assert _settings_from(mock_client).client_id == "env-id"
 
     def test_config_file_base_url_used(
-        self, runner: CliRunner, mock_client, mocker
+        self, runner: CliRunner, mock_client, mocker, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.delenv("KATALOGUE_URL", raising=False)
         mocker.patch(
             "katalogue_cli.cli.common.load_config_file",
             return_value={"base_url": "https://from-file.example.com"},
@@ -75,11 +76,16 @@ class TestConfigFilePrecedence:
         assert _settings_from(mock_client).base_url == "https://from-file.example.com"
 
     def test_config_file_token_url_used(
-        self, runner: CliRunner, mock_client, mocker
+        self, runner: CliRunner, mock_client, mocker, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.delenv("KATALOGUE_URL", raising=False)
+        monkeypatch.delenv("KATALOGUE_TOKEN_URL", raising=False)
         mocker.patch(
             "katalogue_cli.cli.common.load_config_file",
-            return_value={"token_url": "https://from-file.example.com/oidc/token"},
+            return_value={
+                "base_url": "https://from-file.example.com",
+                "token_url": "https://from-file.example.com/oidc/token",
+            },
         )
         runner.invoke(cli, [*_auth_args(), "system", "list"])
         assert (

@@ -12,8 +12,6 @@ from katalogue_cli.auth import DiskTokenCache
 from katalogue_cli.config.file import load_config_file
 from katalogue.client.api import KatalogueClient, AuthError, ApiError
 from katalogue.config.settings import (
-    DEFAULT_BASE_URL,
-    DEFAULT_TOKEN_URL,
     resolve_settings,
     ConfigError,
 )
@@ -67,16 +65,8 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
             settings = resolve_settings(
                 client_id=client_id,
                 client_secret=client_secret,
-                base_url=(
-                    ctx.obj["base_url"]
-                    if ctx.obj["base_url"] != DEFAULT_BASE_URL
-                    else file_cfg.get("base_url")
-                ),
-                token_url=(
-                    ctx.obj["token_url"]
-                    if ctx.obj["token_url"] != DEFAULT_TOKEN_URL
-                    else file_cfg.get("token_url")
-                ),
+                base_url=ctx.obj["base_url"] or file_cfg.get("base_url"),
+                token_url=ctx.obj["token_url"] or file_cfg.get("token_url"),
             )
         except ConfigError as e:
             click.echo(f"Error: {e}", err=True)

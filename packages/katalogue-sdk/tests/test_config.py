@@ -60,13 +60,12 @@ class TestBaseUrlResolution:
         settings = resolve_settings(base_url="https://explicit.example.com")
         assert settings.base_url == "https://explicit.example.com"
 
-    def test_base_url_has_sensible_default(self, monkeypatch):
+    def test_base_url_required_when_not_set(self, monkeypatch):
         monkeypatch.delenv("KATALOGUE_URL", raising=False)
         monkeypatch.setenv("KATALOGUE_CLIENT_ID", "id")
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "secret")
-        settings = resolve_settings()
-        assert settings.base_url
-        assert settings.base_url.startswith("https://")
+        with pytest.raises(ConfigError, match="KATALOGUE_URL"):
+            resolve_settings()
 
 
 class TestTokenUrlResolution:

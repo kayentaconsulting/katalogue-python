@@ -1,7 +1,7 @@
 [project]
 name = "katalogue-cli"
 dynamic = ["version"]
-description = "CLI for the Katalogue Data Catalog API"
+description = "CLI for [Katalogue](https://katalogue.se), based on the Katalogue REST API."
 requires-python = ">=3.11"
 dependencies = [
     "katalogue-sdk",

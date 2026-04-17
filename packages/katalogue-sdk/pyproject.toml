@@ -1,7 +1,7 @@
 [project]
 name = "katalogue-sdk"
 dynamic = ["version"]
-description = "Python SDK for the Katalogue Data Catalog API"
+description = "Python client for [Katalogue](https://katalogue.se), based on the Katalogue REST API."
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",

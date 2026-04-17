@@ -15,7 +15,6 @@ from katalogue_cli.cli.export import export
 from katalogue_cli.cli.field import field
 from katalogue_cli.cli.glossary import glossary
 from katalogue_cli.cli.system import system
-from katalogue import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
 
 
 @click.group()
@@ -39,16 +38,16 @@ from katalogue import DEFAULT_BASE_URL, DEFAULT_TOKEN_URL
 @click.option(
     "--base-url",
     envvar="KATALOGUE_URL",
-    default=DEFAULT_BASE_URL,
+    default=None,
     show_envvar=True,
-    help="API base URL.",
+    help="API base URL. Required — set KATALOGUE_URL or pass --base-url.",
 )
 @click.option(
     "--token-url",
     envvar="KATALOGUE_TOKEN_URL",
-    default=DEFAULT_TOKEN_URL,
+    default=None,
     show_envvar=True,
-    help="OAuth2 token URL.",
+    help="OAuth2 token URL. Defaults to <base-url>/oidc/token if not set.",
 )
 @click.option(
     "--verbose",
@@ -62,8 +61,8 @@ def cli(
     ctx: click.Context,
     client_id: str | None,
     client_secret: str | None,
-    base_url: str,
-    token_url: str,
+    base_url: str | None,
+    token_url: str | None,
     verbose: bool,
 ) -> None:
     """Interact with the Katalogue Data Catalog API."""
