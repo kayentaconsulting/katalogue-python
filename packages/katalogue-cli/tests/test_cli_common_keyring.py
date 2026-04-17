@@ -21,7 +21,7 @@ class TestKeyringFallback:
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
         mocker.patch(
             "katalogue_cli.cli.common.load_config_file",
-            return_value={"client_id": "cid"},
+            return_value={"client_id": "cid", "base_url": "https://test.katalogue.se"},
         )
         mocker.patch(
             "katalogue_cli.cli.common.keyring.get_password",
