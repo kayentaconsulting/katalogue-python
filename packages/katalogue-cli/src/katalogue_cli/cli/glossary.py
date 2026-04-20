@@ -11,7 +11,7 @@ from katalogue_cli.cli.common import (
     handle_api_call,
     show_keys,
 )
-from katalogue_cli.cli.defaults import DEFAULT_FIELDS
+from katalogue_cli.formatters.defaults import DEFAULT_FIELDS
 
 
 @click.group()
