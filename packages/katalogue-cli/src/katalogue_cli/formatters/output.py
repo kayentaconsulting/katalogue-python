@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from katalogue.utils import unwrap_list
+
 
 def extract_draftjs_text(value: Any) -> Any:
     """Return plain text from a Draft.js JSON string, or the value unchanged."""
@@ -115,6 +117,31 @@ def format_grouped_table(
         lines.append("")
 
     return "\n".join(lines).rstrip()
+
+
+def format_output(
+    data: Any,
+    fmt: str,
+    group_by: list[tuple[str, str]] | None = None,
+    wide: bool = False,
+) -> str:
+    """Route data to the correct formatter and return the output string.
+
+    Unwraps API envelope dicts (e.g. {"systems": [...]}) for table output so
+    callers never need to know about the wrapper shape.
+    """
+    if fmt == "json":
+        return format_json(data)
+    if fmt == "compact":
+        return format_compact_json(data)
+
+    data = unwrap_list(data)
+
+    if isinstance(data, list) and group_by and not wide:
+        return format_grouped_table(data, group_by)
+    if isinstance(data, list):
+        return format_list_table(data)
+    return format_table(data)
 
 
 def _format_dict(d: dict[str, Any], lines: list[str], indent: int = 0) -> None:
