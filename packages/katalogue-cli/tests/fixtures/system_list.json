@@ -1,17 +1,20 @@
 [
   {
-    "id": "sys-001",
-    "name": "Customer Data Platform",
+    "system_id": "sys-001",
+    "system_name": "Customer Data Platform",
+    "system_type": "Data Catalog",
     "description": "Central customer data repository"
   },
   {
-    "id": "sys-002",
-    "name": "Product Catalog",
+    "system_id": "sys-002",
+    "system_name": "Product Catalog",
+    "system_type": "Data Catalog",
     "description": "Product and inventory data"
   },
   {
-    "id": "sys-003",
-    "name": "Analytics Warehouse",
+    "system_id": "sys-003",
+    "system_name": "Analytics Warehouse",
+    "system_type": "Data Warehouse",
     "description": null
   }
 ]

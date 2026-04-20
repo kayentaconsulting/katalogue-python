@@ -17,6 +17,7 @@ from katalogue.config.settings import (
 )
 from katalogue_cli.formatters.output import (
     format_compact_json,
+    format_grouped_table,
     format_json,
     format_list_table,
     format_table,
@@ -155,6 +156,9 @@ def handle_api_call(
     fmt: str,
     fields: list[str] | None = None,
     where: Sequence[tuple[str, Any]] = (),
+    default_fields: list[str] | None = None,
+    wide: bool = False,
+    group_by: list[tuple[str, str]] | None = None,
 ) -> None:
     """Execute an API call, handle errors, apply field filtering, and format output."""
     client = _get_or_create_client(ctx)
@@ -167,12 +171,23 @@ def handle_api_call(
     for key, value in where:
         data = filter_where(data, key, value)
 
-    data = filter_fields(data, fields)
+    effective_fields = fields or (None if wide or fmt != "table" else default_fields)
+
+    # Always retain group_by fields so the grouped formatter can use them as headers
+    if group_by and effective_fields:
+        all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
+        extra = [f for f in all_parent_fields if f not in effective_fields]
+        if extra:
+            effective_fields = list(effective_fields) + extra
+
+    data = filter_fields(data, effective_fields)
 
     if fmt == "json":
         click.echo(format_json(data))
     elif fmt == "compact":
         click.echo(format_compact_json(data))
+    elif isinstance(data, list) and group_by and not wide:
+        click.echo(format_grouped_table(data, group_by))
     elif isinstance(data, list):
         click.echo(format_list_table(data))
     else:
@@ -234,4 +249,12 @@ fields_option = click.option(
     help="Comma-separated field names to include in output.",
     callback=lambda ctx, param, v: v.split(",") if v else None,
     is_eager=False,
+)
+
+# Reusable --wide decorator for list commands
+wide_option = click.option(
+    "--wide",
+    is_flag=True,
+    default=False,
+    help="Show all fields in table output (overrides default field selection).",
 )

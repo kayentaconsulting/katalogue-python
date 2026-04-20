@@ -6,10 +6,12 @@ import click
 
 from katalogue_cli.cli.common import (
     fields_option,
+    wide_option,
     where_option,
     handle_api_call,
     show_keys,
 )
+from katalogue_cli.cli.defaults import DEFAULT_FIELDS
 
 
 @click.group()
@@ -19,21 +21,32 @@ def glossary() -> None:
 
 @glossary.command("list")
 @fields_option
+@wide_option
 @where_option
 @click.option(
     "--format",
     "fmt",
     type=click.Choice(["json", "table", "compact"]),
-    default="json",
+    default="table",
     help="Output format.",
 )
 @click.pass_context
 def list_cmd(
-    ctx: click.Context, fields: list[str] | None, where: list[tuple], fmt: str
+    ctx: click.Context,
+    fields: list[str] | None,
+    wide: bool,
+    where: list[tuple],
+    fmt: str,
 ) -> None:
     """List all glossaries."""
     handle_api_call(
-        ctx, lambda c: c.list_resource("glossary"), fmt, fields=fields, where=where
+        ctx,
+        lambda c: c.list_resource("glossary"),
+        fmt,
+        fields=fields,
+        where=where,
+        default_fields=DEFAULT_FIELDS["glossary"],
+        wide=wide,
     )
 
 
