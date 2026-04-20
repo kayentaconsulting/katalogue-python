@@ -37,6 +37,12 @@ _PARENT_ID_FIELD: dict[str, str] = {
     "field": "dataset_id",
 }
 
+_VALID_RESOURCES: frozenset[str] = frozenset(
+    {"system", "datasource", "dataset_group", "dataset", "field", "glossary"}
+)
+_VALID_FORMATS: frozenset[str] = frozenset({"json", "compact"})
+_VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
+
 
 class AuthError(Exception):
     """Raised when the API returns 401 Unauthorized."""
@@ -131,12 +137,12 @@ class KatalogueClient:
         url = f"{self._base_url}/api/{resource}/all"
         return self._request("GET", url, scope=f"{resource}.read")
 
-    def get_resource(self, resource: str, resource_id: str) -> dict[str, Any]:
+    def get_resource(self, resource: str, resource_id: int | str) -> dict[str, Any]:
         url = f"{self._base_url}/api/{resource}/{quote(str(resource_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
     def list_by_parent(
-        self, resource: str, parent_resource: str, parent_id: str
+        self, resource: str, parent_resource: str, parent_id: int | str
     ) -> list[dict[str, Any]]:
         url = f"{self._base_url}/api/{resource}/{parent_resource}/{quote(str(parent_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
@@ -144,8 +150,8 @@ class KatalogueClient:
     def get(
         self,
         resource: str,
-        resource_id: str | None = None,
-        parent_id: str | None = None,
+        resource_id: int | None = None,
+        parent_id: int | None = None,
         filter: dict[str, Any] | None = None,
         fields: list[str] | None = None,
         sort: list[dict[str, str]] | None = None,
@@ -160,8 +166,8 @@ class KatalogueClient:
           resource_id + parent_id -> get_resource, returned only if it belongs to parent
           neither                 -> list_resource (all records)
 
-        For top-level resources with no parent (system, glossary), parent_id is ignored
-        when combined with resource_id.
+        For top-level resources with no parent (system, glossary), parent_id is always
+        ignored — both when combined with resource_id and when used alone.
 
         Args:
             resource: Resource type — "system", "datasource", "dataset_group",
@@ -182,6 +188,26 @@ class KatalogueClient:
             Filtered, sorted, and formatted result. Type depends on `format`:
             None -> dict or list, "json"/"compact" -> str.
         """
+        resource = resource.lower()
+        if resource not in _VALID_RESOURCES:
+            raise ValueError(
+                f"Invalid resource '{resource}'. Must be one of: {', '.join(sorted(_VALID_RESOURCES))}"
+            )
+        if format is not None:
+            format = format.lower()
+            if format not in _VALID_FORMATS:
+                raise ValueError(
+                    f"Invalid format '{format}'. Must be one of: {', '.join(sorted(_VALID_FORMATS))}"
+                )
+        if sort:
+            for spec in sort:
+                for col, direction in spec.items():
+                    if direction.lower() not in _VALID_SORT_DIRECTIONS:
+                        raise ValueError(
+                            f"Invalid sort direction '{direction}' for column '{col}'. Must be 'asc' or 'desc'."
+                        )
+                    spec[col] = direction.lower()
+
         if resource_id is not None:
             data: Any = self.get_resource(resource, resource_id)
             if parent_id is not None:
@@ -190,11 +216,10 @@ class KatalogueClient:
                     return None
         elif parent_id is not None:
             parent_resource = _PARENT_RESOURCE.get(resource)
-            if parent_resource is None:
-                raise ValueError(
-                    f"Resource '{resource}' has no parent — parent_id is not supported for top-level resources."
-                )
-            data = self.list_by_parent(resource, parent_resource, parent_id)
+            if parent_resource is not None:
+                data = self.list_by_parent(resource, parent_resource, parent_id)
+            else:
+                data = self.list_resource(resource)
         else:
             data = self.list_resource(resource)
 

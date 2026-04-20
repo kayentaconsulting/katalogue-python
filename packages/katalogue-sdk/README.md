@@ -23,20 +23,24 @@ pip install "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirec
 ## Quick Start
 
 ```python
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
-from katalogue import KatalogueClient, resolve_settings
+from katalogue import KatalogueClient
 
-vault = SecretClient(
-    vault_url="https://your-vault.vault.azure.net",
-    credential=DefaultAzureCredential(),
-)
-settings = resolve_settings(
-    client_id=vault.get_secret("katalogue-client-id").value,
-    client_secret=vault.get_secret("katalogue-client-secret").value,
-)
-client = KatalogueClient(settings)
-systems = client.list_resource("system")
+client = KatalogueClient()  # reads KATALOGUE_CLIENT_ID / KATALOGUE_CLIENT_SECRET from env
+
+# List all systems (Python object)
+client.get("system")
+
+# List systems — selected fields, sorted, as JSON
+client.get("system", fields=["system_id", "system_name"], sort=[{"system_name": "asc"}], format="json")
+
+# Single record by ID
+client.get("system", resource_id=1)
+
+# All datasources under a system
+client.get("datasource", parent_id=1)
+
+# All PII fields in a specific datasource — filtered client-side
+client.get("field", filter={"datasource_id": 1, "is_pii": True}, fields=["field_id", "field_name", "dataset_name"])
 ```
 
 ## Credentials
@@ -113,12 +117,12 @@ client = KatalogueClient()
 
 ## Resource Hierarchy
 
-Resources form a hierarchy. Pass these strings as the `resource` / `parent_resource` arguments:
+Resources form a hierarchy. Pass these strings as the `resource` argument:
 
 ```
 system
   └── datasource
-        └── dataset-group
+        └── dataset_group
               └── dataset
                     └── field
 glossary   (independent)
@@ -150,43 +154,102 @@ client.get(
 | — | ✓ | All children of that parent |
 | ✓ | ✓ | Single record, `None` if it doesn't belong to the parent |
 
-Top-level resources (`system`, `glossary`) have no parent — passing `parent_id` without `resource_id` raises `ValueError`.
+`parent_id` is silently ignored for top-level resources (`system`, `glossary`).
 
-### Examples
+### List all records
 
 ```python
-# List all systems
-client.get("system")
-# -> [{"system_id": "sys-001", "system_name": "CDP", ...}, ...]
+client.get("system", fields=["system_id", "system_name", "system_type"])
+# -> [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}, ...]
+```
 
-# Single record
-client.get("system", resource_id="sys-001")
-# -> {"system_id": "sys-001", "system_name": "CDP", ...}
+### Single record
 
-# All datasources under a system
-client.get("datasource", parent_id="sys-001")
-# -> [{"datasource_id": "ds-001", ...}, ...]
+```python
+client.get("system", resource_id=1)
+# -> {"system_id": 1, "system_name": "Katalogue", ...}
+```
 
-# Scoped lookup — returns None if the field doesn't belong to that dataset
-client.get("field", resource_id="f-001", parent_id="dt-001")
+### Children by parent
 
-# Filter client-side (AND logic)
-client.get("system", filter={"system_type": "source"})
+Walk the full hierarchy: system → datasource → dataset_group → dataset → field.
 
-# Keep only specific fields
-client.get("system", fields=["system_id", "system_name"])
+```python
+datasources = client.get("datasource", parent_id=1, fields=["datasource_id", "datasource_name"])
 
-# Multi-column sort
-client.get("system", sort=[{"system_name": "asc"}, {"system_id": "desc"}])
+dataset_groups = client.get("dataset_group", parent_id=datasources[0]["datasource_id"],
+                            fields=["dataset_group_id", "dataset_group_name"])
 
-# Return pretty-printed JSON string
-client.get("system", format="json")
+datasets = client.get("dataset", parent_id=dataset_groups[0]["dataset_group_id"],
+                      fields=["dataset_id", "dataset_name"])
 
-# Return compact JSON string (no spaces)
-client.get("system", format="compact")
+fields = client.get("field", parent_id=datasets[0]["dataset_id"],
+                    fields=["field_id", "field_name", "data_type", "is_pii"])
+```
 
-# Convert rich-text description fields to plain text
-client.get("system", format_descriptions_as_text=True)
+### Scoped lookup
+
+Returns `None` if the record doesn't belong to the given parent.
+
+```python
+client.get("field", resource_id=42, parent_id=10)
+# -> record if field 42 is in dataset 10, else None
+```
+
+### Filter
+
+AND-logic, applied client-side. Works on any field present in the API response.
+
+```python
+# All PII fields in a specific datasource
+client.get("field",
+    filter={"datasource_id": 1, "is_pii": True},
+    fields=["field_id", "field_name", "dataset_name", "datasource_name", "is_pii"])
+```
+
+### Sort
+
+Multi-column. `"asc"` and `"desc"` are case-insensitive. Null values always sort last.
+
+```python
+client.get("system", sort=[{"system_name": "asc"}], fields=["system_id", "system_name"])
+
+# Multi-column: primary key first
+client.get("field", sort=[{"dataset_name": "asc"}, {"field_name": "asc"}])
+```
+
+### Output format
+
+```python
+client.get("system", fields=["system_id", "system_name"])          # Python object (default)
+client.get("system", fields=["system_id", "system_name"], format="json")     # pretty JSON string
+client.get("system", fields=["system_id", "system_name"], format="compact")  # minified JSON string
+```
+
+### Plain-text descriptions
+
+Description fields are stored as rich-text JSON. Pass `format_descriptions_as_text=True` to extract plain text.
+
+```python
+client.get("system",
+    fields=["system_id", "system_name", "system_description"],
+    format_descriptions_as_text=True)
+# -> [{"system_id": 1, "system_name": "Katalogue", "system_description": "User-friendly system..."}]
+```
+
+### Validation
+
+`resource`, `format`, and sort `direction` are validated. Invalid values raise `ValueError` with the list of accepted values.
+
+```python
+client.get("ssystem")
+# ValueError: Invalid resource 'ssystem'. Must be one of: dataset, dataset_group, datasource, field, glossary, system
+
+client.get("system", format="table")
+# ValueError: Invalid format 'table'. Must be one of: compact, json
+
+client.get("system", sort=[{"system_name": "ascending"}])
+# ValueError: Invalid sort direction 'ascending' for column 'system_name'. Must be 'asc' or 'desc'.
 ```
 
 ## Utilities
@@ -287,24 +350,24 @@ format_compact_json([{"id": 1}]) # -> '[{"id":1}]'
 These are available for advanced use cases where you need direct control over API calls.
 
 ```python
-# List all records of a resource type
+# List all records of a resource type (returns raw API envelope)
 client.list_resource("system")
-# -> [{"system_id": "sys-001", ...}, ...]
+# -> {"systems": [{"system_id": 1, ...}, ...]}
 
 # Get a single record by ID
-client.get_resource("system", "sys-001")
-# -> {"system_id": "sys-001", ...}
+client.get_resource("system", 1)
+# -> {"system_id": 1, "system_name": "Katalogue", ...}
 
 # List children of a parent resource
-client.list_by_parent("datasource", "system", "sys-001")
-# -> [{"datasource_id": "ds-001", ...}, ...]
+client.list_by_parent("datasource", "system", 1)
+# -> [{"datasource_id": 1, ...}, ...]
 
 # Full system export (all nested data in one call)
-client.get_system_export("sys-001")
+client.get_system_export(1)
 # -> {"meta": {...}, "data": {"system": {...}, "datasources": [...], ...}}
 
 # Full glossary export
-client.get_glossary_export("gl-001")
+client.get_glossary_export(1)
 # -> {"meta": {...}, "data": {"glossary": {...}, "terms": [...], ...}}
 ```
 
@@ -317,7 +380,7 @@ from katalogue import KatalogueClient, ConfigError, AuthError, ApiError
 
 try:
     client = KatalogueClient()
-    systems = client.list_resource("system")
+    systems = client.get("system", fields=["system_id", "system_name"])
 except ConfigError as e:
     # Missing or invalid credentials — check env vars / Settings arguments
     print(f"Config error: {e}")

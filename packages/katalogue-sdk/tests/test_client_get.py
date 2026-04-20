@@ -58,9 +58,11 @@ class TestGetRouting:
         mock.assert_called_once_with("field", "dataset", "dt-001")
         assert result == rows
 
-    def test_parent_id_on_top_level_resource_raises(self, client):
-        with pytest.raises(ValueError, match="no parent"):
-            client.get("system", parent_id="some-id")
+    def test_parent_id_on_top_level_resource_ignored(self, client):
+        with patch.object(client, "list_resource", return_value=_SYSTEMS) as mock:
+            result = client.get("system", parent_id=999)
+        mock.assert_called_once_with("system")
+        assert result == _SYSTEMS
 
     def test_resource_id_and_parent_id_match_returns_record(self, client):
         record = {"field_id": "f-001", "dataset_id": "dt-001"}
@@ -141,6 +143,47 @@ class TestGetFormat:
         with patch.object(client, "list_resource", return_value=[{"id": 1}]):
             result = client.get("system", format="compact")
         assert result == '[{"id":1}]'
+
+
+class TestGetValidation:
+    def test_invalid_resource_raises(self, client):
+        with pytest.raises(ValueError, match="resource"):
+            client.get("ssystem")
+
+    def test_valid_resource_case_insensitive(self, client):
+        with patch.object(client, "list_resource", return_value=_SYSTEMS):
+            result = client.get("System")
+        assert result == _SYSTEMS
+
+    def test_invalid_format_raises(self, client):
+        with pytest.raises(ValueError, match="format"):
+            client.get("system", format="table")
+
+    def test_format_case_insensitive(self, client):
+        with patch.object(client, "list_resource", return_value=[{"id": 1}]):
+            result = client.get("system", format="JSON")
+        assert isinstance(result, str)
+
+    def test_invalid_sort_direction_raises(self, client):
+        with pytest.raises(ValueError, match="sort"):
+            client.get("system", sort=[{"system_name": "ascending"}])
+
+    def test_sort_direction_case_insensitive(self, client):
+        with patch.object(client, "list_resource", return_value=_SYSTEMS):
+            result = client.get("system", sort=[{"system_name": "ASC"}])
+        assert result[0]["system_name"] == "Analytics"
+
+    def test_int_resource_id_accepted(self, client):
+        record = _SYSTEMS[0]
+        with patch.object(client, "get_resource", return_value=record) as mock:
+            client.get("system", resource_id=1)
+        mock.assert_called_once_with("system", 1)
+
+    def test_int_parent_id_accepted(self, client):
+        rows = [{"field_id": 1, "dataset_id": 42}]
+        with patch.object(client, "list_by_parent", return_value=rows) as mock:
+            client.get("field", parent_id=42)
+        mock.assert_called_once_with("field", "dataset", 42)
 
 
 class TestGetFormatDescriptions:
