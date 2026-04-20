@@ -15,7 +15,7 @@ from katalogue.config.settings import (
     resolve_settings,
     ConfigError,
 )
-from katalogue.utils import filter_fields, filter_where, unwrap_list
+from katalogue.utils import filter_fields, filter_resultset, unwrap_list
 from katalogue_cli.formatters.output import format_json, format_output
 
 _NULL_BACKENDS = {"Keyring", "NullKeyring"}
@@ -127,7 +127,7 @@ def handle_api_call(
         return
 
     for key, value in where:
-        data = filter_where(data, key, value)
+        data = filter_resultset(data, key, value)
 
     effective_fields = fields or (None if wide or fmt != "table" else default_fields)
 
