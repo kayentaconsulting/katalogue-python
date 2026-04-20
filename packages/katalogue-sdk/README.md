@@ -124,51 +124,187 @@ system
 glossary   (independent)
 ```
 
-## Client Methods
+## `get()` — High-Level API
 
-### List all items of a resource type
+`get()` is the recommended way to query resources. It handles routing, filtering, sorting, and formatting in one call.
 
 ```python
-systems = client.list_resource("system")
+client.get(
+    resource,                        # required: "system", "datasource", "dataset_group", "dataset", "field", "glossary"
+    resource_id=None,                # fetch a single record by ID
+    parent_id=None,                  # fetch all children of this parent
+    filter=None,                     # AND-logic key/value filter applied client-side
+    fields=None,                     # keep only these fields in the result
+    sort=None,                       # multi-column sort: [{"field": "asc"}, {"other": "desc"}]
+    format=None,                     # "json" | "compact" | None (Python object, default)
+    format_descriptions_as_text=False,  # convert rich-text description fields to plain text
+)
+```
+
+### Routing
+
+| `resource_id` | `parent_id` | Behaviour |
+|---|---|---|
+| — | — | All records of the resource type |
+| ✓ | — | Single record by ID |
+| — | ✓ | All children of that parent |
+| ✓ | ✓ | Single record, `None` if it doesn't belong to the parent |
+
+Top-level resources (`system`, `glossary`) have no parent — passing `parent_id` without `resource_id` raises `ValueError`.
+
+### Examples
+
+```python
+# List all systems
+client.get("system")
 # -> [{"system_id": "sys-001", "system_name": "CDP", ...}, ...]
 
-datasources = client.list_resource("datasource")
-glossaries  = client.list_resource("glossary")
-```
-
-### Get a single item by ID
-
-```python
-system = client.get_resource("system", "sys-001")
+# Single record
+client.get("system", resource_id="sys-001")
 # -> {"system_id": "sys-001", "system_name": "CDP", ...}
 
-ds = client.get_resource("datasource", "ds-001")
+# All datasources under a system
+client.get("datasource", parent_id="sys-001")
+# -> [{"datasource_id": "ds-001", ...}, ...]
+
+# Scoped lookup — returns None if the field doesn't belong to that dataset
+client.get("field", resource_id="f-001", parent_id="dt-001")
+
+# Filter client-side (AND logic)
+client.get("system", filter={"system_type": "source"})
+
+# Keep only specific fields
+client.get("system", fields=["system_id", "system_name"])
+
+# Multi-column sort
+client.get("system", sort=[{"system_name": "asc"}, {"system_id": "desc"}])
+
+# Return pretty-printed JSON string
+client.get("system", format="json")
+
+# Return compact JSON string (no spaces)
+client.get("system", format="compact")
+
+# Convert rich-text description fields to plain text
+client.get("system", format_descriptions_as_text=True)
 ```
 
-### List children filtered by parent
+## Utilities
+
+These functions are available directly from `katalogue` for use outside of `get()`.
+
+### `filter_fields(data, fields)`
+
+Keep only the requested fields from a dict or list of dicts. Wrapper dicts (e.g. `{"systems": [...]}`) are unwrapped automatically.
 
 ```python
-# All datasources belonging to a system
-datasources = client.list_by_parent("datasource", "system", "sys-001")
+from katalogue import filter_fields
 
-# All datasets in a datasource
-datasets = client.list_by_parent("dataset", "datasource", "ds-001")
+filter_fields([{"id": 1, "name": "A", "extra": "x"}], ["id", "name"])
+# -> [{"id": 1, "name": "A"}]
 
-# All fields in a dataset
-fields = client.list_by_parent("field", "dataset", "dsg-001")
+filter_fields({"id": 1, "name": "A", "extra": "x"}, ["id", "name"])
+# -> {"id": 1, "name": "A"}
+
+filter_fields(data, None)   # fields=None — data returned unchanged
+filter_fields(data, [])     # fields=[] — data returned unchanged
 ```
 
-### Export full system (all nested data in one call)
+### `filter_resultset(data, key, value)`
+
+Keep only rows where `row[key] == value`. Unwraps wrapper dicts automatically.
 
 ```python
-export = client.get_system_export("sys-001")
+from katalogue import filter_resultset
+
+rows = [{"type": "db", "name": "Orders"}, {"type": "api", "name": "Events"}]
+filter_resultset(rows, "type", "db")
+# -> [{"type": "db", "name": "Orders"}]
+```
+
+### `sort_resultset(data, sort)`
+
+Sort a list of dicts by one or more columns. Null values are always sorted last regardless of direction.
+
+```python
+from katalogue import sort_resultset
+
+rows = [{"name": "Charlie"}, {"name": "Alice"}, {"name": "Bob"}]
+
+sort_resultset(rows, [{"name": "asc"}])
+# -> [{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}]
+
+# Multi-column: primary sort first in the list
+sort_resultset(rows, [{"type": "asc"}, {"name": "desc"}])
+
+sort_resultset(rows, None)   # None — data returned unchanged
+```
+
+### `format_descriptions_to_plaintext(data)`
+
+Recursively converts rich-text description fields (stored as JSON strings) to plain text. Strings that are not rich-text JSON are returned unchanged. Works on a single string, a dict, or a list of dicts.
+
+```python
+from katalogue import format_descriptions_to_plaintext
+
+format_descriptions_to_plaintext("just a plain string")
+# -> "just a plain string"
+
+format_descriptions_to_plaintext(None)
+# -> None
+
+# Applied recursively to all string values in a list of records
+records = [{"name": "A", "description": "<rich-text-json>"}]
+format_descriptions_to_plaintext(records)
+# -> [{"name": "A", "description": "plain text extracted from blocks"}]
+```
+
+### `format_resultset(data, fmt)`
+
+Route a result to a string formatter. Used internally by `get(format=...)`.
+
+```python
+from katalogue import format_resultset
+
+format_resultset(data, "json")     # -> pretty-printed JSON string
+format_resultset(data, "compact")  # -> compact JSON string, no spaces
+format_resultset(data, None)       # -> data unchanged (Python object)
+```
+
+### `format_json(data)` / `format_compact_json(data)`
+
+Direct JSON formatters.
+
+```python
+from katalogue import format_json, format_compact_json
+
+format_json([{"id": 1}])         # -> '[\n  {\n    "id": 1\n  }\n]'
+format_compact_json([{"id": 1}]) # -> '[{"id":1}]'
+```
+
+## Low-Level Client Methods
+
+These are available for advanced use cases where you need direct control over API calls.
+
+```python
+# List all records of a resource type
+client.list_resource("system")
+# -> [{"system_id": "sys-001", ...}, ...]
+
+# Get a single record by ID
+client.get_resource("system", "sys-001")
+# -> {"system_id": "sys-001", ...}
+
+# List children of a parent resource
+client.list_by_parent("datasource", "system", "sys-001")
+# -> [{"datasource_id": "ds-001", ...}, ...]
+
+# Full system export (all nested data in one call)
+client.get_system_export("sys-001")
 # -> {"meta": {...}, "data": {"system": {...}, "datasources": [...], ...}}
-```
 
-### Export full glossary
-
-```python
-export = client.get_glossary_export("gl-001")
+# Full glossary export
+client.get_glossary_export("gl-001")
 # -> {"meta": {...}, "data": {"glossary": {...}, "terms": [...], ...}}
 ```
 
@@ -209,10 +345,20 @@ You never need to manage tokens manually.
 | Symbol | Type | Description |
 |--------|------|-------------|
 | `KatalogueClient` | class | HTTP client; OAuth2 managed internally |
+| `KatalogueClient.get()` | method | High-level fetch with filtering, sorting, and formatting |
 | `Settings` | Pydantic model | Frozen configuration object |
 | `resolve_settings()` | function | Build `Settings` from explicit args, env vars, or defaults |
+| `filter_fields()` | function | Keep only named fields from a dict or list of dicts |
+| `filter_resultset()` | function | Keep only rows matching a key/value condition |
+| `sort_resultset()` | function | Sort a list of dicts by one or more columns, nulls last |
+| `format_descriptions_to_plaintext()` | function | Convert rich-text description fields to plain text |
+| `format_resultset()` | function | Route data to json/compact/Python-object format |
+| `format_json()` | function | Pretty-print data as a JSON string |
+| `format_compact_json()` | function | Compact JSON string with no spaces |
 | `ConfigError` | exception | Missing credentials or invalid URL at construction time |
 | `AuthError` | exception | HTTP 401 — authentication failed |
 | `ApiError` | exception | Any other HTTP error (4xx, 5xx) |
+| `TokenCache` | protocol | Interface for custom token cache backends |
+| `TokenEntry` | Pydantic model | Single cached token; implement `TokenCache` with this |
 | `DEFAULT_BASE_URL` | `str` | `"https://your-instance.katalogue.se"` |
 | `DEFAULT_TOKEN_URL` | `str` | `"https://your-instance.katalogue.se/oidc/token"` |

@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from katalogue.formatters import (
+    format_descriptions_to_plaintext as extract_draftjs_text,
+)
 from katalogue_cli.formatters.output import (
-    extract_draftjs_text,
     format_compact_json,
     format_grouped_table,
     format_json,

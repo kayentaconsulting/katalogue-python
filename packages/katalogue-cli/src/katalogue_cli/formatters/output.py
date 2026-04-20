@@ -2,31 +2,24 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
+from katalogue.formatters import (
+    format_compact_json,
+    format_descriptions_to_plaintext,
+    format_json,
+)
 from katalogue.utils import unwrap_list
 
-
-def extract_draftjs_text(value: Any) -> Any:
-    """Return plain text from a Draft.js JSON string, or the value unchanged."""
-    if not isinstance(value, str):
-        return value
-    try:
-        parsed = json.loads(value)
-    except (ValueError, TypeError):
-        return value
-    if not isinstance(parsed, dict) or "blocks" not in parsed:
-        return value
-    return " ".join(b.get("text", "") for b in parsed["blocks"] if b.get("text"))
-
-
-def format_json(data: Any) -> str:
-    return json.dumps(data, indent=2, default=str)
-
-
-def format_compact_json(data: Any) -> str:
-    return json.dumps(data, separators=(",", ":"), default=str)
+__all__ = [
+    "format_json",
+    "format_compact_json",
+    "format_descriptions_to_plaintext",
+    "format_output",
+    "format_list_table",
+    "format_grouped_table",
+    "format_table",
+]
 
 
 def format_table(data: dict[str, Any]) -> str:
@@ -58,7 +51,7 @@ _MAX_COL_WIDTH = 60
 
 
 def _cell(value: Any) -> str:
-    text = str(extract_draftjs_text(value) or "")
+    text = str(format_descriptions_to_plaintext(value) or "")
     if len(text) > _MAX_COL_WIDTH:
         return text[:_MAX_COL_WIDTH] + "…"
     return text
@@ -153,4 +146,4 @@ def _format_dict(d: dict[str, Any], lines: list[str], indent: int = 0) -> None:
         elif isinstance(value, list):
             lines.append(f"{prefix}{key}: [{len(value)} items]")
         else:
-            lines.append(f"{prefix}{key}: {extract_draftjs_text(value)}")
+            lines.append(f"{prefix}{key}: {format_descriptions_to_plaintext(value)}")

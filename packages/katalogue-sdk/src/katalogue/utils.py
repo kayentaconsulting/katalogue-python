@@ -62,18 +62,44 @@ def filter_fields(data: Any, fields: list[str] | None) -> Any:
     return data
 
 
-def filter_where(data: Any, key: str, value: Any) -> list[Any]:
+def filter_resultset(data: Any, key: str, value: Any) -> list[Any]:
     """Keep only rows where data[key] == value. Unwraps wrapper dicts first.
 
     List endpoints return all records for a resource type. This lets callers
     filter client-side when the API does not expose a query parameter for the
     desired field — e.g. filtering fields by dataset_id from a full field list.
 
-    filter_where([{"id": 1, "type": "db"}, {"id": 2, "type": "api"}], "type", "db")
+    filter_resultset([{"id": 1, "type": "db"}, {"id": 2, "type": "api"}], "type", "db")
     -> [{"id": 1, "type": "db"}]
 
-    filter_where({"fields": [{"id": 1, "dataset_id": "ds-1"}, {"id": 2, "dataset_id": "ds-2"}]}, "dataset_id", "ds-1")
+    filter_resultset({"fields": [{"id": 1, "dataset_id": "ds-1"}, {"id": 2, "dataset_id": "ds-2"}]}, "dataset_id", "ds-1")
     -> [{"id": 1, "dataset_id": "ds-1"}]
     """
     rows = unwrap_list(data)
     return [row for row in rows if row.get(key) == value]
+
+
+def sort_resultset(data: list[Any], sort: list[dict[str, str]] | None) -> list[Any]:
+    """Sort a result set by one or more columns. Null values are always sorted last.
+
+    Columns are applied in order — the first entry in the list is the most
+    significant sort key. Accepts "asc" or "desc" per column.
+
+    sort_resultset(rows, [{"name": "asc"}])
+    -> rows sorted by name ascending, nulls last
+
+    sort_resultset(rows, [{"type": "desc"}, {"name": "asc"}])
+    -> rows sorted by type descending, then name ascending within each type
+    """
+    if not sort:
+        return data
+
+    result = list(data)
+    for spec in reversed(sort):
+        for col, direction in spec.items():
+            reverse = direction.lower() == "desc"
+            non_null = [row for row in result if row.get(col) is not None]
+            null_rows = [row for row in result if row.get(col) is None]
+            non_null.sort(key=lambda row: row[col], reverse=reverse)  # type: ignore[index]
+            result = non_null + null_rows
+    return result
