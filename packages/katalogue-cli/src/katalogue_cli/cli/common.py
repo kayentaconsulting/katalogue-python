@@ -15,8 +15,10 @@ from katalogue.config.settings import (
     resolve_settings,
     ConfigError,
 )
+from katalogue.utils import filter_fields, filter_where, unwrap_list
 from katalogue_cli.formatters.output import (
     format_compact_json,
+    format_grouped_table,
     format_json,
     format_list_table,
     format_table,
@@ -76,43 +78,6 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
     return ctx.obj["_client"]
 
 
-def filter_fields(data: Any, fields: list[str] | None) -> Any:
-    """Keep only the requested fields from a dict or list of dicts.
-
-    Wrapped list responses (e.g. {"systems": [...]}) are unwrapped to a plain
-    list when fields are requested - cleaner for scripting and AI agents.
-    """
-    if not fields:
-        return data
-
-    # Unwrap single-key wrapper dicts like {"systems": [...]}
-    if isinstance(data, dict):
-        values = list(data.values())
-        if len(data) == 1 and isinstance(values[0], list):
-            return filter_fields(values[0], fields)
-        return {f: data[f] for f in fields if f in data}
-
-    if isinstance(data, list):
-        return [{f: row[f] for f in fields if f in row} for row in data]
-
-    return data
-
-
-def unwrap_list(data: Any) -> list[Any]:
-    """Unwrap a single-key wrapper dict (e.g. {"fields": [...]}) to a plain list."""
-    if isinstance(data, dict):
-        values = list(data.values())
-        if len(data) == 1 and isinstance(values[0], list):
-            return values[0]
-    return data if isinstance(data, list) else [data]
-
-
-def filter_where(data: Any, key: str, value: Any) -> Any:
-    """Keep only rows where data[key] == value. Unwraps wrapper dicts first."""
-    rows = unwrap_list(data)
-    return [row for row in rows if row.get(key) == value]
-
-
 def parse_where_value(value: str) -> bool | int | str:
     """Coerce a CLI string value to the most appropriate Python type.
 
@@ -155,6 +120,9 @@ def handle_api_call(
     fmt: str,
     fields: list[str] | None = None,
     where: Sequence[tuple[str, Any]] = (),
+    default_fields: list[str] | None = None,
+    wide: bool = False,
+    group_by: list[tuple[str, str]] | None = None,
 ) -> None:
     """Execute an API call, handle errors, apply field filtering, and format output."""
     client = _get_or_create_client(ctx)
@@ -167,12 +135,23 @@ def handle_api_call(
     for key, value in where:
         data = filter_where(data, key, value)
 
-    data = filter_fields(data, fields)
+    effective_fields = fields or (None if wide or fmt != "table" else default_fields)
+
+    # Always retain group_by fields so the grouped formatter can use them as headers
+    if group_by and effective_fields:
+        all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
+        extra = [f for f in all_parent_fields if f not in effective_fields]
+        if extra:
+            effective_fields = list(effective_fields) + extra
+
+    data = filter_fields(data, effective_fields)
 
     if fmt == "json":
         click.echo(format_json(data))
     elif fmt == "compact":
         click.echo(format_compact_json(data))
+    elif isinstance(data, list) and group_by and not wide:
+        click.echo(format_grouped_table(data, group_by))
     elif isinstance(data, list):
         click.echo(format_list_table(data))
     else:
@@ -234,4 +213,12 @@ fields_option = click.option(
     help="Comma-separated field names to include in output.",
     callback=lambda ctx, param, v: v.split(",") if v else None,
     is_eager=False,
+)
+
+# Reusable --wide decorator for list commands
+wide_option = click.option(
+    "--wide",
+    is_flag=True,
+    default=False,
+    help="Show all fields in table output (overrides default field selection).",
 )

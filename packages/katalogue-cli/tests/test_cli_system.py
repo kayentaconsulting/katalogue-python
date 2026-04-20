@@ -219,6 +219,84 @@ class TestSystemList:
         assert parsed["system_name"] == "Katalogue"
 
 
+class TestSystemListDefaultFields:
+    """Default field filtering: table uses defaults, json/compact/wide bypass them."""
+
+    _data = [
+        {
+            "system_id": 1,
+            "system_name": "Katalogue",
+            "system_type": "Data Catalog",
+            "description": "Main catalog",
+            "owner": "admin",
+        }
+    ]
+
+    def test_table_shows_only_default_fields(self, runner):
+        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = self._data
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
+            )
+        assert result.exit_code == 0
+        assert "system_id" in result.output
+        assert "system_name" in result.output
+        assert "system_type" in result.output
+        assert "description" not in result.output
+        assert "owner" not in result.output
+
+    def test_json_shows_all_fields(self, runner):
+        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = self._data
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "json"]
+            )
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert "description" in parsed[0]
+        assert "owner" in parsed[0]
+
+    def test_compact_shows_all_fields(self, runner):
+        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = self._data
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "compact"]
+            )
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert "description" in parsed[0]
+        assert "owner" in parsed[0]
+
+    def test_wide_shows_all_fields_in_table(self, runner):
+        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = self._data
+            result = runner.invoke(
+                cli, [*CLI_AUTH, "system", "list", "--format", "table", "--wide"]
+            )
+        assert result.exit_code == 0
+        assert "description" in result.output
+        assert "owner" in result.output
+
+    def test_explicit_fields_override_defaults_in_table(self, runner):
+        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
+            MockClient.return_value.list_resource.return_value = self._data
+            result = runner.invoke(
+                cli,
+                [
+                    *CLI_AUTH,
+                    "system",
+                    "list",
+                    "--format",
+                    "table",
+                    "--fields",
+                    "system_id,description",
+                ],
+            )
+        assert result.exit_code == 0
+        assert "description" in result.output
+        assert "system_type" not in result.output
+
+
 class TestSystemKeys:
     def test_returns_sorted_keys_as_lines(self, runner):
         with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:

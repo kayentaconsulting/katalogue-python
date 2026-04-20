@@ -6,10 +6,12 @@ import click
 
 from katalogue_cli.cli.common import (
     fields_option,
+    wide_option,
     where_option,
     handle_api_call,
     show_keys,
 )
+from katalogue_cli.cli.defaults import DEFAULT_FIELDS, PARENT_GROUP
 
 
 @click.group("dataset-group")
@@ -19,6 +21,7 @@ def dataset_group() -> None:
 
 @dataset_group.command("list")
 @fields_option
+@wide_option
 @where_option
 @click.option(
     "--datasource", "datasource_id", default=None, help="Filter by datasource ID."
@@ -27,13 +30,14 @@ def dataset_group() -> None:
     "--format",
     "fmt",
     type=click.Choice(["json", "table", "compact"]),
-    default="json",
+    default="table",
     help="Output format.",
 )
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
     fields: list[str] | None,
+    wide: bool,
     where: list[tuple],
     datasource_id: str | None,
     fmt: str,
@@ -46,6 +50,9 @@ def list_cmd(
             fmt,
             fields=fields,
             where=where,
+            default_fields=DEFAULT_FIELDS["dataset_group"],
+            wide=wide,
+            group_by=PARENT_GROUP["dataset_group"],
         )
     else:
         handle_api_call(
@@ -54,6 +61,9 @@ def list_cmd(
             fmt,
             fields=fields,
             where=where,
+            default_fields=DEFAULT_FIELDS["dataset_group"],
+            wide=wide,
+            group_by=PARENT_GROUP["dataset_group"],
         )
 
 

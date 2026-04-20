@@ -5,6 +5,7 @@ from katalogue.config.settings import (
     Settings,
     resolve_settings,
 )
+from katalogue.utils import filter_fields, filter_where, unwrap_list
 
 __all__ = [
     "KatalogueClient",
@@ -16,4 +17,7 @@ __all__ = [
     "AuthError",
     "ApiError",
     "ConfigError",
+    "filter_fields",
+    "filter_where",
+    "unwrap_list",
 ]

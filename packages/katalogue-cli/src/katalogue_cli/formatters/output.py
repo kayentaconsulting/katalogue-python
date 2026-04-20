@@ -6,6 +6,19 @@ import json
 from typing import Any
 
 
+def extract_draftjs_text(value: Any) -> Any:
+    """Return plain text from a Draft.js JSON string, or the value unchanged."""
+    if not isinstance(value, str):
+        return value
+    try:
+        parsed = json.loads(value)
+    except (ValueError, TypeError):
+        return value
+    if not isinstance(parsed, dict) or "blocks" not in parsed:
+        return value
+    return " ".join(b.get("text", "") for b in parsed["blocks"] if b.get("text"))
+
+
 def format_json(data: Any) -> str:
     return json.dumps(data, indent=2, default=str)
 
@@ -39,6 +52,16 @@ def format_table(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip()
 
 
+_MAX_COL_WIDTH = 60
+
+
+def _cell(value: Any) -> str:
+    text = str(extract_draftjs_text(value) or "")
+    if len(text) > _MAX_COL_WIDTH:
+        return text[:_MAX_COL_WIDTH] + "…"
+    return text
+
+
 def format_list_table(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "No results."
@@ -47,19 +70,51 @@ def format_list_table(rows: list[dict[str, Any]]) -> str:
     col_widths = {col: len(col) for col in columns}
     for row in rows:
         for col in columns:
-            val = str(row.get(col) or "")
-            col_widths[col] = max(col_widths[col], len(val))
+            col_widths[col] = max(col_widths[col], len(_cell(row.get(col))))
 
     header = "  ".join(col.ljust(col_widths[col]) for col in columns)
     separator = "  ".join("-" * col_widths[col] for col in columns)
     lines = [header, separator]
     for row in rows:
-        line = "  ".join(
-            str(row.get(col) or "").ljust(col_widths[col]) for col in columns
-        )
+        line = "  ".join(_cell(row.get(col)).ljust(col_widths[col]) for col in columns)
         lines.append(line)
 
     return "\n".join(lines)
+
+
+def _parent_label(id_field: str) -> str:
+    """Derive a friendly label from an id field name: 'dataset_group_id' → 'dataset group'."""
+    return id_field.removesuffix("_id").replace("_", " ")
+
+
+def format_grouped_table(
+    rows: list[dict[str, Any]], parents: list[tuple[str, str]]
+) -> str:
+    if not rows:
+        return "No results."
+
+    parent_fields = {f for id_f, name_f in parents for f in (id_f, name_f)}
+    child_keys = [k for k in rows[0] if k not in parent_fields]
+
+    groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for row in rows:
+        key = tuple(row.get(f) for id_f, name_f in parents for f in (id_f, name_f))
+        groups.setdefault(key, []).append(row)
+
+    lines: list[str] = []
+    for key, group_rows in groups.items():
+        it = iter(key)
+        parts = []
+        for id_field, _name_field in parents:
+            gid, gname = next(it), next(it)
+            parts.append(f"{_parent_label(id_field)}: {gname or gid}({gid})")
+        lines.append(",  ".join(parts))
+        child_rows = [{k: r[k] for k in child_keys if k in r} for r in group_rows]
+        for line in format_list_table(child_rows).splitlines():
+            lines.append(f"  {line}")
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
 
 
 def _format_dict(d: dict[str, Any], lines: list[str], indent: int = 0) -> None:
@@ -71,4 +126,4 @@ def _format_dict(d: dict[str, Any], lines: list[str], indent: int = 0) -> None:
         elif isinstance(value, list):
             lines.append(f"{prefix}{key}: [{len(value)} items]")
         else:
-            lines.append(f"{prefix}{key}: {value}")
+            lines.append(f"{prefix}{key}: {extract_draftjs_text(value)}")
