@@ -15,6 +15,7 @@ from katalogue.config.settings import (
     resolve_settings,
     ConfigError,
 )
+from katalogue.utils import filter_fields, filter_where, unwrap_list
 from katalogue_cli.formatters.output import (
     format_compact_json,
     format_grouped_table,
@@ -75,43 +76,6 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
             return None
         ctx.obj["_client"] = KatalogueClient(settings, token_cache=DiskTokenCache())
     return ctx.obj["_client"]
-
-
-def filter_fields(data: Any, fields: list[str] | None) -> Any:
-    """Keep only the requested fields from a dict or list of dicts.
-
-    Wrapped list responses (e.g. {"systems": [...]}) are unwrapped to a plain
-    list when fields are requested - cleaner for scripting and AI agents.
-    """
-    if not fields:
-        return data
-
-    # Unwrap single-key wrapper dicts like {"systems": [...]}
-    if isinstance(data, dict):
-        values = list(data.values())
-        if len(data) == 1 and isinstance(values[0], list):
-            return filter_fields(values[0], fields)
-        return {f: data[f] for f in fields if f in data}
-
-    if isinstance(data, list):
-        return [{f: row[f] for f in fields if f in row} for row in data]
-
-    return data
-
-
-def unwrap_list(data: Any) -> list[Any]:
-    """Unwrap a single-key wrapper dict (e.g. {"fields": [...]}) to a plain list."""
-    if isinstance(data, dict):
-        values = list(data.values())
-        if len(data) == 1 and isinstance(values[0], list):
-            return values[0]
-    return data if isinstance(data, list) else [data]
-
-
-def filter_where(data: Any, key: str, value: Any) -> Any:
-    """Keep only rows where data[key] == value. Unwraps wrapper dicts first."""
-    rows = unwrap_list(data)
-    return [row for row in rows if row.get(key) == value]
 
 
 def parse_where_value(value: str) -> bool | int | str:
