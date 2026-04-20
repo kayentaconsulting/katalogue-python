@@ -24,7 +24,7 @@ client = KatalogueClient()          # reads env vars
 client = KatalogueClient(settings)  # explicit settings object
 ```
 
-## Quick Commands
+## Commands
 
 ```bash
 uv sync                    # install all workspace deps
@@ -34,7 +34,14 @@ uv run pytest -k system    # filter by name
 uv run pytest packages/katalogue-sdk/tests   # SDK only
 uv run pytest packages/katalogue-cli/tests   # CLI only
 uv run katalogue --help    # try the CLI
+
+# run after every logical unit of work — all three, in order
+uv run ruff check --fix && uv run ruff format   # lint + format
+uv run pyright                                   # type-check
+uv run pytest -q                                 # verify nothing broke
 ```
+
+If any check fails, fix before declaring the task complete.
 
 ## Directory Structure
 
@@ -43,17 +50,26 @@ packages/
   katalogue-sdk/
     src/katalogue/
       client/api.py       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
+      client/cache.py     # TokenCache protocol + in-memory impl
       config/settings.py  # resolve_settings() — explicit > env var > default (Pydantic)
-      __init__.py         # public API surface
+      __init__.py         # public API surface: KatalogueClient, Settings, errors
     tests/
       conftest.py
       fixtures/           # JSON response fixtures
   katalogue-cli/
     src/katalogue_cli/
-      cli/                # Click commands — arg parsing, error handling, output formatting
-        main.py           # Root Click group, global options, group registration
+      auth.py             # disk-backed token cache (CLI layer)
+      logging.py          # logging setup
+      cli/
+        main.py           # root Click group + global options
         common.py         # handle_api_call(), filter_fields(), shared decorators
-      formatters/         # format_json, format_table, format_compact_json
+        auth.py           # login / logout / status commands
+        <resource>.py     # one file per resource (system, datasource, dataset,
+                          #   dataset_group, field, glossary, export)
+      config/
+        file.py           # reads ~/.config/katalogue/config.toml (non-secrets only)
+      formatters/
+        output.py         # format_json, format_table, format_compact_json
     tests/
       conftest.py         # runner, cli_auth, mock_client fixtures
       fixtures/           # JSON response fixtures
@@ -63,45 +79,9 @@ pyrightconfig.json        # IDE static analysis config
 
 ## TDD Workflow (Non-Negotiable)
 
-Every feature slice follows this order — **no exceptions**:
-
-1. **Atlas** maps endpoints → **Mira** designs UX → **Kai** proposes structure → **Sven** flags security risks → **Vera** writes test plan
-2. Write tests first (RED) → implement (GREEN)
-3. **Reed** reviews layering → **Dana** reviews UX → **Sven** signs off security → declare done
-
-**Before writing any code**, narrate each agent's verdict explicitly in the response. No implementation until Atlas → Vera have signed off. No slice is done until Reed, Dana, and Sven have reviewed.
+Every feature slice: **tests first (RED) → implement (GREEN) → review done**.
 
 **Never write implementation before tests exist and are failing.**
-
-### Agent Narration Format
-
-Each agent verdict must use this format so they're scannable:
-
-```
-🗺️ [ATLAS]  — <endpoint/data finding>
-🎨 [MIRA]   — <UX decision>
-🏗️ [KAI]    — <structure/approach>
-🛡️ [SVEN]   — <security assessment>
-✅ [VERA]   — <test plan>
---- implement ---
-🔧 [REED]   — <layering verdict>
-💬 [DANA]   — <DX/done verdict>
-🛡️ [SVEN]   — <security sign-off>
-```
-
-Agent definitions: `.claude/agents/<name>.md`
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `packages/katalogue-sdk/src/katalogue/client/api.py` | `KatalogueClient` — HTTP + OAuth2 client credentials; `KatalogueClient()` reads env vars |
-| `packages/katalogue-sdk/src/katalogue/config/settings.py` | `resolve_settings()` — explicit > env var > default |
-| `packages/katalogue-sdk/src/katalogue/__init__.py` | Public SDK API: `KatalogueClient`, `Settings`, `resolve_settings`, errors |
-| `packages/katalogue-cli/src/katalogue_cli/cli/main.py` | Root Click group, global options, group registration |
-| `packages/katalogue-cli/src/katalogue_cli/cli/common.py` | `handle_api_call()`, `filter_fields()`, shared decorators |
-| `packages/katalogue-cli/src/katalogue_cli/formatters/output.py` | `format_json`, `format_table`, `format_compact_json` |
-| `packages/katalogue-cli/tests/conftest.py` | Shared fixtures: `runner`, `cli_auth`, `mock_client` |
 
 ## CLI Design Rules
 
@@ -142,21 +122,3 @@ SDK tests go in `packages/katalogue-sdk/tests/`, CLI tests in `packages/katalogu
 ## Code Preferences
 
 - **Pydantic for all data models** — use `BaseModel` instead of `@dataclass`. Use `SecretStr` for secrets, `field_validator` for validation. Never introduce a plain dataclass when Pydantic can do the job.
-
-## Working Style
-
-- Be opinionated — push back on weak design
-- Small reviewable steps — no big code dumps
-- Wait for input before generating large amounts of code
-
-## Code Quality (Mandatory After Every Python Edit)
-
-After finishing editing or creating any `.py` file, always run:
-
-```bash
-uv run ruff check --fix && uv run ruff format   # lint + format
-uv run pyright                                   # type-check
-uv run pytest -q                                 # verify nothing broke
-```
-
-Run all three **once per logical unit of work** (after all related edits are done), not after every individual file edit. If any check fails, fix before declaring the task complete.
