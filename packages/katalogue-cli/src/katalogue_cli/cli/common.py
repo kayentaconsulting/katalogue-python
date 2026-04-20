@@ -16,13 +16,7 @@ from katalogue.config.settings import (
     ConfigError,
 )
 from katalogue.utils import filter_fields, filter_where, unwrap_list
-from katalogue_cli.formatters.output import (
-    format_compact_json,
-    format_grouped_table,
-    format_json,
-    format_list_table,
-    format_table,
-)
+from katalogue_cli.formatters.output import format_json, format_output
 
 _NULL_BACKENDS = {"Keyring", "NullKeyring"}
 
@@ -146,16 +140,7 @@ def handle_api_call(
 
     data = filter_fields(data, effective_fields)
 
-    if fmt == "json":
-        click.echo(format_json(data))
-    elif fmt == "compact":
-        click.echo(format_compact_json(data))
-    elif isinstance(data, list) and group_by and not wide:
-        click.echo(format_grouped_table(data, group_by))
-    elif isinstance(data, list):
-        click.echo(format_list_table(data))
-    else:
-        click.echo(format_table(data))
+    click.echo(format_output(data, fmt, group_by=group_by, wide=wide))
 
 
 def _fetch_or_exit(ctx: click.Context, call: Any) -> Any:
