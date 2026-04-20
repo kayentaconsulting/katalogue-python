@@ -107,7 +107,7 @@ def format_grouped_table(
         parts = []
         for id_field, _name_field in parents:
             gid, gname = next(it), next(it)
-            parts.append(f"{_parent_label(id_field)}: {gid} - {gname or ''}")
+            parts.append(f"{_parent_label(id_field)}: {gname or gid}({gid})")
         lines.append(",  ".join(parts))
         child_rows = [{k: r[k] for k in child_keys if k in r} for r in group_rows]
         for line in format_list_table(child_rows).splitlines():
