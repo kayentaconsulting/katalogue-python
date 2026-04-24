@@ -6,8 +6,10 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
+from oauthlib.oauth2.rfc6749.errors import InvalidScopeError
 from pydantic import SecretStr
 
+from katalogue.client.api import AuthError
 from katalogue.client.cache import InMemoryTokenCache, TokenEntry
 from katalogue.config.settings import Settings
 
@@ -97,9 +99,12 @@ class TestClientTokenCache:
         client._ensure_token("system.read")
         mock_session.fetch_token.assert_called_once()
 
-    def test_scope_change_triggers_refetch(self, client, mock_session, cache) -> None:
+    def test_unrelated_scope_still_triggers_refetch(
+        self, client, mock_session, cache
+    ) -> None:
+        # glossary.read is not an ancestor of system.read — must fetch
         cache.set(_cache_key("system.read"), _valid_entry("system.read"))
-        client._ensure_token("datasource.read")
+        client._ensure_token("glossary.read")
         mock_session.fetch_token.assert_called_once()
 
     def test_cache_key_includes_token_url_client_id_scope(
@@ -115,3 +120,94 @@ class TestClientTokenCache:
 
             c = KatalogueClient(_settings())
             assert isinstance(c._cache, InMemoryTokenCache)
+
+
+class TestAncestorCacheFallback:
+    def test_ancestor_cache_hit_reuses_broader_scope(
+        self, client, mock_session, cache
+    ) -> None:
+        # system.read is an ancestor of datasource.read — should reuse without fetching
+        cache.set(_cache_key("system.read"), _valid_entry("system.read"))
+        client._ensure_token("datasource.read")
+        mock_session.fetch_token.assert_not_called()
+
+    def test_ancestor_cache_hit_deep_hierarchy(
+        self, client, mock_session, cache
+    ) -> None:
+        # system.read is root ancestor of field.read — should reuse without fetching
+        cache.set(_cache_key("system.read"), _valid_entry("system.read"))
+        client._ensure_token("field.read")
+        mock_session.fetch_token.assert_not_called()
+
+    def test_ancestor_cache_applies_token_to_session(
+        self, client, mock_session, cache
+    ) -> None:
+        entry = _valid_entry("system.read")
+        cache.set(_cache_key("system.read"), entry)
+        client._ensure_token("datasource.read")
+        assert (
+            mock_session.token["access_token"] == entry.access_token.get_secret_value()
+        )
+
+
+class TestScopeEscalation:
+    def test_escalation_succeeds_with_root_scope(
+        self, client, mock_session, cache
+    ) -> None:
+        # No cache; system.read fetch succeeds — only one fetch needed
+        client._ensure_token("datasource.read")
+        mock_session.fetch_token.assert_called_once()
+        assert mock_session.fetch_token.call_args[1]["scope"] == "system.read"
+
+    def test_escalation_caches_under_root_scope(
+        self, client, mock_session, cache
+    ) -> None:
+        client._ensure_token("datasource.read")
+        assert cache.get(_cache_key("system.read")) is not None
+
+    def test_escalation_falls_back_on_invalid_scope(
+        self, client, mock_session, cache
+    ) -> None:
+        # system.read rejected; datasource.read succeeds
+        def _fetch_side_effect(**kwargs):
+            if kwargs.get("scope") == "system.read":
+                raise InvalidScopeError()
+            mock_session.token = {
+                "access_token": "fetched-token",
+                "token_type": "Bearer",
+                "expires_at": time.time() + 3600,
+            }
+
+        mock_session.fetch_token.side_effect = _fetch_side_effect
+        client._ensure_token("datasource.read")
+        assert mock_session.fetch_token.call_count == 2
+        scopes_tried = [c[1]["scope"] for c in mock_session.fetch_token.call_args_list]
+        assert scopes_tried == ["system.read", "datasource.read"]
+
+    def test_escalation_all_scopes_rejected_raises_auth_error(
+        self, client, mock_session, cache
+    ) -> None:
+        mock_session.fetch_token.side_effect = InvalidScopeError()
+        with pytest.raises(AuthError):
+            client._ensure_token("datasource.read")
+
+    def test_escalation_non_scope_error_propagates_immediately(
+        self, client, mock_session, cache
+    ) -> None:
+        mock_session.fetch_token.side_effect = RuntimeError("network failure")
+        with pytest.raises(RuntimeError, match="network failure"):
+            client._ensure_token("datasource.read")
+        mock_session.fetch_token.assert_called_once()
+
+    def test_top_level_resource_no_escalation(
+        self, client, mock_session, cache
+    ) -> None:
+        # system has no ancestors — exactly one fetch attempt
+        client._ensure_token("system.read")
+        mock_session.fetch_token.assert_called_once()
+        assert mock_session.fetch_token.call_args[1]["scope"] == "system.read"
+
+    def test_glossary_no_escalation(self, client, mock_session, cache) -> None:
+        client._ensure_token("glossary.read")
+        mock_session.fetch_token.assert_called_once()
+        assert mock_session.fetch_token.call_args[1]["scope"] == "glossary.read"

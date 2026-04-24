@@ -194,13 +194,14 @@ class TestListByParent:
             "GET", "https://api.example.com/api/datasource/system/1"
         )
 
-    def test_uses_child_resource_scope(self, client):
+    def test_uses_root_ancestor_scope_for_child_resource(self, client):
+        # Escalation fetches system.read (broadest ancestor) for datasource calls
         client._current_scope = None
         client._session.authorized = False
         client._session.request.return_value = _make_response(200, [])
         client.list_by_parent("datasource", "system", "1")
         call_kwargs = client._session.fetch_token.call_args
-        assert call_kwargs[1]["scope"] == "datasource.read"
+        assert call_kwargs[1]["scope"] == "system.read"
 
 
 class TestTokenRefreshOn401:
@@ -226,20 +227,21 @@ class TestScopeDerivation:
         call_kwargs = client._session.fetch_token.call_args
         assert call_kwargs[1]["scope"] == "system.read"
 
-    def test_get_resource_uses_resource_read_scope(self, client):
+    def test_get_resource_fetches_root_ancestor_scope(self, client):
+        # Escalation fetches system.read (broadest ancestor) for datasource calls
         client._current_scope = None
         client._session.authorized = False
         client._session.request.return_value = _make_response(200, {"id": "1"})
         client.get_resource("datasource", "ds-001")
         call_kwargs = client._session.fetch_token.call_args
-        assert call_kwargs[1]["scope"] == "datasource.read"
+        assert call_kwargs[1]["scope"] == "system.read"
 
-    def test_scope_change_triggers_new_token(self, client):
-        """Switching from system.read to datasource.read should re-fetch token."""
+    def test_cache_miss_on_new_resource_fetches_root_scope(self, client):
+        """With no cache, any child resource call escalates to the root scope."""
         client._current_scope = "system.read"
         client._session.authorized = True
         client._session.request.return_value = _make_response(200, [])
         client.list_resource("datasource")
         client._session.fetch_token.assert_called_once()
         call_kwargs = client._session.fetch_token.call_args
-        assert call_kwargs[1]["scope"] == "datasource.read"
+        assert call_kwargs[1]["scope"] == "system.read"

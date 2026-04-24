@@ -8,6 +8,7 @@ from typing import Any, Final
 from urllib.parse import quote
 
 from oauthlib.oauth2 import BackendApplicationClient
+from oauthlib.oauth2.rfc6749.errors import InvalidScopeError
 from pydantic import SecretStr
 from requests.exceptions import HTTPError
 from requests_oauthlib import OAuth2Session
@@ -42,6 +43,21 @@ _VALID_RESOURCES: frozenset[str] = frozenset(
 )
 _VALID_FORMATS: frozenset[str] = frozenset({"json", "compact"})
 _VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
+
+
+def _scope_chain(resource: str) -> list[str]:
+    """Return scopes from root ancestor down to resource.read, broadest first.
+
+    For "dataset": ["system.read", "datasource.read", "dataset_group.read", "dataset.read"]
+    For "system":  ["system.read"]
+    """
+    chain = [f"{resource}.read"]
+    current = resource
+    while current in _PARENT_RESOURCE:
+        current = _PARENT_RESOURCE[current]
+        chain.append(f"{current}.read")
+    chain.reverse()
+    return chain
 
 
 class AuthError(Exception):
@@ -106,19 +122,48 @@ class KatalogueClient:
             TokenEntry(access_token=access_token, expires_at=expires_at, scope=scope),
         )
 
+    def _apply_cached_token(self, cached: TokenEntry, scope: str) -> None:
+        logger.debug("Using cached token for scope=%s", scope)
+        self._session.token = {
+            "access_token": cached.access_token.get_secret_value(),
+            "token_type": "Bearer",
+            "expires_at": cached.expires_at,
+        }
+        self._current_scope = scope
+
     def _ensure_token(self, scope: str) -> None:
         key = f"{self._token_url}|{self._client_id}|{scope}"
         cached = self._cache.get(key)
         if cached is not None:
-            logger.debug("Using cached token for scope=%s", scope)
-            self._session.token = {
-                "access_token": cached.access_token.get_secret_value(),
-                "token_type": "Bearer",
-                "expires_at": cached.expires_at,
-            }
-            self._current_scope = scope
+            self._apply_cached_token(cached, scope)
             return
-        self._fetch_token(scope)
+
+        # Check ancestor scopes (broadest first) before fetching
+        resource = scope.removesuffix(".read")
+        for ancestor_scope in _scope_chain(resource)[:-1]:
+            ancestor_key = f"{self._token_url}|{self._client_id}|{ancestor_scope}"
+            cached = self._cache.get(ancestor_key)
+            if cached is not None:
+                self._apply_cached_token(cached, ancestor_scope)
+                return
+
+        self._fetch_token_with_escalation(scope)
+
+    def _fetch_token_with_escalation(self, scope: str) -> None:
+        """Try scopes from broadest ancestor down to scope, stopping at first success."""
+        resource = scope.removesuffix(".read")
+        chain = _scope_chain(resource)
+        last_exc: Exception | None = None
+        for candidate in chain:
+            try:
+                self._fetch_token(candidate)
+                return
+            except InvalidScopeError as exc:
+                logger.debug(
+                    "Scope %s rejected by auth server, trying narrower", candidate
+                )
+                last_exc = exc
+        raise AuthError(f"No usable scope found for '{scope}'") from last_exc
 
     def _request(self, method: str, url: str, scope: str, **kwargs: Any) -> Any:
         self._ensure_token(scope)
