@@ -41,7 +41,7 @@ jobs:
           echo "Tag is valid: $tag"
 
   publish:
-    name: Publish packages
+    name: Publish packages | ${{ inputs.mode }}
     runs-on: ubuntu-latest
     needs: validate-tag
     environment: ${{ inputs.mode == 'pypi' && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
