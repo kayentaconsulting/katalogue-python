@@ -40,7 +40,7 @@ jobs:
 
   publish-sdk:
     name: Publish katalogue-sdk
-    uses: ./.github/workflows/reusable/pypi-publish-package.yml
+    uses: ./.github/workflows/_pypi-publish-package.yml
     needs: validate-tag
     with:
       mode: ${{ inputs.mode }}
@@ -51,7 +51,7 @@ jobs:
   publish-cli:
     name: Publish katalogue-cli
     needs: publish-sdk
-    uses: ./.github/workflows/reusable/pypi-publish-package.yml
+    uses: ./.github/workflows/_pypi-publish-package.yml
     with:
       mode: ${{ inputs.mode }}
       package_name: katalogue-cli

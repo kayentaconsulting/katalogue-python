@@ -5,7 +5,7 @@ Releases are triggered manually from a tag ref. Nothing publishes automatically 
 ## Files
 
 - [`.github/workflows/pypi-publish.yml`](../.github/workflows/pypi-publish.yml) — entry point
-- [`.github/workflows/reusable/pypi-publish-package.yml`](../.github/workflows/reusable/pypi-publish-package.yml) — builds and publishes one package
+- [`.github/workflows/_pypi-publish-package.yml`](../.github/workflows/_pypi-publish-package.yml) — builds and publishes one package
 
 ## How to Release
 
