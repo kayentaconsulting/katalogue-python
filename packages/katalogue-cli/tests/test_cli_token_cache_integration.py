@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from click.testing import CliRunner
 
+from katalogue import CatalogResult
 from katalogue_cli.cli.main import cli
 from katalogue_cli.auth import DiskTokenCache
 
@@ -25,7 +26,7 @@ def test_client_receives_disk_token_cache(runner: CliRunner, mocker) -> None:
     """KatalogueClient must be constructed with a DiskTokenCache instance."""
     mock_cls = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
     mock_instance = MagicMock()
-    mock_instance.list_resource.return_value = []
+    mock_instance.get.return_value = CatalogResult(data=[], output="[]")
     mock_cls.return_value = mock_instance
 
     result = runner.invoke(cli, [*_auth_args(), "system", "list"])
@@ -40,7 +41,7 @@ def test_disk_cache_instantiated_once_per_invocation(runner: CliRunner, mocker) 
     """DiskTokenCache is created once per CLI invocation, not per API call."""
     mock_cls = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
     mock_instance = MagicMock()
-    mock_instance.list_resource.return_value = []
+    mock_instance.get.return_value = CatalogResult(data=[], output="[]")
     mock_cls.return_value = mock_instance
 
     init_count: list[int] = [0]

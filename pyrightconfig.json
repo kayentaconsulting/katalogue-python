@@ -4,5 +4,9 @@
   "extraPaths": [
     "packages/katalogue-sdk/src",
     "packages/katalogue-cli/src"
+  ],
+  "exclude": [
+    "git_ignored",
+    ".venv"
   ]
 }

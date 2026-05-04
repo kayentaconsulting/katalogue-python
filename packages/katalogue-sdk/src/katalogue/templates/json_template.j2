@@ -1,0 +1,13 @@
+{
+  "resource": {{ resource | tojson }},
+  "system": {{ system | default(none) | tojson }},
+  "datasource": {{ datasource | default(none) | tojson }},
+  "datasources": {{ datasources | default([]) | tojson }},
+  "dataset_group": {{ dataset_group | default(none) | tojson }},
+  "dataset_groups": {{ dataset_groups | default([]) | tojson }},
+  "dataset": {{ dataset | default(none) | tojson }},
+  "datasets": {{ datasets | default([]) | tojson }},
+  "fields": {{ fields | default([]) | tojson }},
+  "glossary": {{ glossary | default(none) | tojson }},
+  "terms": {{ terms | default([]) | tojson }}
+}

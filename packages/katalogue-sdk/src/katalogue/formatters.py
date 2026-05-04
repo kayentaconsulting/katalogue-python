@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from typing import Any
+
+import yaml
 
 
 def format_json(data: Any) -> str:
@@ -13,6 +17,16 @@ def format_json(data: Any) -> str:
     -> '[\\n  {\\n    "id": 1,\\n    "name": "CDP"\\n  }\\n]'
     """
     return json.dumps(data, indent=2, default=str)
+
+
+def format_yaml(data: Any) -> str:
+    """Serialize data to a YAML string.
+
+    format_yaml([{"id": 1, "name": "A"}]) -> "- id: 1\\n  name: A\\n"
+    """
+    return yaml.dump(
+        data, allow_unicode=True, sort_keys=False, default_flow_style=False
+    )
 
 
 def format_compact_json(data: Any) -> str:
@@ -63,19 +77,158 @@ def _draftjs_to_text(value: str) -> str:
     return " ".join(b.get("text", "") for b in parsed["blocks"] if b.get("text"))
 
 
+_MAX_COL_WIDTH = 60
+
+
+def _cell(value: Any) -> str:
+    text = str(format_descriptions_to_plaintext(value) or "")
+    return text[:_MAX_COL_WIDTH] + "…" if len(text) > _MAX_COL_WIDTH else text
+
+
+def format_table(data: Any) -> str:
+    """Render data as a plain-text table or key:value block.
+
+    format_table([{"id": 1, "name": "A"}]) -> "id  name\\n--  ----\\n1   A"
+    format_table([])                        -> "No results."
+    format_table({"id": 1, "name": "A"})   -> "id: 1\\nname: A"
+    """
+    if isinstance(data, list):
+        if not data:
+            return "No results."
+        columns = list(data[0].keys())
+        col_widths = {col: len(col) for col in columns}
+        for row in data:
+            for col in columns:
+                col_widths[col] = max(col_widths[col], len(_cell(row.get(col))))
+        header = "  ".join(col.ljust(col_widths[col]) for col in columns)
+        separator = "  ".join("-" * col_widths[col] for col in columns)
+        lines = [header, separator]
+        for row in data:
+            lines.append(
+                "  ".join(_cell(row.get(col)).ljust(col_widths[col]) for col in columns)
+            )
+        return "\n".join(lines)
+    if isinstance(data, dict):
+        return "\n".join(
+            f"{k}: {format_descriptions_to_plaintext(v)}" for k, v in data.items()
+        )
+    return str(data)
+
+
+def _scalar(value: Any) -> str | int | float | bool | None:
+    """Convert a value to a CSV-safe scalar."""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, default=str)
+    if isinstance(value, str):
+        return value.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    return value
+
+
+def _prefix_system(system: dict[str, Any]) -> dict[str, Any]:
+    return {
+        k if k.startswith("system_") else f"system_{k}": v for k, v in system.items()
+    }
+
+
+def _flatten_for_csv(data: Any) -> list[dict[str, Any]]:
+    """Flatten catalog data to a list of dicts for CSV serialization.
+
+    Flat list[dict] → returned as-is.
+    Hierarchical dict (from include-children export) → flattened to the lowest
+    available level: fields > datasets > dataset_groups > datasources > singular resource.
+    Parent values are denormalized into every child row.
+    """
+    if isinstance(data, list):
+        return [{k: _scalar(v) for k, v in row.items()} for row in data]
+    if not isinstance(data, dict):
+        return [{"value": str(data)}]
+
+    fields = data.get("fields") or []
+    datasets = data.get("datasets") or []
+    dataset_groups = data.get("dataset_groups") or []
+    datasources: list[dict[str, Any]] = data.get("datasources") or (
+        [data["datasource"]] if isinstance(data.get("datasource"), dict) else []
+    )
+
+    system_row = _prefix_system(data.get("system") or {})
+    ds_by_id = {d.get("datasource_id"): d for d in datasources}
+    dg_by_id = {g.get("dataset_group_id"): g for g in dataset_groups}
+    dt_by_id = {d.get("dataset_id"): d for d in datasets}
+
+    def _row(*layers: dict[str, Any]) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
+        for layer in layers:
+            merged.update(layer)
+        return {k: _scalar(v) for k, v in merged.items()}
+
+    if fields:
+        rows = []
+        for field in fields:
+            dataset = dt_by_id.get(field.get("dataset_id"), {})
+            dg = dg_by_id.get(dataset.get("dataset_group_id"), {})
+            ds = ds_by_id.get(dg.get("datasource_id"), {})
+            rows.append(_row(system_row, ds, dg, dataset, field))
+        return rows
+
+    if datasets:
+        rows = []
+        for dataset in datasets:
+            dg = dg_by_id.get(dataset.get("dataset_group_id"), {})
+            ds = ds_by_id.get(dg.get("datasource_id"), {})
+            rows.append(_row(system_row, ds, dg, dataset))
+        return rows
+
+    if dataset_groups:
+        rows = []
+        for dg in dataset_groups:
+            ds = ds_by_id.get(dg.get("datasource_id"), {})
+            rows.append(_row(system_row, ds, dg))
+        return rows
+
+    if datasources:
+        return [_row(system_row, ds) for ds in datasources]
+
+    for key in ("datasource", "dataset_group", "dataset", "field"):
+        if isinstance(data.get(key), dict):
+            return [_row(system_row, data[key])]
+
+    return [{k: _scalar(v) for k, v in data.items()}]
+
+
+def format_csv(data: Any) -> str:
+    """Serialize data to a CSV string, flattening hierarchical data to the lowest level.
+
+    format_csv([{"id": 1, "name": "A"}]) -> "id,name\\n1,A\\n"
+    """
+    rows = _flatten_for_csv(data)
+    if not rows:
+        return ""
+    fieldnames = list(dict.fromkeys(k for row in rows for k in row))
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, restval="", lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return buf.getvalue()
+
+
 def format_resultset(data: Any, fmt: str | None) -> Any:
     """Serialize a result set to the requested format, or return the Python object.
 
-    fmt="json"    -> pretty-printed JSON string
-    fmt="compact" -> compact JSON string, no whitespace
-    fmt=None      -> data returned as-is (Python dict or list)
-
-    format_resultset([{"id": 1}], "json")    -> '[\\n  {"id": 1}\\n]'
-    format_resultset([{"id": 1}], "compact") -> '[{"id":1}]'
-    format_resultset([{"id": 1}], None)      -> [{"id": 1}]
+    fmt="json"                 -> pretty-printed JSON string
+    fmt="compact"/"json-compact" -> compact JSON string, no whitespace
+    fmt="yaml"/"yml"           -> YAML string
+    fmt="csv"                  -> CSV string (hierarchical data flattened to lowest level)
+    fmt="table"                -> plain-text table string
+    fmt=None                   -> data returned as-is (Python dict or list)
     """
     if fmt == "json":
         return format_json(data)
-    if fmt == "compact":
+    if fmt in ("compact", "json-compact"):
         return format_compact_json(data)
+    if fmt in ("yaml", "yml"):
+        return format_yaml(data)
+    if fmt == "csv":
+        return format_csv(data)
+    if fmt == "table":
+        return format_table(data)
     return data

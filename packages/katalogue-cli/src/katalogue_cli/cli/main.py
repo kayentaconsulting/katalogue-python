@@ -11,7 +11,6 @@ from katalogue_cli.logging import configure_logging
 from katalogue_cli.cli.dataset import dataset
 from katalogue_cli.cli.dataset_group import dataset_group
 from katalogue_cli.cli.datasource import datasource
-from katalogue_cli.cli.export import export
 from katalogue_cli.cli.field import field
 from katalogue_cli.cli.glossary import glossary
 from katalogue_cli.cli.system import system
@@ -82,4 +81,3 @@ cli.add_command(dataset_group)
 cli.add_command(dataset)
 cli.add_command(field)
 cli.add_command(glossary)
-cli.add_command(export)

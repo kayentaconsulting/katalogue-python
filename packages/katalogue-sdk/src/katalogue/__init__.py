@@ -5,13 +5,9 @@ from katalogue.config.settings import (
     Settings,
     resolve_settings,
 )
-from katalogue.formatters import (
-    format_compact_json,
-    format_descriptions_to_plaintext,
-    format_json,
-    format_resultset,
-)
-from katalogue.utils import filter_fields, filter_resultset, sort_resultset
+from katalogue.filters import Filter
+from katalogue.options import GetOptions, OutputOptions
+from katalogue.results import CatalogResult, WrittenFile
 
 __all__ = [
     # Client
@@ -25,13 +21,10 @@ __all__ = [
     # Token cache (protocol + entry — needed to implement custom backends)
     "TokenCache",
     "TokenEntry",
-    # Result set utilities
-    "filter_fields",
-    "filter_resultset",
-    "sort_resultset",
-    # Formatters
-    "format_json",
-    "format_compact_json",
-    "format_descriptions_to_plaintext",
-    "format_resultset",
+    # Options / results
+    "Filter",
+    "GetOptions",
+    "OutputOptions",
+    "CatalogResult",
+    "WrittenFile",
 ]

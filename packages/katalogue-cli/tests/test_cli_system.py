@@ -1,14 +1,15 @@
-"""Tests for CLI system commands - integration tests using Click CliRunner."""
+"""Tests for CLI system commands."""
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+from pydantic import ValidationError
 
+from katalogue import CatalogResult, GetOptions, OutputOptions, WrittenFile
+from katalogue.client.api import ApiError, AuthError
 from katalogue_cli.cli.main import cli
-from katalogue.client.api import AuthError, ApiError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -32,278 +33,316 @@ def system_list_data():
     return json.loads((FIXTURES / "system_list.json").read_text())
 
 
-class TestSystemGet:
-    def test_happy_path_json(self, runner):
-        data = {"system_id": 1, "system_name": "Katalogue"}
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(
-                cli,
-                [*CLI_AUTH, "system", "get", "1", "--format", "json"],
-            )
-        assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert parsed["system_name"] == "Katalogue"
+def _get_options(mock_client) -> GetOptions:
+    return mock_client.get.call_args.args[1]
 
-    def test_missing_credentials_shows_error(self, runner, monkeypatch):
+
+class TestSystemGet:
+    def test_happy_path_json(self, runner, mock_client, catalog_result):
+        data = {"system_id": 1, "system_name": "Katalogue"}
+        mock_client.get.return_value = catalog_result(data, "json")
+        result = runner.invoke(
+            cli,
+            [*CLI_AUTH, "system", "get", "1", "--format", "json"],
+        )
+        assert result.exit_code == 0
+        assert json.loads(result.output)["system_name"] == "Katalogue"
+        mock_client.get.assert_called_once()
+        assert mock_client.get.call_args.args[0] == "system"
+        options = _get_options(mock_client)
+        assert options.resource_id == "1"
+        assert options.output.format == "json"
+
+    def test_table_uses_cli_renderer_not_sdk_output(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={"system_id": 1, "system_name": "Katalogue"}
+        )
+        result = runner.invoke(
+            cli,
+            [*CLI_AUTH, "system", "get", "1", "--format", "table"],
+        )
+        assert result.exit_code == 0
+        assert "system_name" in result.output
+        assert "Katalogue" in result.output
+        assert _get_options(mock_client).output.format is None
+
+    def test_missing_credentials_shows_error(self, runner, monkeypatch, mocker):
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
-        with (
-            patch("katalogue_cli.cli.common.load_config_file", return_value={}),
-            patch("katalogue_cli.cli.common.keyring.get_password", return_value=None),
-        ):
-            result = runner.invoke(cli, ["system", "get", "1"])
+        mocker.patch("katalogue_cli.cli.common.load_config_file", return_value={})
+        mocker.patch("katalogue_cli.cli.common.keyring.get_password", return_value=None)
+        result = runner.invoke(cli, ["system", "get", "1"])
         assert result.exit_code == 1
         assert "client" in result.output.lower()
 
-    def test_api_error_shows_message(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.get_resource.side_effect = ApiError("Not found")
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "get", "bad"])
+    def test_api_error_shows_message(self, runner, mock_client):
+        mock_client.get.side_effect = ApiError("Not found")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "get", "bad"])
         assert result.exit_code == 1
         assert "Not found" in result.output
 
-    def test_auth_error_shows_message(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.get_resource.side_effect = AuthError("Unauthorized")
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "get", "1"])
+    def test_auth_error_shows_message(self, runner, mock_client):
+        mock_client.get.side_effect = AuthError("Unauthorized")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "get", "1"])
         assert result.exit_code == 1
         assert "Authentication failed" in result.output
 
+    def test_include_children_passed_to_sdk(self, runner, mock_client, catalog_result):
+        data = {"resource": "system", "system": {"system_id": 1}}
+        mock_client.get.return_value = catalog_result(data, "json")
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "get", "1", "--include-children"]
+        )
+        assert result.exit_code == 0
+        options = _get_options(mock_client)
+        assert options.resource_id == "1"
+        assert options.include_children is True
+        assert options.output.format == "json"
+
+    def test_template_split_dry_run_flags(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={},
+            output_files=[WrittenFile(path="out/users.yml")],
+        )
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "get",
+                "1",
+                "--include-children",
+                "--template",
+                "dbt-source",
+                "--split-by",
+                "dataset",
+                "--output-dir",
+                "./out",
+                "--dry-run",
+            ],
+        )
+        assert result.exit_code == 0
+        assert result.output.splitlines() == ["Would write 1 files", "out/users.yml"]
+        options = _get_options(mock_client)
+        assert options.include_children is True
+        assert options.output == OutputOptions(
+            format=None,
+            template="dbt-source",
+            split_by="dataset",
+            output_dir="./out",
+            dry_run=True,
+        )
+
+    def test_template_single_output_file_flags(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={},
+            output="version: 2",
+            output_file="./out.sql",
+        )
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "get",
+                "1",
+                "--include-children",
+                "--template",
+                "dbt-source",
+                "--output-file",
+                "./out.sql",
+                "--overwrite",
+            ],
+        )
+        assert result.exit_code == 0
+        assert result.output.strip() == "Wrote ./out.sql"
+        options = _get_options(mock_client)
+        assert options.output.output_file == "./out.sql"
+        assert options.output.overwrite is True
+
+    def test_filter_passed_to_sdk(self, runner, mock_client, catalog_result):
+        mock_client.get.return_value = catalog_result({"system_id": 1}, "json")
+        result = runner.invoke(
+            cli,
+            [*CLI_AUTH, "system", "get", "1", "--filter", "is_pii=true"],
+        )
+        assert result.exit_code == 0
+        assert _get_options(mock_client).filters == ["is_pii=true"]
+
+    def test_split_by_without_include_children_is_usage_error(
+        self, runner, mock_client
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "get",
+                "1",
+                "--split-by",
+                "dataset",
+                "--output-dir",
+                "./out",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "split_by requires include_children" in result.output
+        mock_client.get.assert_not_called()
+
+    def test_split_by_with_output_file_is_usage_error(self, runner, mock_client):
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "get",
+                "1",
+                "--include-children",
+                "--split-by",
+                "dataset",
+                "--output-file",
+                "foo",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "split_by cannot be combined with output_file" in result.output
+        mock_client.get.assert_not_called()
+
+    def test_malformed_filter_maps_to_usage_error(self, runner, mock_client):
+        mock_client.get.side_effect = ValueError(
+            "no valid operator found in filter: 'foo bar'"
+        )
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "get", "1", "--filter", "foo bar"]
+        )
+        assert result.exit_code == 2
+        assert "foo bar" in result.output
+
 
 class TestSystemList:
-    def test_happy_path_json(self, runner, system_list_data):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = system_list_data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "json"]
-            )
+    def test_happy_path_json(
+        self, runner, mock_client, catalog_result, system_list_data
+    ):
+        mock_client.get.return_value = catalog_result(system_list_data, "json")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "json"])
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert len(parsed) == 3
+        options = _get_options(mock_client)
+        assert options.resource_id is None
+        assert options.output.format == "json"
 
-    def test_happy_path_table(self, runner, system_list_data):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = system_list_data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
-            )
+    def test_happy_path_table_uses_default_fields(
+        self, runner, mock_client, system_list_data
+    ):
+        mock_client.get.return_value = CatalogResult(data=system_list_data)
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "table"])
         assert result.exit_code == 0
         assert "Customer Data Platform" in result.output
+        options = _get_options(mock_client)
+        assert options.fields == [
+            "system_id",
+            "system_name",
+            "system_type",
+            "system_description",
+        ]
+        assert options.output.format is None
 
-    def test_missing_credentials_shows_error(self, runner, monkeypatch):
+    def test_missing_credentials_shows_error(self, runner, monkeypatch, mocker):
         monkeypatch.delenv("KATALOGUE_CLIENT_ID", raising=False)
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
-        with (
-            patch("katalogue_cli.cli.common.load_config_file", return_value={}),
-            patch("katalogue_cli.cli.common.keyring.get_password", return_value=None),
-        ):
-            result = runner.invoke(cli, ["system", "list"])
+        mocker.patch("katalogue_cli.cli.common.load_config_file", return_value={})
+        mocker.patch("katalogue_cli.cli.common.keyring.get_password", return_value=None)
+        result = runner.invoke(cli, ["system", "list"])
         assert result.exit_code == 1
         assert "client" in result.output.lower()
 
-    def test_empty_results(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
-            )
+    def test_empty_results_table(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(data=[])
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "table"])
         assert result.exit_code == 0
         assert "No results" in result.output
 
-    def test_fields_filter_json(self, runner):
-        data = [
-            {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"},
-            {"system_id": 2, "system_name": "Kayenta", "system_type": "Intranet"},
-        ]
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(
-                cli,
-                [
-                    *CLI_AUTH,
-                    "system",
-                    "list",
-                    "--fields",
-                    "system_id,system_name",
-                    "--format",
-                    "json",
-                ],
-            )
+    def test_empty_results_json(self, runner, mock_client, catalog_result):
+        mock_client.get.return_value = catalog_result([], "json")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list", "--format", "json"])
         assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert parsed == [
-            {"system_id": 1, "system_name": "Katalogue"},
-            {"system_id": 2, "system_name": "Kayenta"},
-        ]
+        assert json.loads(result.output) == []
 
-    def test_fields_filter_table(self, runner):
-        data = [
-            {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}
-        ]
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(
-                cli,
-                [
-                    *CLI_AUTH,
-                    "system",
-                    "list",
-                    "--fields",
-                    "system_id,system_name",
-                    "--format",
-                    "table",
-                ],
-            )
-        assert result.exit_code == 0
-        assert "system_name" in result.output
-        assert "system_type" not in result.output
-
-    def test_fields_filter_get(self, runner):
-        data = {
-            "system_id": 1,
-            "system_name": "Katalogue",
-            "system_type": "Data Catalog",
-        }
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(
-                cli,
-                [
-                    *CLI_AUTH,
-                    "system",
-                    "get",
-                    "1",
-                    "--fields",
-                    "system_id,system_name",
-                    "--format",
-                    "json",
-                ],
-            )
-        assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert "system_type" not in parsed
-        assert parsed["system_name"] == "Katalogue"
-
-    def test_list_compact(self, runner):
+    def test_fields_filter_json(self, runner, mock_client, catalog_result):
         data = [
             {"system_id": 1, "system_name": "Katalogue"},
             {"system_id": 2, "system_name": "Kayenta"},
         ]
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "compact"]
-            )
+        mock_client.get.return_value = catalog_result(data, "json")
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "list",
+                "--fields",
+                "system_id,system_name",
+                "--format",
+                "json",
+            ],
+        )
         assert result.exit_code == 0
-        output = result.output.strip()
-        assert "\n" not in output
-        parsed = json.loads(output)
-        assert len(parsed) == 2
+        assert json.loads(result.output) == data
+        assert _get_options(mock_client).fields == ["system_id", "system_name"]
 
-    def test_get_compact(self, runner):
-        data = {
-            "system_id": 1,
-            "system_name": "Katalogue",
-            "system_type": "Data Catalog",
-        }
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.get_resource.return_value = data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "get", "1", "--format", "compact"]
-            )
+    def test_wide_bypasses_default_fields_for_table(self, runner, mock_client):
+        data = [
+            {
+                "system_id": 1,
+                "system_name": "Katalogue",
+                "system_type": "Data Catalog",
+                "owner": "admin",
+            }
+        ]
+        mock_client.get.return_value = CatalogResult(data=data)
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "list", "--format", "table", "--wide"]
+        )
         assert result.exit_code == 0
-        output = result.output.strip()
-        assert "\n" not in output
-        parsed = json.loads(output)
-        assert parsed["system_name"] == "Katalogue"
-
-
-class TestSystemListDefaultFields:
-    """Default field filtering: table uses defaults, json/compact/wide bypass them."""
-
-    _data = [
-        {
-            "system_id": 1,
-            "system_name": "Katalogue",
-            "system_type": "Data Catalog",
-            "description": "Main catalog",
-            "owner": "admin",
-        }
-    ]
-
-    def test_table_shows_only_default_fields(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = self._data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "table"]
-            )
-        assert result.exit_code == 0
-        assert "system_id" in result.output
-        assert "system_name" in result.output
-        assert "system_type" in result.output
-        assert "description" not in result.output
-        assert "owner" not in result.output
-
-    def test_json_shows_all_fields(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = self._data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "json"]
-            )
-        assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert "description" in parsed[0]
-        assert "owner" in parsed[0]
-
-    def test_compact_shows_all_fields(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = self._data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "compact"]
-            )
-        assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert "description" in parsed[0]
-        assert "owner" in parsed[0]
-
-    def test_wide_shows_all_fields_in_table(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = self._data
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "list", "--format", "table", "--wide"]
-            )
-        assert result.exit_code == 0
-        assert "description" in result.output
         assert "owner" in result.output
+        assert _get_options(mock_client).fields is None
 
-    def test_explicit_fields_override_defaults_in_table(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = self._data
-            result = runner.invoke(
-                cli,
-                [
-                    *CLI_AUTH,
-                    "system",
-                    "list",
-                    "--format",
-                    "table",
-                    "--fields",
-                    "system_id,description",
-                ],
-            )
+    def test_list_compact(self, runner, mock_client, catalog_result):
+        data = [
+            {"system_id": 1, "system_name": "Katalogue"},
+            {"system_id": 2, "system_name": "Kayenta"},
+        ]
+        mock_client.get.return_value = catalog_result(data, "compact")
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "list", "--format", "compact"]
+        )
         assert result.exit_code == 0
-        assert "description" in result.output
-        assert "system_type" not in result.output
+        assert "\n" not in result.output.strip()
+        assert len(json.loads(result.output)) == 2
+
+    def test_api_error_shows_message(self, runner, mock_client):
+        mock_client.get.side_effect = ApiError("Server error")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list"])
+        assert result.exit_code == 1
+        assert "Server error" in result.output
+
+    def test_validation_error_maps_to_usage_error(self, runner, mock_client):
+        try:
+            GetOptions(output=OutputOptions(split_by="dataset", output_dir="./out"))
+        except ValidationError as exc:
+            mock_client.get.side_effect = exc
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "list"])
+        assert result.exit_code == 2
+        assert "split_by requires include_children" in result.output
 
 
 class TestSystemKeys:
-    def test_returns_sorted_keys_as_lines(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = [
-                {"system_id": 1, "system_name": "X", "active": True}
-            ]
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
+    def test_returns_sorted_keys_as_lines(self, runner, mock_client):
+        mock_client.list_resource.return_value = [
+            {"system_id": 1, "system_name": "X", "active": True}
+        ]
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
         assert result.exit_code == 0
         assert result.output.strip().splitlines() == [
             "active",
@@ -311,36 +350,38 @@ class TestSystemKeys:
             "system_name",
         ]
 
-    def test_returns_json_array(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = [
-                {"system_id": 1, "system_name": "X"}
-            ]
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "keys", "--format", "json"]
-            )
+    def test_returns_json_array(self, runner, mock_client):
+        mock_client.list_resource.return_value = [{"system_id": 1, "system_name": "X"}]
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "keys", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output) == ["system_id", "system_name"]
 
-    def test_empty_list_lines(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
+    def test_empty_list_lines(self, runner, mock_client):
+        mock_client.list_resource.return_value = []
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
         assert result.exit_code == 0
         assert result.output.strip() == ""
 
-    def test_empty_list_json(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = []
-            result = runner.invoke(
-                cli, [*CLI_AUTH, "system", "keys", "--format", "json"]
-            )
+    def test_empty_list_json(self, runner, mock_client):
+        mock_client.list_resource.return_value = []
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "keys", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output) == []
 
-    def test_api_error(self, runner):
-        with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.side_effect = ApiError("Server error")
-            result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
+    def test_api_error(self, runner, mock_client):
+        mock_client.list_resource.side_effect = ApiError("Server error")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "keys"])
         assert result.exit_code == 1
         assert "Server error" in result.output
+
+
+class TestTopLevelExportRemoved:
+    def test_root_help_no_longer_lists_export(self, runner):
+        result = runner.invoke(cli, ["--help"])
+        assert result.exit_code == 0
+        assert "export" not in result.output
+
+    def test_export_group_is_removed(self, runner):
+        result = runner.invoke(cli, [*CLI_AUTH, "export", "system", "1"])
+        assert result.exit_code != 0
+        assert "No such command" in result.output

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from click.testing import CliRunner
 
+from katalogue import CatalogResult
 from katalogue_cli.cli.main import cli
 
 
@@ -28,7 +29,9 @@ class TestKeyringFallback:
             return_value="keyring-secret",
         )
         mock_client_cls = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
-        mock_client_cls.return_value.list_resource.return_value = []
+        mock_client_cls.return_value.get.return_value = CatalogResult(
+            data=[], output="[]"
+        )
 
         result = runner.invoke(cli, ["system", "list", "--format", "json"])
 
@@ -42,7 +45,9 @@ class TestKeyringFallback:
         monkeypatch.delenv("KATALOGUE_CLIENT_SECRET", raising=False)
         mock_keyring = mocker.patch("katalogue_cli.cli.common.keyring.get_password")
         mock_client_cls = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
-        mock_client_cls.return_value.list_resource.return_value = []
+        mock_client_cls.return_value.get.return_value = CatalogResult(
+            data=[], output="[]"
+        )
         mocker.patch("katalogue_cli.cli.common.load_config_file", return_value={})
 
         runner.invoke(
@@ -65,7 +70,9 @@ class TestKeyringFallback:
         monkeypatch.setenv("KATALOGUE_CLIENT_SECRET", "env-secret")
         mock_keyring = mocker.patch("katalogue_cli.cli.common.keyring.get_password")
         mock_client_cls = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
-        mock_client_cls.return_value.list_resource.return_value = []
+        mock_client_cls.return_value.get.return_value = CatalogResult(
+            data=[], output="[]"
+        )
         mocker.patch(
             "katalogue_cli.cli.common.load_config_file",
             return_value={"client_id": "cid"},

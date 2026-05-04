@@ -2,78 +2,76 @@
 
 import json
 
-from katalogue_cli.cli.main import cli
+from katalogue import CatalogResult
 from katalogue.client.api import ApiError
+from katalogue_cli.cli.main import cli
+
+
+def _options(mock_client):
+    return mock_client.get.call_args.args[1]
 
 
 class TestFieldList:
-    def test_list_all(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [
-            {"field_id": 1, "field_name": "user_id", "is_pii": False}
-        ]
+    def test_list_all(self, runner, cli_auth, mock_client, catalog_result):
+        mock_client.get.return_value = catalog_result(
+            [{"field_id": 1, "field_name": "user_id", "is_pii": False}], "json"
+        )
         result = runner.invoke(cli, [*cli_auth, "field", "list", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output)[0]["field_name"] == "user_id"
+        assert mock_client.get.call_args.args[0] == "field"
 
-    def test_list_by_dataset(self, runner, cli_auth, mock_client):
-        mock_client.list_by_parent.return_value = [
-            {"field_id": 1, "field_name": "user_id"}
-        ]
+    def test_list_by_dataset(self, runner, cli_auth, mock_client, catalog_result):
+        mock_client.get.return_value = catalog_result(
+            [{"field_id": 1, "field_name": "user_id"}], "json"
+        )
         result = runner.invoke(
             cli, [*cli_auth, "field", "list", "--dataset", "1", "--format", "json"]
         )
         assert result.exit_code == 0
-        mock_client.list_by_parent.assert_called_once_with("field", "dataset", "1")
+        assert _options(mock_client).parent_id == "1"
+        mock_client.list_by_parent.assert_not_called()
 
-    def test_list_where_bool_filters_pii(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [
-            {"field_id": 1, "field_name": "email", "is_pii": True},
-            {"field_id": 2, "field_name": "created_at", "is_pii": False},
-        ]
+    def test_list_filter_bool_passed_to_sdk(
+        self, runner, cli_auth, mock_client, catalog_result
+    ):
+        mock_client.get.return_value = catalog_result(
+            [{"field_id": 1, "field_name": "email", "is_pii": True}], "json"
+        )
         result = runner.invoke(
             cli,
-            [*cli_auth, "field", "list", "--where", "is_pii=true", "--format", "json"],
+            [*cli_auth, "field", "list", "--filter", "is_pii=true", "--format", "json"],
         )
         assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert len(parsed) == 1
-        assert parsed[0]["field_id"] == 1
+        assert _options(mock_client).filters == ["is_pii=true"]
 
-    def test_list_where_multiple_conditions_and(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = [
-            {"field_id": 1, "field_name": "email", "is_pii": True, "status": "active"},
-            {"field_id": 2, "field_name": "age", "is_pii": True, "status": "inactive"},
-            {
-                "field_id": 3,
-                "field_name": "created_at",
-                "is_pii": False,
-                "status": "active",
-            },
-        ]
+    def test_list_filter_multiple_conditions_passed_to_sdk(
+        self, runner, cli_auth, mock_client, catalog_result
+    ):
+        mock_client.get.return_value = catalog_result([], "json")
         result = runner.invoke(
             cli,
             [
                 *cli_auth,
                 "field",
                 "list",
-                "--where",
+                "--filter",
                 "is_pii=true",
-                "--where",
+                "--filter",
                 "status=active",
                 "--format",
                 "json",
             ],
         )
         assert result.exit_code == 0
-        parsed = json.loads(result.output)
-        assert len(parsed) == 1
-        assert parsed[0]["field_id"] == 1
+        assert _options(mock_client).filters == ["is_pii=true", "status=active"]
 
-    def test_list_where_with_dataset_parent(self, runner, cli_auth, mock_client):
-        mock_client.list_by_parent.return_value = [
-            {"field_id": 1, "field_name": "email", "is_pii": True},
-            {"field_id": 2, "field_name": "created_at", "is_pii": False},
-        ]
+    def test_list_filter_with_dataset_parent(
+        self, runner, cli_auth, mock_client, catalog_result
+    ):
+        mock_client.get.return_value = catalog_result(
+            [{"field_id": 1, "field_name": "email", "is_pii": True}], "json"
+        )
         result = runner.invoke(
             cli,
             [
@@ -82,26 +80,25 @@ class TestFieldList:
                 "list",
                 "--dataset",
                 "42",
-                "--where",
+                "--filter",
                 "is_pii=true",
                 "--format",
                 "json",
             ],
         )
         assert result.exit_code == 0
-        mock_client.list_by_parent.assert_called_once_with("field", "dataset", "42")
-        parsed = json.loads(result.output)
-        assert len(parsed) == 1
-        assert parsed[0]["field_id"] == 1
+        options = _options(mock_client)
+        assert options.parent_id == "42"
+        assert options.filters == ["is_pii=true"]
 
     def test_empty_results(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.return_value = []
+        mock_client.get.return_value = CatalogResult(data=[])
         result = runner.invoke(cli, [*cli_auth, "field", "list", "--format", "table"])
         assert result.exit_code == 0
         assert "No results" in result.output
 
     def test_api_error(self, runner, cli_auth, mock_client):
-        mock_client.list_resource.side_effect = ApiError("Server error")
+        mock_client.get.side_effect = ApiError("Server error")
         result = runner.invoke(cli, [*cli_auth, "field", "list"])
         assert result.exit_code == 1
         assert "Server error" in result.output
@@ -142,20 +139,19 @@ class TestFieldKeys:
 
 
 class TestFieldGet:
-    def test_happy_path(self, runner, cli_auth, mock_client):
-        mock_client.get_resource.return_value = {
-            "field_id": 1,
-            "field_name": "email",
-            "is_pii": True,
-        }
+    def test_happy_path(self, runner, cli_auth, mock_client, catalog_result):
+        mock_client.get.return_value = catalog_result(
+            {"field_id": 1, "field_name": "email", "is_pii": True}, "json"
+        )
         result = runner.invoke(
             cli, [*cli_auth, "field", "get", "1", "--format", "json"]
         )
         assert result.exit_code == 0
         assert json.loads(result.output)["field_name"] == "email"
+        assert _options(mock_client).resource_id == "1"
 
     def test_api_error(self, runner, cli_auth, mock_client):
-        mock_client.get_resource.side_effect = ApiError("Not found")
+        mock_client.get.side_effect = ApiError("Not found")
         result = runner.invoke(cli, [*cli_auth, "field", "get", "999"])
         assert result.exit_code == 1
         assert "Not found" in result.output

@@ -23,25 +23,54 @@ pip install "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirec
 ## Quick Start
 
 ```python
-from katalogue import KatalogueClient
+from katalogue import KatalogueClient, GetOptions
 
 client = KatalogueClient()  # reads KATALOGUE_CLIENT_ID / KATALOGUE_CLIENT_SECRET from env
 
-# List all systems (Python object)
-client.get("system")
+# List all systems
+result = client.get("system")
+print(result.data)  # list of dicts
 
-# List systems — selected fields, sorted, as JSON
-client.get("system", fields=["system_id", "system_name"], sort=[{"system_name": "asc"}], format="json")
+# List systems — selected fields, sorted
+result = client.get("system", GetOptions(
+    fields=["system_id", "system_name"],
+    sort=[{"system_name": "asc"}],
+))
 
 # Single record by ID
-client.get("system", resource_id=1)
+result = client.get("system", GetOptions(resource_id=1))
 
 # All datasources under a system
-client.get("datasource", parent_id=1)
+result = client.get("datasource", GetOptions(parent_id=1))
 
-# All PII fields in a specific datasource — filtered client-side
-client.get("field", filter={"datasource_id": 1, "is_pii": True}, fields=["field_id", "field_name", "dataset_name"])
+# All PII fields — filtered client-side
+result = client.get("field", GetOptions(
+    filters=["is_pii=true"],
+    fields=["field_id", "field_name", "dataset_name"],
+))
 ```
+
+## Public Surface
+
+```python
+from katalogue import (
+    KatalogueClient,
+    GetOptions,
+    OutputOptions,
+    Filter,
+    CatalogResult,
+    WrittenFile,
+    Settings,
+    resolve_settings,
+    AuthError,
+    ApiError,
+    ConfigError,
+    TokenCache,
+    TokenEntry,
+)
+```
+
+Internal helpers (`filter_fields`, `sort_resultset`, `format_json`, etc.) are available from their submodules (`katalogue.utils`, `katalogue.formatters`) for advanced use cases.
 
 ## Credentials
 
@@ -130,19 +159,18 @@ glossary   (independent)
 
 ## `get()` — High-Level API
 
-`get()` is the recommended way to query resources. It handles routing, filtering, sorting, and formatting in one call.
+`get()` is the single entry point for querying resources. Pass a `GetOptions` object to control routing, filtering, sorting, and output. All filtering and sorting happens **client-side** after the API fetch.
 
 ```python
-client.get(
-    resource,                        # required: "system", "datasource", "dataset_group", "dataset", "field", "glossary"
-    resource_id=None,                # fetch a single record by ID
-    parent_id=None,                  # fetch all children of this parent
-    filter=None,                     # AND-logic key/value filter applied client-side
-    fields=None,                     # keep only these fields in the result
-    sort=None,                       # multi-column sort: [{"field": "asc"}, {"other": "desc"}]
-    format=None,                     # "json" | "compact" | None (Python object, default)
-    format_descriptions_as_text=False,  # convert rich-text description fields to plain text
-)
+from katalogue import KatalogueClient, GetOptions, OutputOptions
+
+result = client.get(resource, options=GetOptions(...))
+# result.data          — filtered/sorted Python object (dict or list of dicts)
+# result.raw           — unprocessed API response
+# result.output        — formatted string (set when OutputOptions.format or .template is set)
+# result.output_file   — path written to (set when OutputOptions.output_file is used)
+# result.output_files  — list of WrittenFile (set when OutputOptions.split_by is used)
+# result.metadata["strategy"] — "single" | "list" | "list_by_parent"
 ```
 
 ### Routing
@@ -159,15 +187,15 @@ client.get(
 ### List all records
 
 ```python
-client.get("system", fields=["system_id", "system_name", "system_type"])
-# -> [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}, ...]
+result = client.get("system", GetOptions(fields=["system_id", "system_name", "system_type"]))
+# result.data -> [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}, ...]
 ```
 
 ### Single record
 
 ```python
-client.get("system", resource_id=1)
-# -> {"system_id": 1, "system_name": "Katalogue", ...}
+result = client.get("system", GetOptions(resource_id=1))
+# result.data -> {"system_id": 1, "system_name": "Katalogue", ...}
 ```
 
 ### Children by parent
@@ -175,55 +203,71 @@ client.get("system", resource_id=1)
 Walk the full hierarchy: system → datasource → dataset_group → dataset → field.
 
 ```python
-datasources = client.get("datasource", parent_id=1, fields=["datasource_id", "datasource_name"])
+datasources = client.get("datasource", GetOptions(parent_id=1, fields=["datasource_id", "datasource_name"])).data
 
-dataset_groups = client.get("dataset_group", parent_id=datasources[0]["datasource_id"],
-                            fields=["dataset_group_id", "dataset_group_name"])
+dataset_groups = client.get("dataset_group", GetOptions(
+    parent_id=datasources[0]["datasource_id"],
+    fields=["dataset_group_id", "dataset_group_name"],
+)).data
 
-datasets = client.get("dataset", parent_id=dataset_groups[0]["dataset_group_id"],
-                      fields=["dataset_id", "dataset_name"])
+datasets = client.get("dataset", GetOptions(
+    parent_id=dataset_groups[0]["dataset_group_id"],
+    fields=["dataset_id", "dataset_name"],
+)).data
 
-fields = client.get("field", parent_id=datasets[0]["dataset_id"],
-                    fields=["field_id", "field_name", "data_type", "is_pii"])
+fields = client.get("field", GetOptions(
+    parent_id=datasets[0]["dataset_id"],
+    fields=["field_id", "field_name", "data_type", "is_pii"],
+)).data
 ```
 
 ### Scoped lookup
 
-Returns `None` if the record doesn't belong to the given parent.
+Returns `data=None` if the record doesn't belong to the given parent.
 
 ```python
-client.get("field", resource_id=42, parent_id=10)
-# -> record if field 42 is in dataset 10, else None
+result = client.get("field", GetOptions(resource_id=42, parent_id=10))
+# result.data -> record if field 42 is in dataset 10, else None
 ```
 
 ### Filter
 
-AND-logic, applied client-side. Works on any field present in the API response.
+AND-logic filter strings, applied client-side. Syntax: `path OP value`.
 
 ```python
-# All PII fields in a specific datasource
-client.get("field",
-    filter={"datasource_id": 1, "is_pii": True},
-    fields=["field_id", "field_name", "dataset_name", "datasource_name", "is_pii"])
+result = client.get("field", GetOptions(
+    filters=["is_pii=true"],
+    fields=["field_id", "field_name", "dataset_name", "datasource_name", "is_pii"],
+))
+
+# Multiple filters are ANDed together
+result = client.get("field", GetOptions(
+    filters=["is_pii=true", 'datatype_fullname="varchar"'],
+))
+
+# Dotted-path filter scoped to a nested level
+result = client.get("system", GetOptions(
+    include_children=True,
+    resource_id=1,
+    filters=['field.is_pii=true'],  # only keep fields where is_pii is true
+))
 ```
+
+Operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
+String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
 
 ### Sort
 
 Multi-column. `"asc"` and `"desc"` are case-insensitive. Null values always sort last.
 
 ```python
-client.get("system", sort=[{"system_name": "asc"}], fields=["system_id", "system_name"])
+result = client.get("system", GetOptions(
+    sort=[{"system_name": "asc"}],
+    fields=["system_id", "system_name"],
+))
 
 # Multi-column: primary key first
-client.get("field", sort=[{"dataset_name": "asc"}, {"field_name": "asc"}])
-```
-
-### Output format
-
-```python
-client.get("system", fields=["system_id", "system_name"])          # Python object (default)
-client.get("system", fields=["system_id", "system_name"], format="json")     # pretty JSON string
-client.get("system", fields=["system_id", "system_name"], format="compact")  # minified JSON string
+result = client.get("field", GetOptions(sort=[{"dataset_name": "asc"}, {"field_name": "asc"}]))
 ```
 
 ### Plain-text descriptions
@@ -231,123 +275,249 @@ client.get("system", fields=["system_id", "system_name"], format="compact")  # m
 Description fields are stored as rich-text JSON. Pass `format_descriptions_as_text=True` to extract plain text.
 
 ```python
-client.get("system",
+result = client.get("system", GetOptions(
     fields=["system_id", "system_name", "system_description"],
-    format_descriptions_as_text=True)
-# -> [{"system_id": 1, "system_name": "Katalogue", "system_description": "User-friendly system..."}]
+    format_descriptions_as_text=True,
+))
+# result.data -> [{"system_id": 1, "system_name": "Katalogue", "system_description": "User-friendly system..."}]
+```
+
+### Serialization formats
+
+Pass `OutputOptions(format=...)` to serialize the result as a string in `result.output`.
+
+```python
+from katalogue import KatalogueClient, GetOptions, OutputOptions
+
+# JSON (pretty-printed)
+result = client.get("system", GetOptions(output=OutputOptions(format="json")))
+print(result.output)   # '[\n  {\n    "system_id": 1, ...'
+
+# YAML (also accepts "yml")
+result = client.get("system", GetOptions(output=OutputOptions(format="yaml")))
+
+# Compact JSON — single line, no whitespace (also accepts "compact")
+result = client.get("system", GetOptions(output=OutputOptions(format="json-compact")))
+
+# CSV — flat list serialized directly; hierarchical data flattened to lowest level
+result = client.get("field", GetOptions(output=OutputOptions(format="csv")))
+
+# CSV with include_children — flattened to field level, parent columns denormalized per row
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(format="csv"),
+))
 ```
 
 ### Validation
 
-`resource`, `format`, and sort `direction` are validated. Invalid values raise `ValueError` with the list of accepted values.
+`resource` and sort `direction` are validated. Invalid values raise `ValueError`.
 
 ```python
 client.get("ssystem")
 # ValueError: Invalid resource 'ssystem'. Must be one of: dataset, dataset_group, datasource, field, glossary, system
 
-client.get("system", format="table")
-# ValueError: Invalid format 'table'. Must be one of: compact, json
-
-client.get("system", sort=[{"system_name": "ascending"}])
+client.get("system", GetOptions(sort=[{"system_name": "ascending"}]))
 # ValueError: Invalid sort direction 'ascending' for column 'system_name'. Must be 'asc' or 'desc'.
 ```
 
-## Utilities
+## Hierarchical Retrieval
 
-These functions are available directly from `katalogue` for use outside of `get()`.
-
-### `filter_fields(data, fields)`
-
-Keep only the requested fields from a dict or list of dicts. Wrapper dicts (e.g. `{"systems": [...]}`) are unwrapped automatically.
+Pass `include_children=True` with `resource_id` to fetch a resource and all its descendants in a single call. The result uses a flat canonical shape with all child records in separate top-level lists.
 
 ```python
-from katalogue import filter_fields
+from katalogue import KatalogueClient, GetOptions
 
-filter_fields([{"id": 1, "name": "A", "extra": "x"}], ["id", "name"])
-# -> [{"id": 1, "name": "A"}]
-
-filter_fields({"id": 1, "name": "A", "extra": "x"}, ["id", "name"])
-# -> {"id": 1, "name": "A"}
-
-filter_fields(data, None)   # fields=None — data returned unchanged
-filter_fields(data, [])     # fields=[] — data returned unchanged
+result = client.get("system", GetOptions(resource_id=1, include_children=True))
+# result.data -> {
+#   "resource": "system",
+#   "system": {"system_id": 1, "system_name": "..."},
+#   "datasources": [...],
+#   "dataset_groups": [...],
+#   "datasets": [...],
+#   "fields": [...],
+# }
 ```
 
-### `filter_resultset(data, key, value)`
+Supported for `system`, `datasource`, `dataset_group`, `dataset`, and `glossary`.
 
-Keep only rows where `row[key] == value`. Unwraps wrapper dicts automatically.
+Hierarchical filters scope to the named level — only records at that level are pruned; ancestors are retained:
 
 ```python
-from katalogue import filter_resultset
-
-rows = [{"type": "db", "name": "Orders"}, {"type": "api", "name": "Events"}]
-filter_resultset(rows, "type", "db")
-# -> [{"type": "db", "name": "Orders"}]
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    filters=["field.is_pii=true"],   # keep only PII fields
+))
 ```
 
-### `sort_resultset(data, sort)`
+## Templated Export
 
-Sort a list of dicts by one or more columns. Null values are always sorted last regardless of direction.
+Combine `include_children=True` with `OutputOptions(template=...)` to render the result using a built-in or custom Jinja2 template. Templates and serialization formats are independent axes.
+
+### Built-in templates
+
+| Name | Natural format | Description |
+|------|----------------|-------------|
+| `dbt-source` | YAML | dbt `sources.yml` structure |
+| `column-mapping` | YAML | Field-level column mapping |
+| `json-template` | JSON | Full hierarchical context as a JSON object |
+
+### Template only — natural format
 
 ```python
-from katalogue import sort_resultset
+from katalogue import KatalogueClient, GetOptions, OutputOptions
 
-rows = [{"name": "Charlie"}, {"name": "Alice"}, {"name": "Bob"}]
+# dbt-source renders YAML
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="dbt-source"),
+))
+print(result.output)   # YAML string starting with "version: 2\nsources:\n..."
 
-sort_resultset(rows, [{"name": "asc"}])
-# -> [{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}]
-
-# Multi-column: primary sort first in the list
-sort_resultset(rows, [{"type": "asc"}, {"name": "desc"}])
-
-sort_resultset(rows, None)   # None — data returned unchanged
+# json-template renders JSON
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="json-template"),
+))
+print(result.output)   # JSON string
 ```
 
-### `format_descriptions_to_plaintext(data)`
+### Template + format — convert output
 
-Recursively converts rich-text description fields (stored as JSON strings) to plain text. Strings that are not rich-text JSON are returned unchanged. Works on a single string, a dict, or a list of dicts.
+Combine `template` and `format` to convert the rendered output to a different serialization format:
 
 ```python
-from katalogue import format_descriptions_to_plaintext
+# dbt-source (YAML) converted to JSON
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="dbt-source", format="json"),
+))
+print(result.output)   # JSON string
 
-format_descriptions_to_plaintext("just a plain string")
-# -> "just a plain string"
+# dbt-source (YAML) converted to compact JSON
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="dbt-source", format="json-compact"),
+))
 
-format_descriptions_to_plaintext(None)
-# -> None
-
-# Applied recursively to all string values in a list of records
-records = [{"name": "A", "description": "<rich-text-json>"}]
-format_descriptions_to_plaintext(records)
-# -> [{"name": "A", "description": "plain text extracted from blocks"}]
+# json-template (JSON) converted to YAML
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="json-template", format="yaml"),
+))
 ```
 
-### `format_resultset(data, fmt)`
+### Custom template
 
-Route a result to a string formatter. Used internally by `get(format=...)`.
+You can either pass a direct `.j2` path or register templates in a repo-local
+config file.
 
-```python
-from katalogue import format_resultset
+`katalogue.toml` in the repository root:
 
-format_resultset(data, "json")     # -> pretty-printed JSON string
-format_resultset(data, "compact")  # -> compact JSON string, no spaces
-format_resultset(data, None)       # -> data unchanged (Python object)
+```toml
+[templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+
+[templates.customer-mapping]
+path = "templates/customer-mapping.j2"
+default_format = "json"
 ```
 
-### `format_json(data)` / `format_compact_json(data)`
+`pyproject.toml`:
 
-Direct JSON formatters.
+```toml
+[tool.katalogue.templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+
+[tool.katalogue.templates.customer-mapping]
+path = "templates/customer-mapping.j2"
+default_format = "json"
+```
+
+Registry entries use the logical name passed to `template=...`, plus the source
+path and default output format. If a repo defines the same name as a built-in
+template, the repo version wins.
+
+Pass a path to a `.j2` file directly:
 
 ```python
-from katalogue import format_json, format_compact_json
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="./my_template.j2"),
+))
+```
 
-format_json([{"id": 1}])         # -> '[\n  {\n    "id": 1\n  }\n]'
-format_compact_json([{"id": 1}]) # -> '[{"id":1}]'
+### Single file output
+
+```python
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(template="dbt-source", output_file="./sources.yml"),
+))
+# result.output_file -> "./sources.yml"
+```
+
+### Split by resource level
+
+Write one file per dataset (or datasource, or dataset_group):
+
+```python
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(
+        template="dbt-source",
+        split_by="dataset",
+        output_dir="./dbt/models",
+    ),
+))
+for f in result.output_files:
+    print(f.path)   # ./dbt/models/customers.yml, ./dbt/models/orders.yml, ...
+```
+
+File extensions are derived from the format or template:
+
+| Setting | Extension |
+|---------|-----------|
+| `format="json"` | `.json` |
+| `format="yaml"` or `"yml"` | `.yaml` |
+| `format="csv"` | `.csv` |
+| built-in or repo-registered template with default format `yaml` / `yml` | `.yaml` / `.yml` |
+| built-in or repo-registered template with default format `json` | `.json` |
+| custom `.j2` file (no format) | `.yml` |
+
+`format` takes precedence over `template` when determining the extension.
+
+### Dry run
+
+```python
+result = client.get("system", GetOptions(
+    resource_id=1,
+    include_children=True,
+    output=OutputOptions(
+        template="dbt-source",
+        split_by="dataset",
+        output_dir="./out",
+        dry_run=True,
+    ),
+))
+# Files are planned but not written. result.output_files lists what would be created.
 ```
 
 ## Low-Level Client Methods
 
-These are available for advanced use cases where you need direct control over API calls.
+These are available for advanced use cases where you need direct control over API calls. They return the raw API envelope without any filtering or formatting applied.
 
 ```python
 # List all records of a resource type (returns raw API envelope)
@@ -380,7 +550,8 @@ from katalogue import KatalogueClient, ConfigError, AuthError, ApiError
 
 try:
     client = KatalogueClient()
-    systems = client.get("system", fields=["system_id", "system_name"])
+    result = client.get("system", GetOptions(fields=["system_id", "system_name"]))
+    systems = result.data
 except ConfigError as e:
     # Missing or invalid credentials — check env vars / Settings arguments
     print(f"Config error: {e}")
@@ -408,20 +579,32 @@ You never need to manage tokens manually.
 | Symbol | Type | Description |
 |--------|------|-------------|
 | `KatalogueClient` | class | HTTP client; OAuth2 managed internally |
-| `KatalogueClient.get()` | method | High-level fetch with filtering, sorting, and formatting |
+| `KatalogueClient.get()` | method | High-level fetch with filtering, sorting, and output |
+| `GetOptions` | Pydantic model | Routing, filter, sort, fields, output options |
+| `GetOptions.resource_id` | `int \| str \| None` | Fetch a single resource by ID |
+| `GetOptions.parent_id` | `int \| str \| None` | Fetch all children of a parent |
+| `GetOptions.filters` | `list[str] \| None` | Client-side filter expressions |
+| `GetOptions.fields` | `list[str] \| None` | Columns to keep in the result |
+| `GetOptions.sort` | `list[dict] \| None` | Multi-column sort, e.g. `[{"name": "asc"}]` |
+| `GetOptions.include_children` | `bool` | Fetch resource and all descendants |
+| `GetOptions.format_descriptions_as_text` | `bool` | Convert Draft.js rich-text to plain text |
+| `GetOptions.output` | `OutputOptions` | Output rendering and file options |
+| `OutputOptions` | Pydantic model | Serialization, template, file output, split-by, dry-run |
+| `OutputOptions.format` | `str \| None` | Serialization format: `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv` |
+| `OutputOptions.template` | `str \| None` | Built-in template name or path to a `.j2` file |
+| `OutputOptions.output_file` | `str \| None` | Write output to this file path |
+| `OutputOptions.output_dir` | `str \| None` | Directory for split output files |
+| `OutputOptions.split_by` | `str \| None` | Split level: `datasource`, `dataset_group`, `dataset` |
+| `OutputOptions.filename_template` | `str \| None` | Jinja2 expression for naming split files |
+| `OutputOptions.overwrite` | `bool` | Overwrite existing files (default `False`) |
+| `OutputOptions.dry_run` | `bool` | Plan files without writing them (default `False`) |
+| `Filter` | Pydantic model | Parsed filter expression (path, operator, value) |
+| `CatalogResult` | Pydantic model | Result envelope: data, raw, output, output_file, output_files |
+| `WrittenFile` | Pydantic model | Single written file record from a split export |
 | `Settings` | Pydantic model | Frozen configuration object |
 | `resolve_settings()` | function | Build `Settings` from explicit args, env vars, or defaults |
-| `filter_fields()` | function | Keep only named fields from a dict or list of dicts |
-| `filter_resultset()` | function | Keep only rows matching a key/value condition |
-| `sort_resultset()` | function | Sort a list of dicts by one or more columns, nulls last |
-| `format_descriptions_to_plaintext()` | function | Convert rich-text description fields to plain text |
-| `format_resultset()` | function | Route data to json/compact/Python-object format |
-| `format_json()` | function | Pretty-print data as a JSON string |
-| `format_compact_json()` | function | Compact JSON string with no spaces |
 | `ConfigError` | exception | Missing credentials or invalid URL at construction time |
 | `AuthError` | exception | HTTP 401 — authentication failed |
 | `ApiError` | exception | Any other HTTP error (4xx, 5xx) |
 | `TokenCache` | protocol | Interface for custom token cache backends |
 | `TokenEntry` | Pydantic model | Single cached token; implement `TokenCache` with this |
-| `DEFAULT_BASE_URL` | `str` | `"https://your-instance.katalogue.se"` |
-| `DEFAULT_TOKEN_URL` | `str` | `"https://your-instance.katalogue.se/oidc/token"` |

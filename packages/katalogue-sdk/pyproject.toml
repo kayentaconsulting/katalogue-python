@@ -20,7 +20,9 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
+    "jinja2>=3,<4",
     "pydantic>=2.0",
+    "pyyaml>=6",
     "requests>=2.31",
     "requests-oauthlib>=1.3",
 ]
