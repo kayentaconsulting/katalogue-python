@@ -14,8 +14,12 @@ from requests_oauthlib import OAuth2Session
 
 from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
 from katalogue.config.settings import Settings, resolve_settings
-from katalogue.formatters import format_descriptions_to_plaintext, format_resultset
-from katalogue.utils import filter_fields, filter_resultset, sort_resultset
+from katalogue.filters import Filter, FilterParser, apply_filter
+from katalogue.formatters import format_descriptions_to_plaintext
+from katalogue.options import GetOptions
+from katalogue.output import OutputPipeline
+from katalogue.results import CatalogResult
+from katalogue.utils import filter_fields, sort_resultset, unwrap_list
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +44,6 @@ _PARENT_ID_FIELD: dict[str, str] = {
 _VALID_RESOURCES: frozenset[str] = frozenset(
     {"system", "datasource", "dataset_group", "dataset", "field", "glossary"}
 )
-_VALID_FORMATS: frozenset[str] = frozenset({"json", "compact"})
 _VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
 
 
@@ -50,6 +53,12 @@ class AuthError(Exception):
 
 class ApiError(Exception):
     """Raised when the API returns a non-success status code."""
+
+
+def _apply_filters_to_list(rows: list[Any], filters: list[Filter]) -> list[Any]:
+    for f in filters:
+        rows = [row for row in rows if apply_filter(row, f)]
+    return rows
 
 
 class KatalogueClient:
@@ -150,57 +159,41 @@ class KatalogueClient:
     def get(
         self,
         resource: str,
-        resource_id: int | None = None,
-        parent_id: int | None = None,
-        filter: dict[str, Any] | None = None,
-        fields: list[str] | None = None,
-        sort: list[dict[str, str]] | None = None,
-        format: str | None = None,
-        format_descriptions_as_text: bool = False,
-    ) -> Any:
-        """Fetch a resource and apply filtering, sorting, and formatting in one call.
+        options: GetOptions | None = None,
+    ) -> CatalogResult:
+        """Fetch a resource and apply filtering, sorting, and field selection.
 
-        Routing:
+        Routing (based on options):
           resource_id only        -> get_resource (single record)
           parent_id only          -> list_by_parent (all children of that parent)
-          resource_id + parent_id -> get_resource, returned only if it belongs to parent
+          resource_id + parent_id -> get_resource, data=None if parent mismatch
           neither                 -> list_resource (all records)
 
         For top-level resources with no parent (system, glossary), parent_id is always
-        ignored — both when combined with resource_id and when used alone.
+        ignored.
 
         Args:
-            resource: Resource type — "system", "datasource", "dataset_group",
-                      "dataset", "field", or "glossary".
-            resource_id: ID of a single record to fetch.
-            parent_id: ID of the parent to filter children by.
-            filter: AND-logic key/value pairs to filter the result set.
-                    e.g. {"is_pii": True, "system_name": "Kayenta"}
-            fields: Column names to keep. All other fields are dropped.
-            sort: Multi-column sort spec applied in order.
-                  e.g. [{"field_name": "asc"}, {"field_id": "desc"}]
-            format: "json" for pretty-printed string, "compact" for minified string,
-                    None (default) to return a Python object.
-            format_descriptions_as_text: When True, converts Draft.js rich-text JSON
-                    in description fields to plain text strings.
+            resource: Resource type — one of the valid Katalogue resources.
+            options: Fetch and output options. Pass None to use all defaults.
 
         Returns:
-            Filtered, sorted, and formatted result. Type depends on `format`:
-            None -> dict or list, "json"/"compact" -> str.
+            CatalogResult with data, raw, output=None (formatting in slice 5),
+            and metadata["strategy"] indicating which route was used.
         """
+        if options is None:
+            options = GetOptions()
+
         resource = resource.lower()
         if resource not in _VALID_RESOURCES:
             raise ValueError(
                 f"Invalid resource '{resource}'. Must be one of: {', '.join(sorted(_VALID_RESOURCES))}"
             )
-        if format is not None:
-            format = format.lower()
-            if format not in _VALID_FORMATS:
-                raise ValueError(
-                    f"Invalid format '{format}'. Must be one of: {', '.join(sorted(_VALID_FORMATS))}"
-                )
-        if sort:
-            for spec in sort:
+
+        if options.include_children:
+            return self._get_hierarchical(resource, options)
+
+        if options.sort:
+            for spec in options.sort:
                 for col, direction in spec.items():
                     if direction.lower() not in _VALID_SORT_DIRECTIONS:
                         raise ValueError(
@@ -208,41 +201,130 @@ class KatalogueClient:
                         )
                     spec[col] = direction.lower()
 
+        # Parse filters once before fetching so bad filter strings fail fast.
+        parsed_filters = FilterParser().parse(options.filters)
+
+        resource_id = options.resource_id
+        parent_id = options.parent_id
         if resource_id is not None:
-            data: Any = self.get_resource(resource, resource_id)
+            raw: Any = self.get_resource(resource, resource_id)
+            data: Any = raw
             if parent_id is not None:
                 parent_field = _PARENT_ID_FIELD.get(resource)
                 if parent_field and data.get(parent_field) != parent_id:
-                    return None
+                    data = None
+            strategy = "single"
         elif parent_id is not None:
             parent_resource = _PARENT_RESOURCE.get(resource)
             if parent_resource is not None:
-                data = self.list_by_parent(resource, parent_resource, parent_id)
+                raw = self.list_by_parent(resource, parent_resource, parent_id)
             else:
-                data = self.list_resource(resource)
+                raw = self.list_resource(resource)
+            data = unwrap_list(raw)
+            strategy = "list_by_parent"
         else:
-            data = self.list_resource(resource)
+            raw = self.list_resource(resource)
+            data = unwrap_list(raw)
+            strategy = "list"
+        # Apply post-fetch processing to list results only.
+        if isinstance(data, list):
+            if parsed_filters:
+                data = _apply_filters_to_list(data, parsed_filters)
+            data = filter_fields(data, options.fields)
+            if options.sort:
+                data = sort_resultset(data, options.sort)
+            if options.format_descriptions_as_text:
+                data = format_descriptions_to_plaintext(data)
+        elif data is not None:
+            # Single record: apply field selection and description formatting only.
+            data = filter_fields(data, options.fields)
+            if options.format_descriptions_as_text:
+                data = format_descriptions_to_plaintext(data)
 
-        if filter:
-            for key, value in filter.items():
-                data = filter_resultset(data, key, value)
-
-        data = filter_fields(data, fields)
-        data = (
-            sort_resultset(data if isinstance(data, list) else [data], sort)
-            if sort
-            else data
+        output, output_file, output_files = OutputPipeline().process(
+            data, options.output, root_resource=resource
         )
-        if format_descriptions_as_text:
-            data = format_descriptions_to_plaintext(data)
 
-        return format_resultset(data, format)
+        return CatalogResult(
+            data=data,
+            raw=raw,
+            output=output,
+            output_file=output_file,
+            output_files=output_files,
+            metadata={"strategy": strategy},
+        )
 
-    def get_system_export(self, system_id: str) -> dict[str, Any]:
+    def _get_hierarchical(self, resource: str, options: GetOptions) -> CatalogResult:
+        """Dispatch to hierarchical assembly for include_children=True."""
+        from katalogue.exporting import (
+            apply_hierarchical_filters,
+            assemble_dataset,
+            assemble_dataset_group,
+            assemble_datasource,
+            assemble_glossary,
+            assemble_system,
+        )
+
+        _HIERARCHICAL_RESOURCES = frozenset(
+            {"system", "datasource", "dataset_group", "dataset", "glossary"}
+        )
+        if resource not in _HIERARCHICAL_RESOURCES:
+            raise ValueError(
+                f"Resource '{resource}' does not support hierarchical retrieval. "
+                f"Valid resources: {', '.join(sorted(_HIERARCHICAL_RESOURCES))}"
+            )
+        if options.resource_id is None:
+            raise ValueError("include_children=True requires resource_id to be set")
+
+        resource_id = options.resource_id
+
+        assemblers = {
+            "system": assemble_system,
+            "datasource": assemble_datasource,
+            "dataset_group": assemble_dataset_group,
+            "dataset": assemble_dataset,
+            "glossary": assemble_glossary,
+        }
+        strategy = (
+            "export_endpoint" if resource in ("system", "glossary") else "recursive"
+        )
+
+        data = assemblers[resource](self, resource_id)
+        raw = data  # flat shape is both raw and processed before filtering
+
+        parsed_filters = FilterParser().parse(options.filters)
+        if parsed_filters:
+            data = apply_hierarchical_filters(
+                data, parsed_filters, root_resource=resource
+            )
+
+        if options.fields:
+            from katalogue.exporting import _META_KEYS
+
+            preserved = {k: data[k] for k in _META_KEYS if k in data}
+            filtered = filter_fields(data, options.fields)
+            if isinstance(filtered, dict):
+                filtered.update(preserved)
+                data = filtered
+
+        output, output_file, output_files = OutputPipeline().process(
+            data, options.output, root_resource=resource
+        )
+
+        return CatalogResult(
+            data=data,
+            raw=raw,
+            output=output,
+            output_file=output_file,
+            output_files=output_files,
+            metadata={"strategy": strategy},
+        )
+
+    def get_system_export(self, system_id: int | str) -> dict[str, Any]:
         url = f"{self._base_url}/api/export/system/{quote(str(system_id), safe='')}"
         return self._request("GET", url, scope="system.read")
 
-    def get_glossary_export(self, glossary_id: str) -> dict[str, Any]:
+    def get_glossary_export(self, glossary_id: int | str) -> dict[str, Any]:
         url = f"{self._base_url}/api/export/glossary/{quote(str(glossary_id), safe='')}"
         return self._request("GET", url, scope="glossary.read")
 

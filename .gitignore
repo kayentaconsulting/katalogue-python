@@ -144,10 +144,11 @@ Desktop.ini
 
 # local config
 *.local
-
+local_plans/
 # local tools
 .mcp.json
 .claude/
+.codex/
 
 # coverage.py
 .coverage

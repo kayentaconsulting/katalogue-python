@@ -52,7 +52,17 @@ packages/
       client/api.py       # KatalogueClient — HTTP + OAuth2, raises AuthError/ApiError
       client/cache.py     # TokenCache protocol + in-memory impl
       config/settings.py  # resolve_settings() — explicit > env var > default (Pydantic)
-      __init__.py         # public API surface: KatalogueClient, Settings, errors
+      filters.py          # Filter model, FilterParser, apply_filter
+      options.py          # GetOptions, OutputOptions (Pydantic)
+      results.py          # CatalogResult, WrittenFile (Pydantic)
+      formatters.py       # format_json, format_compact_json, format_resultset, format_table
+      utils.py            # filter_fields, filter_resultset, sort_resultset, unwrap_list
+      exporting.py        # assemble_system/datasource/dataset_group/dataset/glossary
+      output.py           # OutputPipeline — render, write, split
+      rendering.py        # Jinja2 sandbox, load_template, render_template, auto_filename
+      templates/          # built-in Jinja2 templates (dbt_source.j2, column_mapping.j2)
+      __init__.py         # public API surface: KatalogueClient, GetOptions, OutputOptions,
+                          #   Filter, CatalogResult, WrittenFile, Settings, errors, TokenCache
     tests/
       conftest.py
       fixtures/           # JSON response fixtures
@@ -62,16 +72,17 @@ packages/
       logging.py          # logging setup
       cli/
         main.py           # root Click group + global options
-        common.py         # handle_api_call(), filter_fields(), shared decorators
+        common.py         # emit_result(), run_get(), build_get_options(), shared decorators
         auth.py           # login / logout / status commands
         <resource>.py     # one file per resource (system, datasource, dataset,
-                          #   dataset_group, field, glossary, export)
+                          #   dataset_group, field, glossary)
       config/
         file.py           # reads ~/.config/katalogue/config.toml (non-secrets only)
       formatters/
-        output.py         # format_json, format_table, format_compact_json
+        output.py         # format_output, format_list_table, format_grouped_table
+        defaults.py       # DEFAULT_FIELDS, PARENT_GROUP per resource
     tests/
-      conftest.py         # runner, cli_auth, mock_client fixtures
+      conftest.py         # runner, cli_auth, mock_client, catalog_result fixtures
       fixtures/           # JSON response fixtures
 pyproject.toml            # uv workspace root — no code, just workspace + pytest config
 pyrightconfig.json        # IDE static analysis config
@@ -97,10 +108,16 @@ Every feature slice: **tests first (RED) → implement (GREEN) → review done**
 Mock at the client layer using the shared `mock_client` fixture:
 
 ```python
-def test_something(runner, cli_auth, mock_client):
-    mock_client.get_resource.return_value = {"id": 1, "name": "Test"}
+def test_something(runner, cli_auth, mock_client, catalog_result):
+    mock_client.get.return_value = catalog_result({"id": 1, "name": "Test"}, "json")
     result = runner.invoke(cli, [*cli_auth, "system", "get", "1"])
     assert result.exit_code == 0
+```
+
+The `catalog_result` fixture builds a `CatalogResult` with `output` pre-populated for json/compact formats. For table format, set only `data` (the CLI renders it client-side):
+
+```python
+mock_client.get.return_value = CatalogResult(data=[{"system_id": 1, "system_name": "X"}])
 ```
 
 Cover per slice: happy path (json + table), auth failure, API error, empty results, missing config.
@@ -114,10 +131,11 @@ SDK tests go in `packages/katalogue-sdk/tests/`, CLI tests in `packages/katalogu
 
 | Package | Layer | Does | Does Not |
 |---------|-------|------|----------|
-| `katalogue-sdk` | `client/` | HTTP requests, parse responses, raise typed errors | Format output, know about Click |
+| `katalogue-sdk` | `client/` | HTTP requests, OAuth2, routing via `get()`, typed errors | Format output, know about Click |
 | `katalogue-sdk` | `config/` | Resolve settings from env/defaults | Make HTTP calls |
-| `katalogue-cli` | `cli/` | Parse args, call client, format output, handle errors | Construct URLs, manage HTTP |
-| `katalogue-cli` | `formatters/` | Turn dicts into strings | Know about HTTP, Click, or config |
+| `katalogue-sdk` | `output.py` + `rendering.py` + `templates/` | Render json/compact/template output, write files, split by resource level | Table formatting, Click |
+| `katalogue-cli` | `cli/` | Parse args, call `client.get()`, emit results, handle errors | Construct URLs, manage HTTP |
+| `katalogue-cli` | `formatters/` | Table rendering for TTY | Know about HTTP, Click, or config |
 
 ## Code Preferences
 

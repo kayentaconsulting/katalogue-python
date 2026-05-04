@@ -5,13 +5,14 @@ from __future__ import annotations
 import pytest
 from click.testing import CliRunner
 
+from katalogue import CatalogResult
 from katalogue_cli.cli.main import cli
 
 
 @pytest.fixture
 def mock_client(mocker):
     mock = mocker.patch("katalogue_cli.cli.common.KatalogueClient")
-    mock.return_value.list_resource.return_value = []
+    mock.return_value.get.return_value = CatalogResult(data=[], output="[]")
     return mock
 
 

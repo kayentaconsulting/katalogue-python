@@ -1,11 +1,12 @@
-"""Unit tests for shared CLI helpers - filter_fields, parse_where_value, where_option."""
+"""Unit tests for shared CLI helpers."""
 
 import json
 from unittest.mock import patch
 
 import click
 
-from katalogue_cli.cli.common import filter_fields, parse_where_value, where_option
+from katalogue import CatalogResult, WrittenFile
+from katalogue_cli.cli.common import emit_result, filter_fields, filter_option
 from katalogue_cli.cli.main import cli
 
 CLI_AUTH = [
@@ -19,10 +20,31 @@ CLI_AUTH = [
 
 
 @click.command()
-@where_option
-def _where_cmd(where):
-    """Minimal command for testing where_option callback."""
-    click.echo(json.dumps([[k, v] for k, v in where]))
+@filter_option
+def _filter_cmd(filters: tuple[str, ...]):
+    """Minimal command for testing filter_option."""
+    click.echo(json.dumps(list(filters)))
+
+
+@click.command()
+@click.option("--dry-run", is_flag=True)
+@click.pass_context
+def _emit_files_cmd(ctx: click.Context, dry_run: bool):
+    result = CatalogResult(
+        data={},
+        output_files=[
+            WrittenFile(path="out/a.yml"),
+            WrittenFile(path="out/b.yml"),
+        ],
+    )
+    emit_result(ctx, result, "json", dry_run=dry_run)
+
+
+@click.command()
+@click.pass_context
+def _emit_table_cmd(ctx: click.Context):
+    result = CatalogResult(data=[{"id": 1, "name": "CRM"}])
+    emit_result(ctx, result, "table")
 
 
 class TestFilterFields:
@@ -61,7 +83,6 @@ class TestFilterFields:
         assert result == []
 
     def test_filter_fields_unwraps_resource_key(self):
-        """Wrapped response like {"systems": [...]} is unwrapped when fields are requested."""
         wrapped = {
             "systems": [
                 {
@@ -75,112 +96,70 @@ class TestFilterFields:
         assert result == [{"system_id": 1, "system_name": "Katalogue"}]
 
 
-class TestParseWhereValue:
-    def test_true_lowercase(self):
-        assert parse_where_value("true") is True
-
-    def test_true_mixed_case(self):
-        assert parse_where_value("True") is True
-        assert parse_where_value("TRUE") is True
-
-    def test_false_lowercase(self):
-        assert parse_where_value("false") is False
-
-    def test_false_mixed_case(self):
-        assert parse_where_value("False") is False
-        assert parse_where_value("FALSE") is False
-
-    def test_digit_string_returns_int(self):
-        result = parse_where_value("42")
-        assert result == 42
-        assert isinstance(result, int)
-
-    def test_zero_returns_int(self):
-        result = parse_where_value("0")
-        assert result == 0
-        assert isinstance(result, int)
-
-    def test_plain_string_unchanged(self):
-        result = parse_where_value("TEXT")
-        assert result == "TEXT"
-        assert isinstance(result, str)
-
-    def test_mixed_alphanumeric_stays_str(self):
-        assert parse_where_value("v2") == "v2"
-
-    def test_decimal_stays_str(self):
-        result = parse_where_value("3.14")
-        assert result == "3.14"
-        assert isinstance(result, str)
-
-    def test_leading_zero_integer_coerces(self):
-        # "007" coerces to int 7, not string "007" — document this known behaviour
-        assert parse_where_value("007") == 7
-        assert isinstance(parse_where_value("007"), int)
-
-
-class TestWhereOptionCallback:
-    def test_single_string_value(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "status=active"])
+class TestFilterOption:
+    def test_single_filter_passes_raw_string(self, runner):
+        result = runner.invoke(_filter_cmd, ["--filter", "status=active"])
         assert result.exit_code == 0
-        assert json.loads(result.output) == [["status", "active"]]
+        assert json.loads(result.output) == ["status=active"]
 
-    def test_single_bool_true(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "is_pii=true"])
-        assert result.exit_code == 0
-        assert json.loads(result.output) == [["is_pii", True]]
-
-    def test_single_bool_false(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "is_pii=false"])
-        assert result.exit_code == 0
-        assert json.loads(result.output) == [["is_pii", False]]
-
-    def test_single_int_value(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "dataset_id=7"])
-        assert result.exit_code == 0
-        assert json.loads(result.output) == [["dataset_id", 7]]
-
-    def test_multiple_flags_produce_list(self, runner):
+    def test_multiple_filters_pass_raw_strings(self, runner):
         result = runner.invoke(
-            _where_cmd, ["--where", "is_pii=true", "--where", "dataset_id=7"]
+            _filter_cmd,
+            ["--filter", "is_pii=true", "--filter", 'system.name="CRM"'],
         )
         assert result.exit_code == 0
-        assert json.loads(result.output) == [["is_pii", True], ["dataset_id", 7]]
+        assert json.loads(result.output) == ["is_pii=true", 'system.name="CRM"']
 
-    def test_no_where_flag_produces_empty(self, runner):
-        result = runner.invoke(_where_cmd, [])
+    def test_no_filter_flag_produces_empty_tuple(self, runner):
+        result = runner.invoke(_filter_cmd, [])
         assert result.exit_code == 0
         assert json.loads(result.output) == []
 
-    def test_missing_equals_sign_raises_usage_error(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "is_pii"])
-        assert result.exit_code != 0
-        assert "KEY=VALUE" in result.output
 
-    def test_empty_value_is_str(self, runner):
-        result = runner.invoke(_where_cmd, ["--where", "status="])
+class TestEmitResult:
+    def test_split_files_prints_wrote_paths(self, runner):
+        result = runner.invoke(_emit_files_cmd)
         assert result.exit_code == 0
-        assert json.loads(result.output) == [["status", ""]]
+        assert result.output.splitlines() == [
+            "Wrote 2 files",
+            "out/a.yml",
+            "out/b.yml",
+        ]
+
+    def test_dry_run_split_files_prints_would_write_paths(self, runner):
+        result = runner.invoke(_emit_files_cmd, ["--dry-run"])
+        assert result.exit_code == 0
+        assert result.output.splitlines() == [
+            "Would write 2 files",
+            "out/a.yml",
+            "out/b.yml",
+        ]
+
+    def test_table_format_renders_data_when_sdk_output_absent(self, runner):
+        result = runner.invoke(_emit_table_cmd)
+        assert result.exit_code == 0
+        assert "name" in result.output
+        assert "CRM" in result.output
 
 
 class TestLazyClientResolution:
     """Client credentials are only accessed when an API call is actually made."""
 
     def test_get_client_not_in_public_api(self):
-        """get_client is removed — commands no longer call it directly."""
+        """get_client is removed - commands no longer call it directly."""
         import katalogue_cli.cli.common as common
 
         assert not hasattr(common, "get_client")
 
-    def test_client_created_exactly_once_per_invocation(self, runner):
-        """One KatalogueClient instance is shared across handle_api_call calls."""
+    def test_client_created_exactly_once_per_invocation(self, runner, catalog_result):
+        """One KatalogueClient instance is shared across SDK calls."""
         with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
-            MockClient.return_value.list_resource.return_value = []
+            MockClient.return_value.get.return_value = catalog_result([], "json")
             runner.invoke(cli, [*CLI_AUTH, "system", "list"])
         assert MockClient.call_count == 1
 
     def test_client_not_constructed_without_api_call(self, runner):
-        """KatalogueClient is not instantiated when --help is shown (no API call)."""
+        """KatalogueClient is not instantiated when --help is shown."""
         with patch("katalogue_cli.cli.common.KatalogueClient") as MockClient:
             runner.invoke(cli, [*CLI_AUTH, "system", "--help"])
         MockClient.assert_not_called()

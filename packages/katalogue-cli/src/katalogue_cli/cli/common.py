@@ -2,39 +2,41 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import click
 import keyring
+from pydantic import ValidationError
 
+from katalogue import (
+    ApiError,
+    AuthError,
+    CatalogResult,
+    GetOptions,
+    KatalogueClient,
+    OutputOptions,
+)
+from katalogue.config.settings import ConfigError, resolve_settings
+from katalogue.utils import filter_fields as filter_fields
+from katalogue.utils import unwrap_list
 from katalogue_cli.auth import DiskTokenCache
 from katalogue_cli.config.file import load_config_file
-from katalogue.client.api import KatalogueClient, AuthError, ApiError
-from katalogue.config.settings import (
-    resolve_settings,
-    ConfigError,
-)
-from katalogue.utils import filter_fields, filter_resultset, unwrap_list
 from katalogue_cli.formatters.output import format_json, format_output
 
 _NULL_BACKENDS = {"Keyring", "NullKeyring"}
+_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "table"]
+_FORMAT_HELP = "Serialization format for output."
+_TEMPLATE_HELP = (
+    "Template to apply. Built-in: dbt-source, column-mapping, json-template. "
+    "Or provide a path to a .j2 file."
+)
+
+T = TypeVar("T")
 
 
 def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
-    """Return the cached client for this invocation, creating it on first call.
-
-    Credential precedence (highest to lowest):
-      1. CLI flags (--client-id, --client-secret) — stored in ctx.obj by main.py
-      2. Environment variables read by Click (envvar= on each option) — also in ctx.obj
-      3. Environment variables read by resolve_settings() as a fallback
-      4. Hardcoded defaults (base_url, token_url only — credentials have no default)
-
-    Note: KATALOGUE_CLIENT_ID and KATALOGUE_CLIENT_SECRET are read by both Click
-    (via envvar=) and resolve_settings() (via os.environ). In practice Click wins
-    because its value is passed explicitly; resolve_settings() only sees None when
-    no flag or envvar was set.
-    """
+    """Return the cached client for this invocation, creating it on first call."""
     if "_client" not in ctx.obj:
         try:
             file_cfg = load_config_file()
@@ -72,81 +74,17 @@ def _get_or_create_client(ctx: click.Context) -> KatalogueClient | None:
     return ctx.obj["_client"]
 
 
-def parse_where_value(value: str) -> bool | int | str:
-    """Coerce a CLI string value to the most appropriate Python type.
-
-    - "true"/"false" (case-insensitive) -> bool
-    - pure integer strings -> int
-    - everything else -> str unchanged
-    """
-    if value.lower() == "true":
-        return True
-    if value.lower() == "false":
-        return False
-    try:
-        return int(value)
-    except ValueError:
-        return value
-
-
-def _parse_where_callback(
+def _handle_sdk_call(
     ctx: click.Context,
-    param: click.Parameter,
-    values: tuple[str, ...],
-) -> list[tuple[str, Any]]:
-    """Parse a sequence of 'key=value' strings into typed (key, value) pairs."""
-    result = []
-    for item in values:
-        if "=" not in item:
-            raise click.BadParameter(
-                f"Expected KEY=VALUE format, got: {item!r}",
-                ctx=ctx,
-                param=param,
-            )
-        key, _, raw = item.partition("=")
-        result.append((key.strip(), parse_where_value(raw.strip())))
-    return result
-
-
-def handle_api_call(
-    ctx: click.Context,
-    call: Callable[[KatalogueClient], Any],
-    fmt: str,
-    fields: list[str] | None = None,
-    where: Sequence[tuple[str, Any]] = (),
-    default_fields: list[str] | None = None,
-    wide: bool = False,
-    group_by: list[tuple[str, str]] | None = None,
-) -> None:
-    """Execute an API call, handle errors, apply field filtering, and format output."""
+    call: Callable[[KatalogueClient], T],
+) -> T | None:
+    """Execute an SDK call and map SDK/user-input errors to CLI exits."""
     client = _get_or_create_client(ctx)
     if client is None:
-        return
-    data = _fetch_or_exit(ctx, lambda: call(client))
-    if data is None:
-        return
+        return None
 
-    for key, value in where:
-        data = filter_resultset(data, key, value)
-
-    effective_fields = fields or (None if wide or fmt != "table" else default_fields)
-
-    # Always retain group_by fields so the grouped formatter can use them as headers
-    if group_by and effective_fields:
-        all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
-        extra = [f for f in all_parent_fields if f not in effective_fields]
-        if extra:
-            effective_fields = list(effective_fields) + extra
-
-    data = filter_fields(data, effective_fields)
-
-    click.echo(format_output(data, fmt, group_by=group_by, wide=wide))
-
-
-def _fetch_or_exit(ctx: click.Context, call: Any) -> Any:
-    """Execute call(), print errors and signal failure by returning None."""
     try:
-        return call()
+        return call(client)
     except AuthError as e:
         click.echo(f"Authentication failed: {e}", err=True)
         ctx.exit(1)
@@ -155,16 +93,194 @@ def _fetch_or_exit(ctx: click.Context, call: Any) -> Any:
         click.echo(f"Error: {e}", err=True)
         ctx.exit(1)
         return None
+    except (ValidationError, ValueError, FileExistsError, FileNotFoundError) as e:
+        raise click.UsageError(str(e)) from None
+
+
+def emit_result(
+    ctx: click.Context,
+    result: CatalogResult,
+    fmt: str | None,
+    *,
+    group_by: list[tuple[str, str]] | None = None,
+    wide: bool = False,
+    dry_run: bool = False,
+) -> None:
+    """Emit a CatalogResult using CLI presentation rules."""
+    _ = ctx
+    if result.output_files:
+        verb = "Would write" if dry_run else "Wrote"
+        click.echo(f"{verb} {len(result.output_files)} files")
+        for written in result.output_files:
+            click.echo(written.path)
+        return
+
+    if result.output_file:
+        verb = "Would write" if dry_run else "Wrote"
+        click.echo(f"{verb} {result.output_file}")
+        return
+
+    if result.output is not None:
+        click.echo(result.output)
+        return
+
+    if fmt == "table":
+        click.echo(format_output(result.data, "table", group_by=group_by, wide=wide))
+        return
+
+    click.echo(repr(result.data))
+
+
+def _resolve_fields(
+    fields: list[str] | None,
+    fmt: str,
+    *,
+    default_fields: list[str] | None = None,
+    wide: bool = False,
+    group_by: list[tuple[str, str]] | None = None,
+) -> list[str] | None:
+    effective_fields = fields or (None if wide or fmt != "table" else default_fields)
+    if group_by and effective_fields:
+        all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
+        extra = [f for f in all_parent_fields if f not in effective_fields]
+        if extra:
+            effective_fields = list(effective_fields) + extra
+    return effective_fields
+
+
+def _output_options(
+    fmt: str | None,
+    *,
+    template: str | None = None,
+    output_file: str | None = None,
+    output_dir: str | None = None,
+    split_by: str | None = None,
+    filename_template: str | None = None,
+    overwrite: bool = False,
+    dry_run: bool = False,
+) -> OutputOptions:
+    if fmt == "table" and template:
+        raise ValueError(
+            "table format cannot be combined with --template; "
+            "omit --format or choose json, yaml, or csv."
+        )
+    if fmt == "table" and any(
+        [output_file, output_dir, split_by, filename_template, overwrite, dry_run]
+    ):
+        raise ValueError(
+            "table format cannot be combined with file output options; "
+            "use json, yaml, csv, or a template"
+        )
+    return OutputOptions(
+        format=None if fmt == "table" else fmt,
+        template=template,
+        output_file=output_file,
+        output_dir=output_dir,
+        split_by=split_by,
+        filename_template=filename_template,
+        overwrite=overwrite,
+        dry_run=dry_run,
+    )
+
+
+def build_list_options(
+    *,
+    filters: tuple[str, ...],
+    fields: list[str] | None,
+    fmt: str,
+    parent_id: str | None = None,
+    default_fields: list[str] | None = None,
+    wide: bool = False,
+    group_by: list[tuple[str, str]] | None = None,
+) -> GetOptions:
+    return GetOptions(
+        parent_id=parent_id,
+        filters=list(filters) or None,
+        fields=_resolve_fields(
+            fields,
+            fmt,
+            default_fields=default_fields,
+            wide=wide,
+            group_by=group_by,
+        ),
+        output=_output_options(fmt),
+    )
+
+
+def build_get_options(
+    *,
+    resource_id: str,
+    filters: tuple[str, ...],
+    fields: list[str] | None,
+    fmt: str | None,
+    template: str | None = None,
+    include_children: bool,
+    output_file: str | None,
+    output_dir: str | None,
+    split_by: str | None,
+    filename_template: str | None,
+    overwrite: bool,
+    dry_run: bool,
+) -> GetOptions:
+    return GetOptions(
+        resource_id=resource_id,
+        filters=list(filters) or None,
+        fields=fields,
+        include_children=include_children,
+        output=_output_options(
+            fmt,
+            template=template,
+            output_file=output_file,
+            output_dir=output_dir,
+            split_by=split_by,
+            filename_template=filename_template,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        ),
+    )
+
+
+def resolve_template_format(
+    ctx: click.Context, fmt: str, template: str | None
+) -> str | None:
+    """Return None when --template is given but --format was not explicitly set.
+
+    This lets the template render in its natural format (YAML for dbt-source,
+    JSON for json-template) instead of being silently converted to the CLI default.
+    """
+    from click.core import ParameterSource
+
+    if template and ctx.get_parameter_source("fmt") == ParameterSource.DEFAULT:
+        return None
+    return fmt
+
+
+def run_get(
+    ctx: click.Context,
+    resource: str,
+    options_factory: Callable[[], GetOptions],
+    fmt: str | None,
+    *,
+    group_by: list[tuple[str, str]] | None = None,
+    wide: bool = False,
+    dry_run: bool = False,
+) -> None:
+    try:
+        options = options_factory()
+    except (ValidationError, ValueError, FileExistsError, FileNotFoundError) as e:
+        raise click.UsageError(str(e)) from None
+
+    result = _handle_sdk_call(ctx, lambda client: client.get(resource, options))
+    if result is None:
+        return
+    emit_result(ctx, result, fmt, group_by=group_by, wide=wide, dry_run=dry_run)
 
 
 def show_keys(
-    ctx: click.Context, call: Callable[[KatalogueClient], Any], fmt: str
+    ctx: click.Context, call: Callable[[KatalogueClient], object], fmt: str
 ) -> None:
     """Fetch the first record from a list call and print its sorted keys."""
-    client = _get_or_create_client(ctx)
-    if client is None:
-        return
-    data = _fetch_or_exit(ctx, lambda: call(client))
+    data = _handle_sdk_call(ctx, call)
     if data is None:
         return
 
@@ -178,20 +294,17 @@ def show_keys(
             click.echo(key)
 
 
-# Reusable --where decorator for list commands
-where_option = click.option(
-    "--where",
-    "where",
+filter_option = click.option(
+    "--filter",
+    "filters",
     multiple=True,
-    callback=_parse_where_callback,
-    metavar="KEY=VALUE",
+    metavar="FILTER",
     help=(
-        "Filter by KEY=VALUE. Repeatable for AND logic. "
-        "Values are coerced: true/false -> bool, integers -> int."
+        'Filter expression such as is_pii=true or system.name="CRM". '
+        "Repeat for AND logic."
     ),
 )
 
-# Reusable --fields decorator for all resource commands
 fields_option = click.option(
     "--fields",
     default=None,
@@ -200,10 +313,75 @@ fields_option = click.option(
     is_eager=False,
 )
 
-# Reusable --wide decorator for list commands
 wide_option = click.option(
     "--wide",
     is_flag=True,
     default=False,
     help="Show all fields in table output (overrides default field selection).",
 )
+
+
+def format_option(default: str) -> Callable[[Any], Any]:
+    return click.option(
+        "--format",
+        "fmt",
+        default=default,
+        show_default=True,
+        type=click.Choice(_FORMAT_CHOICES, case_sensitive=False),
+        help=_FORMAT_HELP,
+    )
+
+
+template_option = click.option(
+    "--template",
+    default=None,
+    metavar="TEMPLATE",
+    help=_TEMPLATE_HELP,
+)
+
+
+def get_output_options(default_format: str = "json") -> Callable[[Any], Any]:
+    def decorator(func: Any) -> Any:
+        func = click.option(
+            "--dry-run",
+            is_flag=True,
+            default=False,
+            help="Show planned output files without writing them.",
+        )(func)
+        func = click.option(
+            "--overwrite",
+            is_flag=True,
+            default=False,
+            help="Overwrite existing output files.",
+        )(func)
+        func = click.option(
+            "--output-file",
+            default=None,
+            help="Write rendered output to this file.",
+        )(func)
+        func = click.option(
+            "--output-dir",
+            default=None,
+            help="Directory for split rendered output files.",
+        )(func)
+        func = click.option(
+            "--filename-template",
+            default=None,
+            help="Jinja2 expression used to name split output files.",
+        )(func)
+        func = click.option(
+            "--split-by",
+            default=None,
+            help="Split hierarchical output by resource level.",
+        )(func)
+        func = click.option(
+            "--include-children",
+            is_flag=True,
+            default=False,
+            help="Fetch the resource and its child resources.",
+        )(func)
+        func = template_option(func)
+        func = format_option(default_format)(func)
+        return func
+
+    return decorator
