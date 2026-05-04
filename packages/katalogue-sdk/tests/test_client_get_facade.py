@@ -141,6 +141,22 @@ class TestAllOperators:
         assert len(result.data) == 1
         assert result.data[0]["system_id"] == 1
 
+    def test_startswith_filter_works(self, client):
+        with patch.object(client, "list_resource", return_value=_SYSTEMS):
+            result = client.get(
+                "system", GetOptions(filters=["system_name startswith cr"])
+            )
+        assert len(result.data) == 1
+        assert result.data[0]["system_name"] == "CRM"
+
+    def test_endswith_filter_works(self, client):
+        with patch.object(client, "list_resource", return_value=_SYSTEMS):
+            result = client.get(
+                "system", GetOptions(filters=["system_name endswith RP"])
+            )
+        assert len(result.data) == 1
+        assert result.data[0]["system_name"] == "ERP"
+
 
 class TestFlatResourcePrefixCompatibility:
     def test_dataset_prefix_matches_flat_dataset_list(self, client):

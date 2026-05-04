@@ -106,6 +106,27 @@ def test_apply_filter_contains_missing_key_no_match() -> None:
     assert not apply_filter({}, _f("desc", "contains", "pii"))
 
 
+# --- startswith / endswith ---
+
+
+def test_apply_filter_startswith_match() -> None:
+    assert apply_filter({"name": "CRM Platform"}, _f("name", "startswith", "crm"))
+
+
+def test_apply_filter_startswith_no_match() -> None:
+    assert not apply_filter({"name": "Platform CRM"}, _f("name", "startswith", "crm"))
+
+
+def test_apply_filter_endswith_match() -> None:
+    assert apply_filter({"name": "CRM Platform"}, _f("name", "endswith", "platform"))
+
+
+def test_apply_filter_endswith_no_match() -> None:
+    assert not apply_filter(
+        {"name": "Platform CRM"}, _f("name", "endswith", "platform")
+    )
+
+
 # --- field_* prefix fallback ---
 
 
@@ -128,6 +149,16 @@ def test_apply_filter_dotted_path_neq_all_must_mismatch() -> None:
 
 def test_apply_filter_dotted_path_absent_list_neq_true() -> None:
     assert apply_filter({}, _f("attrs.code", "!=", "x"))
+
+
+def test_apply_filter_dotted_path_startswith_any_match() -> None:
+    row = {"attrs": [{"code": "CRM"}, {"code": "ERP"}]}
+    assert apply_filter(row, _f("attrs.code", "startswith", "cr"))
+
+
+def test_apply_filter_dotted_path_endswith_any_match() -> None:
+    row = {"attrs": [{"code": "CRM"}, {"code": "ERP"}]}
+    assert apply_filter(row, _f("attrs.code", "endswith", "rp"))
 
 
 # --- apply_hierarchical_filters ---

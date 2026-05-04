@@ -254,6 +254,7 @@ result = client.get("system", GetOptions(
 ```
 
 Operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
+String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
 
 ### Sort
 

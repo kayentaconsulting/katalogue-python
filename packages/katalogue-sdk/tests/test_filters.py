@@ -28,7 +28,19 @@ def test_filter_empty_path_rejected() -> None:
 
 @pytest.mark.parametrize(
     "op",
-    ["=", "!=", ">", ">=", "<", "<=", "in", "not-in", "contains"],
+    [
+        "=",
+        "!=",
+        ">",
+        ">=",
+        "<",
+        "<=",
+        "in",
+        "not-in",
+        "contains",
+        "startswith",
+        "endswith",
+    ],
 )
 def test_filter_all_operators_accepted(op: str) -> None:
     f = Filter(path="x", operator=op, value=1)  # type: ignore[arg-type]

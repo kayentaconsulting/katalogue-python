@@ -109,6 +109,7 @@ katalogue system list --filter system_type=Database
 ```
 
 Supported operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
+String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
 
 ```bash
 katalogue system list --filter 'system_name contains CRM'

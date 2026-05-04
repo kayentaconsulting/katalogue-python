@@ -72,6 +72,20 @@ def test_contains_operator() -> None:
     assert f.value == "pii"
 
 
+def test_startswith_operator() -> None:
+    f = _p("description startswith pii")
+    assert f.path == "description"
+    assert f.operator == "startswith"
+    assert f.value == "pii"
+
+
+def test_endswith_operator() -> None:
+    f = _p("description endswith pii")
+    assert f.path == "description"
+    assert f.operator == "endswith"
+    assert f.value == "pii"
+
+
 # --- dotted path preserved ---
 
 

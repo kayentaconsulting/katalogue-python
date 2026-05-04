@@ -3,10 +3,24 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-FilterOperator = Literal["=", "!=", ">", ">=", "<", "<=", "in", "not-in", "contains"]
+FilterOperator = Literal[
+    "=",
+    "!=",
+    ">",
+    ">=",
+    "<",
+    "<=",
+    "in",
+    "not-in",
+    "contains",
+    "startswith",
+    "endswith",
+]
 
 # Word operators must appear surrounded by whitespace.
-_WORD_OP_RE = re.compile(r"^([\w.]+)\s+(not-in|in|contains)\s+(.+)$")
+_WORD_OP_RE = re.compile(
+    r"^([\w.]+)\s+(not-in|in|contains|startswith|endswith)\s+(.+)$"
+)
 # Symbol operators: longest first to avoid e.g. '!' consuming before '!='.
 _SYMBOL_OP_RE = re.compile(r"^([\w.]+)\s*(!=|>=|<=|>|<|=)\s*(.*)$")
 
@@ -99,6 +113,18 @@ def _str_eq(a: Any, b: Any) -> bool:
     return a == b
 
 
+def _str_startswith(a: Any, b: Any) -> bool:
+    if isinstance(a, str) and isinstance(b, str):
+        return a.lower().startswith(b.lower())
+    return False
+
+
+def _str_endswith(a: Any, b: Any) -> bool:
+    if isinstance(a, str) and isinstance(b, str):
+        return a.lower().endswith(b.lower())
+    return False
+
+
 def apply_filter(row: "dict[str, Any]", f: Filter) -> bool:
     """Return True if row satisfies filter f.
 
@@ -126,6 +152,10 @@ def apply_filter(row: "dict[str, Any]", f: Filter) -> bool:
                     and value.lower() in item.get(subkey, "").lower()
                     for item in items
                 )
+            if op == "startswith":
+                return any(_str_startswith(item.get(subkey), value) for item in items)
+            if op == "endswith":
+                return any(_str_endswith(item.get(subkey), value) for item in items)
             if op == "in":
                 lst = value if isinstance(value, list) else [value]
                 return any(
@@ -168,4 +198,8 @@ def apply_filter(row: "dict[str, Any]", f: Filter) -> bool:
             and isinstance(value, str)
             and value.lower() in current.lower()
         )
+    if op == "startswith":
+        return _str_startswith(current, value)
+    if op == "endswith":
+        return _str_endswith(current, value)
     return False
