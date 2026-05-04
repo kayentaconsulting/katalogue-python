@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "katalogue-sdk>=0.1.0b0",
+    "katalogue-sdk>=0.0.0a0",
     "click>=8.1",
     "platformdirs>=4.0",
     "keyring>=24.0",
