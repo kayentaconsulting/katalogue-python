@@ -197,6 +197,25 @@ class TestHierarchicalWithFilters:
         field_ids = [f["field_id"] for f in result.data["fields"]]
         assert "f-1" in field_ids
 
+    def test_dataset_prefix_still_works_in_hierarchical_mode(self, client):
+        with patch.object(
+            client, "get_system_export", return_value=NESTED_SYSTEM_EXPORT
+        ):
+            result = client.get(
+                "system",
+                GetOptions(
+                    resource_id="sys-1",
+                    include_children=True,
+                    filters=[
+                        Filter(
+                            path="dataset.dataset_name", operator="=", value="customers"
+                        )
+                    ],
+                ),
+            )
+        dataset_ids = [d["dataset_id"] for d in result.data["datasets"]]
+        assert dataset_ids == ["dt-1"]
+
 
 class TestHierarchicalWithFields:
     def test_fields_applied_to_flat_shape(self, client):

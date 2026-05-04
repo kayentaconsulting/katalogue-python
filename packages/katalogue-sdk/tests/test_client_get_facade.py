@@ -140,3 +140,35 @@ class TestAllOperators:
             result = client.get("system", GetOptions(filters=["system_id<2"]))
         assert len(result.data) == 1
         assert result.data[0]["system_id"] == 1
+
+
+class TestFlatResourcePrefixCompatibility:
+    def test_dataset_prefix_matches_flat_dataset_list(self, client):
+        rows = [
+            {"dataset_id": 1, "dataset_name": "users"},
+            {"dataset_id": 2, "dataset_name": "orders"},
+        ]
+        with patch.object(client, "list_resource", return_value=rows):
+            result = client.get(
+                "dataset",
+                GetOptions(filters=["dataset.dataset_name=users"]),
+            )
+        assert [row["dataset_name"] for row in result.data] == ["users"]
+
+    def test_dataset_prefix_matches_flat_single_record(self, client):
+        record = {"dataset_id": 1, "dataset_name": "users"}
+        with patch.object(client, "get_resource", return_value=record):
+            result = client.get(
+                "dataset",
+                GetOptions(resource_id=1, filters=["dataset.dataset_name=users"]),
+            )
+        assert result.data == record
+
+    def test_unrelated_prefix_still_does_not_match_flat_dataset_list(self, client):
+        rows = [{"dataset_id": 1, "dataset_name": "users"}]
+        with patch.object(client, "list_resource", return_value=rows):
+            result = client.get(
+                "dataset",
+                GetOptions(filters=["field.field_name=email"]),
+            )
+        assert result.data == []

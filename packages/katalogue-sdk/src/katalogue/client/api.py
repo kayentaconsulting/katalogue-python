@@ -61,6 +61,20 @@ def _apply_filters_to_list(rows: list[Any], filters: list[Filter]) -> list[Any]:
     return rows
 
 
+def _normalize_flat_filters(resource: str, filters: list[Filter]) -> list[Filter]:
+    """Treat the current resource prefix as optional for flat results."""
+    prefix = f"{resource}."
+    normalized: list[Filter] = []
+    for f in filters:
+        if f.path.startswith(prefix):
+            path = f.path[len(prefix) :]
+            if path:
+                normalized.append(Filter(path=path, operator=f.operator, value=f.value))
+                continue
+        normalized.append(f)
+    return normalized
+
+
 class KatalogueClient:
     def __init__(
         self, settings: Settings | None = None, token_cache: TokenCache | None = None
@@ -203,6 +217,8 @@ class KatalogueClient:
 
         # Parse filters once before fetching so bad filter strings fail fast.
         parsed_filters = FilterParser().parse(options.filters)
+        if parsed_filters:
+            parsed_filters = _normalize_flat_filters(resource, parsed_filters)
 
         resource_id = options.resource_id
         parent_id = options.parent_id
@@ -226,7 +242,7 @@ class KatalogueClient:
             raw = self.list_resource(resource)
             data = unwrap_list(raw)
             strategy = "list"
-        # Apply post-fetch processing to list results only.
+        # Apply post-fetch processing to fetched data.
         if isinstance(data, list):
             if parsed_filters:
                 data = _apply_filters_to_list(data, parsed_filters)
@@ -236,10 +252,15 @@ class KatalogueClient:
             if options.format_descriptions_as_text:
                 data = format_descriptions_to_plaintext(data)
         elif data is not None:
-            # Single record: apply field selection and description formatting only.
-            data = filter_fields(data, options.fields)
-            if options.format_descriptions_as_text:
-                data = format_descriptions_to_plaintext(data)
+            # Single record: apply filters, then field selection and description formatting.
+            if parsed_filters and not all(
+                apply_filter(data, f) for f in parsed_filters
+            ):
+                data = None
+            if data is not None:
+                data = filter_fields(data, options.fields)
+                if options.format_descriptions_as_text:
+                    data = format_descriptions_to_plaintext(data)
 
         output, output_file, output_files = OutputPipeline().process(
             data, options.output, root_resource=resource
