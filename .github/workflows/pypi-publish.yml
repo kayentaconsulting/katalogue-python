@@ -41,7 +41,7 @@ jobs:
           echo "Tag is valid: $tag"
 
   publish:
-    name: Publish packages | ${{ inputs.mode }}
+    name: Publish packages
     runs-on: ubuntu-latest
     needs: validate-tag
     environment: ${{ inputs.mode == 'pypi' && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Publish katalogue-sdk
+      - name: Publish katalogue-sdk | ${{ inputs.mode }}
         uses: ./.github/actions/pypi-publish-package
         with:
           mode: ${{ inputs.mode }}
@@ -63,7 +63,7 @@ jobs:
           package_dir: packages/katalogue-sdk
           dist_glob: dist/katalogue_sdk*
 
-      - name: Publish katalogue-cli
+      - name: Publish katalogue-cli | ${{ inputs.mode }}
         uses: ./.github/actions/pypi-publish-package
         with:
           mode: ${{ inputs.mode }}
