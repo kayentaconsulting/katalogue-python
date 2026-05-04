@@ -23,14 +23,10 @@ runs:
 
     - name: Publish ${{ inputs.package_name }} to TestPyPI
       if: inputs.mode == 'test-pypi'
-      shell: bash
-      run: |
-        echo "Would publish to TestPyPI:"
-        ls ${{ inputs.dist_glob }}
-      # uses: pypa/gh-action-pypi-publish@release/v1
-      # with:
-      #   repository-url: https://upload.test.pypi.org/legacy/
-      #   packages-dir: dist/
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://upload.test.pypi.org/legacy/
+        packages-dir: dist/
 
     - name: Publish ${{ inputs.package_name }} to PyPI
       if: inputs.mode == 'pypi'
