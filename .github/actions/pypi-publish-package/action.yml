@@ -24,7 +24,7 @@ runs:
     - name: Publish ${{ inputs.package_name }} to TestPyPI
       if: inputs.mode == 'test-pypi'
       shell: bash
-      run: uv publish --trusted-publishing always --publish-url https://upload.test.pypi.org/legacy/ ${{ inputs.dist_glob }}
+      run: uv publish --trusted-publishing always --publish-url https://test.pypi.org/legacy/ ${{ inputs.dist_glob }}
 
     - name: Publish ${{ inputs.package_name }} to PyPI
       if: inputs.mode == 'pypi'
