@@ -40,20 +40,40 @@ jobs:
 
   publish-sdk:
     name: Publish katalogue-sdk
-    uses: ./.github/workflows/_pypi-publish-package.yml
+    runs-on: ubuntu-latest
     needs: validate-tag
-    with:
-      mode: ${{ inputs.mode }}
-      package_name: katalogue-sdk
-      package_dir: packages/katalogue-sdk
-      dist_glob: dist/katalogue_sdk*
+    environment: ${{ inputs.mode == 'pypi' && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/pypi-publish-package
+        with:
+          mode: ${{ inputs.mode }}
+          package_name: katalogue-sdk
+          package_dir: packages/katalogue-sdk
+          dist_glob: dist/katalogue_sdk*
 
   publish-cli:
     name: Publish katalogue-cli
+    runs-on: ubuntu-latest
     needs: publish-sdk
-    uses: ./.github/workflows/_pypi-publish-package.yml
-    with:
-      mode: ${{ inputs.mode }}
-      package_name: katalogue-cli
-      package_dir: packages/katalogue-cli
-      dist_glob: dist/katalogue_cli*
+    environment: ${{ inputs.mode == 'pypi' && 'pypi' || inputs.mode == 'test-pypi' && 'test-pypi' || '' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/pypi-publish-package
+        with:
+          mode: ${{ inputs.mode }}
+          package_name: katalogue-cli
+          package_dir: packages/katalogue-cli
+          dist_glob: dist/katalogue_cli*

@@ -1,0 +1,43 @@
+name: Publish PyPI package
+description: Build and publish a single package to PyPI or TestPyPI
+
+inputs:
+  mode:
+    required: true
+  package_name:
+    required: true
+  package_dir:
+    required: true
+  dist_glob:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v5
+
+    - name: Build ${{ inputs.package_name }}
+      shell: bash
+      working-directory: ${{ inputs.package_dir }}
+      run: uv build
+
+    - name: Publish ${{ inputs.package_name }} to TestPyPI
+      if: inputs.mode == 'test-pypi'
+      shell: bash
+      run: |
+        echo "Would publish to TestPyPI:"
+        ls ${{ inputs.dist_glob }}
+      # uses: pypa/gh-action-pypi-publish@release/v1
+      # with:
+      #   repository-url: https://upload.test.pypi.org/legacy/
+      #   packages-dir: dist/
+
+    - name: Publish ${{ inputs.package_name }} to PyPI
+      if: inputs.mode == 'pypi'
+      shell: bash
+      run: |
+        echo "Would publish to PyPI:"
+        ls ${{ inputs.dist_glob }}
+      # uses: pypa/gh-action-pypi-publish@release/v1
+      # with:
+      #   packages-dir: dist/
