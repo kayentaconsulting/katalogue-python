@@ -2,30 +2,17 @@
 
 from __future__ import annotations
 
-import importlib.resources
 import re
-from pathlib import Path
 from typing import Any
 
 from jinja2 import StrictUndefined, Template
 from jinja2.sandbox import SandboxedEnvironment
 
-BUILTIN_TEMPLATES: dict[str, str] = {
-    "dbt-source": "dbt_source.j2",
-    "column-mapping": "column_mapping.j2",
-    "json-template": "json_template.j2",
-}
-
-# Default file extension for auto-generated filenames per built-in template.
-# Templates not listed here fall back to "yml".
-BUILTIN_TEMPLATE_EXTENSIONS: dict[str, str] = {
-    "json-template": "json",
-}
-
-
-def get_template_extension(fmt: str) -> str:
-    """Return the default file extension for auto-generated filenames."""
-    return BUILTIN_TEMPLATE_EXTENSIONS.get(fmt, "yml")
+from katalogue.template_registry import (
+    get_template_default_format,
+    looks_like_template_path as _looks_like_template_path,
+    resolve_template_source,
+)
 
 
 STANDARD_FORMATS: frozenset[str] = frozenset(
@@ -38,7 +25,7 @@ def is_template_format(fmt: str) -> bool:
 
 
 def looks_like_template_path(value: str) -> bool:
-    return value.endswith(".j2") or "/" in value or "\\" in value
+    return _looks_like_template_path(value)
 
 
 def _env() -> SandboxedEnvironment:
@@ -52,27 +39,13 @@ def _env() -> SandboxedEnvironment:
 def load_template(name_or_path: str) -> Template:
     """Load a built-in template by name, or a custom .j2 file by path."""
     env = _env()
+    source, _ = resolve_template_source(name_or_path)
+    return env.from_string(source)
 
-    if name_or_path in BUILTIN_TEMPLATES:
-        package = importlib.resources.files("katalogue.templates")
-        source = (package / BUILTIN_TEMPLATES[name_or_path]).read_text(encoding="utf-8")
-        return env.from_string(source)
 
-    if looks_like_template_path(name_or_path):
-        path = Path(name_or_path).expanduser()
-        if path.suffix != ".j2":
-            raise ValueError(
-                f"Custom template paths must end in .j2 (got '{name_or_path}')."
-            )
-        if not path.exists():
-            raise FileNotFoundError(f"Template file not found: {name_or_path}")
-        return env.from_string(path.read_text(encoding="utf-8"))
-
-    builtins = ", ".join(sorted(BUILTIN_TEMPLATES))
-    raise ValueError(
-        f"Unknown format '{name_or_path}'. Standard formats: json, table, compact. "
-        f"Built-in templates: {builtins}. Or provide a path to a .j2 file."
-    )
+def get_template_extension(fmt: str) -> str:
+    """Return the natural output format for a template reference."""
+    return get_template_default_format(fmt)
 
 
 def render_template(template: Template, context: dict[str, Any]) -> str:

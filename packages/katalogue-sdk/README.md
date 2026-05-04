@@ -416,7 +416,38 @@ result = client.get("system", GetOptions(
 
 ### Custom template
 
-Pass a path to a `.j2` file:
+You can either pass a direct `.j2` path or register templates in a repo-local
+config file.
+
+`katalogue.toml` in the repository root:
+
+```toml
+[templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+
+[templates.customer-mapping]
+path = "templates/customer-mapping.j2"
+default_format = "json"
+```
+
+`pyproject.toml`:
+
+```toml
+[tool.katalogue.templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+
+[tool.katalogue.templates.customer-mapping]
+path = "templates/customer-mapping.j2"
+default_format = "json"
+```
+
+Registry entries use the logical name passed to `template=...`, plus the source
+path and default output format. If a repo defines the same name as a built-in
+template, the repo version wins.
+
+Pass a path to a `.j2` file directly:
 
 ```python
 result = client.get("system", GetOptions(
@@ -462,8 +493,8 @@ File extensions are derived from the format or template:
 | `format="json"` | `.json` |
 | `format="yaml"` or `"yml"` | `.yaml` |
 | `format="csv"` | `.csv` |
-| `template="dbt-source"` or `"column-mapping"` (no format) | `.yml` |
-| `template="json-template"` (no format) | `.json` |
+| built-in or repo-registered template with default format `yaml` / `yml` | `.yaml` / `.yml` |
+| built-in or repo-registered template with default format `json` | `.json` |
 | custom `.j2` file (no format) | `.yml` |
 
 `format` takes precedence over `template` when determining the extension.

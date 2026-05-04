@@ -7,6 +7,7 @@ import pytest
 
 from katalogue.rendering import (
     auto_filename,
+    get_template_extension,
     is_template_format,
     load_template,
     looks_like_template_path,
@@ -69,6 +70,20 @@ def test_load_custom_j2_from_file(tmp_path):
     assert render_template(tmpl, {"name": "world"}) == "hello world"
 
 
+def test_load_custom_json_j2_from_file(tmp_path):
+    custom = tmp_path / "custom.json.j2"
+    custom.write_text("hello {{ name }}", encoding="utf-8")
+    tmpl = load_template(str(custom))
+    assert render_template(tmpl, {"name": "world"}) == "hello world"
+
+
+def test_load_j2_json_suffix_is_rejected(tmp_path):
+    custom = tmp_path / "custom.j2.json"
+    custom.write_text("hello {{ name }}", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"\.j2"):
+        load_template(str(custom))
+
+
 def test_load_missing_file_raises_file_not_found(tmp_path):
     with pytest.raises(FileNotFoundError):
         load_template(str(tmp_path / "missing.j2"))
@@ -87,6 +102,11 @@ def test_load_unknown_name_raises_value_error():
 def test_load_unknown_name_lists_builtins():
     with pytest.raises(ValueError, match="dbt-source"):
         load_template("unknown-format")
+
+
+def test_builtin_template_default_format():
+    assert get_template_extension("dbt-source") == "yml"
+    assert get_template_extension("json-template") == "json"
 
 
 # --- sandbox enforcement ---

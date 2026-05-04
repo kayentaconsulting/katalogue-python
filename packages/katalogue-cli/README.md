@@ -157,12 +157,34 @@ katalogue system get 1 --include-children --format csv
 ### --template
 
 Renders the result using a Jinja2 template. Templates control the structure and shape of the output independently of `--format`.
+You can reference built-ins, repo-registered templates, or direct `.j2` files.
+Repo-local templates are registered in `katalogue.toml` or in
+`[tool.katalogue.templates]` inside `pyproject.toml`.
+
+`katalogue.toml`:
+
+```toml
+[templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+```
+
+`pyproject.toml`:
+
+```toml
+[tool.katalogue.templates.dbt-source]
+path = "templates/dbt-source.j2"
+default_format = "yaml"
+```
+
+If a repo defines the same name as a built-in template, the repo version wins.
 
 | Template | Output | Description |
 |----------|--------|-------------|
 | `dbt-source` | YAML | dbt `sources.yml` structure |
 | `column-mapping` | YAML | Field-level column mapping |
 | `json-template` | JSON | Full hierarchical context as JSON |
+| `customer-mapping` | depends | Repo-registered template name |
 | `./path/to/file.j2` | depends | Custom Jinja2 template file |
 
 ```bash
@@ -176,6 +198,8 @@ katalogue datasource get 5 --include-children --template ./my_template.j2
 ```
 
 `--template` requires `--include-children` for hierarchical data (datasource, system, etc.).
+Custom template filenames like `my_template.json.j2` or `my_template.yml.j2` are valid.
+`my_template.j2.json` is not, because the template source must still end in `.j2`.
 
 ### Combining --template and --format
 
@@ -247,7 +271,7 @@ Valid `--split-by` levels depend on the root resource:
 | `dataset_group` | `dataset_group`, `dataset` |
 | `dataset` | `dataset` |
 
-**File extensions** are derived automatically: `--format yaml` → `.yaml`, `--format json` → `.json`, `--format csv` → `.csv`, `--template dbt-source` → `.yml`, `--template json-template` → `.json`, custom `.j2` file → `.yml`.
+**File extensions** are derived automatically: `--format yaml` → `.yaml`, `--format json` → `.json`, `--format csv` → `.csv`, built-in or repo-registered templates use their configured default format, and direct `.j2` files fall back to `.yml`.
 
 ### Custom filename template
 
