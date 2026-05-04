@@ -50,18 +50,21 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: ./.github/actions/pypi-publish-package
+      - name: Publish katalogue-sdk
+        uses: ./.github/actions/pypi-publish-package
         with:
           mode: ${{ inputs.mode }}
           package_name: katalogue-sdk
           package_dir: packages/katalogue-sdk
           dist_glob: dist/katalogue_sdk*
 
-      - uses: ./.github/actions/pypi-publish-package
+      - name: Publish katalogue-cli
+        uses: ./.github/actions/pypi-publish-package
         with:
           mode: ${{ inputs.mode }}
           package_name: katalogue-cli
