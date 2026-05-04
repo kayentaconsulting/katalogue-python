@@ -58,7 +58,9 @@ class TemplateRegistry(BaseModel):
     templates: dict[str, TemplateDefinition] = Field(default_factory=dict)
 
 
-def load_template_registry(start_dir: Path | None = None) -> tuple[Path, TemplateRegistry] | None:
+def load_template_registry(
+    start_dir: Path | None = None,
+) -> tuple[Path, TemplateRegistry] | None:
     """Load the first repo-local template registry found above start_dir."""
     for directory in _iter_search_directories(start_dir):
         registry = _load_registry_from_directory(directory)
@@ -76,14 +78,14 @@ def resolve_template_source(
         config_path, loaded = registry
         entry = loaded.templates.get(name_or_path)
         if entry is not None:
-            template_path = _resolve_config_template_path(entry.path, config_path.parent)
+            template_path = _resolve_config_template_path(
+                entry.path, config_path.parent
+            )
             return _read_template_text(template_path), entry.default_format
 
     if name_or_path in BUILTIN_TEMPLATES:
         package = importlib.resources.files("katalogue.templates")
-        source = (package / BUILTIN_TEMPLATES[name_or_path]).read_text(
-            encoding="utf-8"
-        )
+        source = (package / BUILTIN_TEMPLATES[name_or_path]).read_text(encoding="utf-8")
         return source, BUILTIN_TEMPLATE_FORMATS[name_or_path]
 
     if looks_like_template_path(name_or_path):
@@ -102,7 +104,9 @@ def resolve_template_source(
     )
 
 
-def get_template_default_format(name_or_path: str, start_dir: Path | None = None) -> str:
+def get_template_default_format(
+    name_or_path: str, start_dir: Path | None = None
+) -> str:
     """Return the natural output format for a template reference."""
     _, fmt = resolve_template_source(name_or_path, start_dir=start_dir)
     return fmt
@@ -145,7 +149,9 @@ def _load_registry_from_directory(
     return None
 
 
-def _load_registry_from_file(path: Path, *, is_pyproject: bool) -> TemplateRegistry | None:
+def _load_registry_from_file(
+    path: Path, *, is_pyproject: bool
+) -> TemplateRegistry | None:
     data = _load_toml_file(path)
     templates = _extract_templates_section(data, is_pyproject=is_pyproject)
     if templates is None:
@@ -181,7 +187,9 @@ def _extract_templates_section(
     if not templates:
         return None
 
-    return {name: TemplateDefinition(**definition) for name, definition in templates.items()}
+    return {
+        name: TemplateDefinition(**definition) for name, definition in templates.items()
+    }
 
 
 def _resolve_config_template_path(path_value: str, config_dir: Path) -> Path:
@@ -189,9 +197,7 @@ def _resolve_config_template_path(path_value: str, config_dir: Path) -> Path:
     if not path.is_absolute():
         path = config_dir / path
     if path.suffix != ".j2":
-        raise ValueError(
-            f"Custom template paths must end in .j2 (got '{path_value}')."
-        )
+        raise ValueError(f"Custom template paths must end in .j2 (got '{path_value}').")
     return path
 
 

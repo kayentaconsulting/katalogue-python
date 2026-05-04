@@ -81,7 +81,9 @@ def test_pyproject_registry_is_supported(tmp_path, monkeypatch):
     repo.mkdir()
     template_dir = repo / "shared"
     template_dir.mkdir()
-    (template_dir / "customer.j2").write_text("customer: {{ system.system_name }}", encoding="utf-8")
+    (template_dir / "customer.j2").write_text(
+        "customer: {{ system.system_name }}", encoding="utf-8"
+    )
     (repo / "pyproject.toml").write_text(
         "\n".join(
             [
