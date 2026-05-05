@@ -143,6 +143,26 @@ def _flatten_for_csv(data: Any) -> list[dict[str, Any]]:
     if not isinstance(data, dict):
         return [{"value": str(data)}]
 
+    # Only flatten hierarchically for SDK-assembled data (always carries a
+    # "resource" sentinel set by the assemble_* functions). Plain API responses
+    # must not enter this path — they may contain keys like "fields" or
+    # "datasources" that would cause incorrect multi-row expansion.
+    if data.get("resource") not in {
+        "system",
+        "datasource",
+        "dataset_group",
+        "dataset",
+        "glossary",
+    }:
+        # Unwrap single-key list envelopes (e.g. {"systems": [{...}]}).
+        values = list(data.values())
+        if len(data) == 1 and isinstance(values[0], list):
+            return [{k: _scalar(v) for k, v in row.items()} for row in values[0]]
+        for key in ("datasource", "dataset_group", "dataset", "field"):
+            if isinstance(data.get(key), dict):
+                return [{k: _scalar(v) for k, v in data[key].items()}]
+        return [{k: _scalar(v) for k, v in data.items()}]
+
     fields = data.get("fields") or []
     datasets = data.get("datasets") or []
     dataset_groups = data.get("dataset_groups") or []
