@@ -26,6 +26,7 @@ from katalogue_cli.formatters.output import format_json, format_output
 
 _NULL_BACKENDS = {"Keyring", "NullKeyring"}
 _FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "table"]
+_EXPORT_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv"]
 _FORMAT_HELP = "Serialization format for output."
 _TEMPLATE_HELP = (
     "Template to apply. Built-in: dbt-source, column-mapping, json-template. "
@@ -340,6 +341,128 @@ template_option = click.option(
     metavar="TEMPLATE",
     help=_TEMPLATE_HELP,
 )
+
+
+def _export_extension(fmt: str | None, template: str | None) -> str:
+    if template and not fmt:
+        from katalogue.rendering import get_template_extension
+
+        return get_template_extension(template)
+    if fmt in ("yaml", "yml"):
+        return "yaml"
+    if fmt == "csv":
+        return "csv"
+    return "json"
+
+
+def export_format_option() -> Callable[[Any], Any]:
+    return click.option(
+        "--format",
+        "fmt",
+        default="json",
+        show_default=True,
+        type=click.Choice(_EXPORT_FORMAT_CHOICES, case_sensitive=False),
+        help=_FORMAT_HELP,
+    )
+
+
+def export_output_options() -> Callable[[Any], Any]:
+    def decorator(func: Any) -> Any:
+        func = click.option(
+            "--dry-run",
+            is_flag=True,
+            default=False,
+            help="Show planned output files without writing them.",
+        )(func)
+        func = click.option(
+            "--overwrite",
+            is_flag=True,
+            default=False,
+            help="Overwrite existing output files.",
+        )(func)
+        func = click.option(
+            "--filename-template",
+            default=None,
+            help="Jinja2 filename expression — only used with --split-by.",
+        )(func)
+        func = click.option(
+            "--split-by",
+            default=None,
+            help="Split into one file per resource level. Files are written to --output-dir.",
+        )(func)
+        func = click.option(
+            "--output-file",
+            default=None,
+            help="Override auto-generated filename. Cannot be combined with --split-by.",
+        )(func)
+        func = click.option(
+            "--output-dir",
+            default=".",
+            show_default=True,
+            help="Directory to write output files.",
+        )(func)
+        func = template_option(func)
+        func = export_format_option()(func)
+        return func
+
+    return decorator
+
+
+def build_export_options(
+    *,
+    resource: str,
+    resource_id: str,
+    filters: tuple[str, ...],
+    fields: list[str] | None,
+    fmt: str | None,
+    template: str | None,
+    output_dir: str,
+    output_file: str | None,
+    split_by: str | None,
+    filename_template: str | None,
+    overwrite: bool,
+    dry_run: bool,
+) -> GetOptions:
+    from pathlib import Path
+
+    from katalogue.rendering import auto_filename
+
+    if output_file:
+        out = _output_options(
+            fmt,
+            template=template,
+            output_file=output_file,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        )
+    elif split_by:
+        out = _output_options(
+            fmt,
+            template=template,
+            output_dir=output_dir,
+            split_by=split_by,
+            filename_template=filename_template,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        )
+    else:
+        ext = _export_extension(fmt, template)
+        filename = auto_filename(f"{resource}-{resource_id}", extension=ext)
+        auto_file = str(Path(output_dir) / filename)
+        out = _output_options(
+            fmt,
+            template=template,
+            output_file=auto_file,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        )
+    return GetOptions(
+        resource_id=resource_id,
+        filters=list(filters) or None,
+        fields=fields,
+        include_children=True,
+        output=out,
+    )
 
 
 def get_output_options(default_format: str = "json") -> Callable[[Any], Any]:

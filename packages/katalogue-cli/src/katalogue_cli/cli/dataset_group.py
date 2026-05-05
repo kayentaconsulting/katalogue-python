@@ -5,8 +5,10 @@ from __future__ import annotations
 import click
 
 from katalogue_cli.cli.common import (
+    build_export_options,
     build_get_options,
     build_list_options,
+    export_output_options,
     fields_option,
     filter_option,
     format_option,
@@ -96,6 +98,54 @@ def get(
             include_children=include_children,
             output_file=output_file,
             output_dir=output_dir,
+            split_by=split_by,
+            filename_template=filename_template,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        ),
+        out_fmt,
+        dry_run=dry_run,
+    )
+
+
+@dataset_group.command("export")
+@fields_option
+@filter_option
+@export_output_options()
+@click.argument("dataset_group_id")
+@click.pass_context
+def export(
+    ctx: click.Context,
+    fields: list[str] | None,
+    filters: tuple[str, ...],
+    fmt: str,
+    template: str | None,
+    output_dir: str,
+    output_file: str | None,
+    split_by: str | None,
+    filename_template: str | None,
+    overwrite: bool,
+    dry_run: bool,
+    dataset_group_id: str,
+) -> None:
+    """Export a full dataset group hierarchy to file.
+
+    Writes dataset_group-{id}.json to the current directory by default.
+    Use --split-by to create one file per child resource level.
+    """
+    out_fmt = resolve_template_format(ctx, fmt, template)
+    run_get(
+        ctx,
+        "dataset_group",
+        lambda: build_export_options(
+            resource="dataset_group",
+            resource_id=dataset_group_id,
+            filters=filters,
+            fields=fields,
+            fmt=out_fmt,
+            template=template,
+            output_dir=output_dir,
+            output_file=output_file,
             split_by=split_by,
             filename_template=filename_template,
             overwrite=overwrite,

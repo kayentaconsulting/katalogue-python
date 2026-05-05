@@ -16,6 +16,7 @@ from katalogue_cli.cli.common import (
     show_keys,
     wide_option,
 )
+
 from katalogue_cli.formatters.defaults import DEFAULT_FIELDS, PARENT_GROUP
 
 
@@ -101,6 +102,17 @@ def get(
         ),
         out_fmt,
         dry_run=dry_run,
+    )
+
+
+@field.command("export")
+@click.argument("field_id")
+@click.pass_context
+def export(ctx: click.Context, field_id: str) -> None:
+    """Fields do not support export."""
+    raise click.UsageError(
+        "Fields do not support export. "
+        "Use 'katalogue dataset export <id>' to export a dataset including all its fields."
     )
 
 

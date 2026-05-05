@@ -219,6 +219,109 @@ class TestSystemGet:
         assert "foo bar" in result.output
 
 
+class TestSystemExport:
+    def test_default_writes_json_to_current_dir(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="{}", output_file="system-1.json"
+        )
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "export", "1"])
+        assert result.exit_code == 0
+        assert "system-1.json" in result.output
+        options = _get_options(mock_client)
+        assert options.include_children is True
+        assert options.resource_id == "1"
+        assert options.output.format == "json"
+        assert options.output.output_file is not None
+        assert Path(options.output.output_file).name == "system-1.json"
+        assert Path(options.output.output_file).parent == Path(".")
+
+    def test_dry_run_shows_would_write(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="{}", output_file="system-1.json"
+        )
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "export", "1", "--dry-run"])
+        assert result.exit_code == 0
+        assert "Would write" in result.output
+        assert "system-1.json" in result.output
+        assert _get_options(mock_client).output.dry_run is True
+
+    def test_format_csv_sets_csv_extension(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="", output_file="system-1.csv"
+        )
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "export", "1", "--format", "csv"]
+        )
+        assert result.exit_code == 0
+        options = _get_options(mock_client)
+        assert options.output.format == "csv"
+        assert options.output.output_file is not None
+        assert Path(options.output.output_file).name == "system-1.csv"
+
+    def test_template_uses_natural_extension(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="version: 2", output_file="system-1.yml"
+        )
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "export", "1", "--template", "dbt-source"]
+        )
+        assert result.exit_code == 0
+        options = _get_options(mock_client)
+        assert options.output.template == "dbt-source"
+        assert options.output.format is None
+        assert options.output.output_file is not None
+        assert Path(options.output.output_file).name == "system-1.yml"
+
+    def test_custom_output_dir(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="{}", output_file="exports/system-1.json"
+        )
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "export", "1", "--output-dir", "./exports"]
+        )
+        assert result.exit_code == 0
+        options = _get_options(mock_client)
+        assert options.output.output_file is not None
+        assert Path(options.output.output_file).name == "system-1.json"
+        assert Path(options.output.output_file).parent == Path("exports")
+
+    def test_output_file_overrides_auto_name(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output="{}", output_file="./my-export.json"
+        )
+        result = runner.invoke(
+            cli,
+            [*CLI_AUTH, "system", "export", "1", "--output-file", "./my-export.json"],
+        )
+        assert result.exit_code == 0
+        assert _get_options(mock_client).output.output_file == "./my-export.json"
+
+    def test_split_by_uses_output_dir(self, runner, mock_client):
+        mock_client.get.return_value = CatalogResult(
+            data={}, output_files=[WrittenFile(path="sales-db.json")]
+        )
+        result = runner.invoke(
+            cli, [*CLI_AUTH, "system", "export", "1", "--split-by", "datasource"]
+        )
+        assert result.exit_code == 0
+        options = _get_options(mock_client)
+        assert options.output.split_by == "datasource"
+        assert options.output.output_dir == "."
+        assert options.output.output_file is None
+
+    def test_auth_error(self, runner, mock_client):
+        mock_client.get.side_effect = AuthError("Unauthorized")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "export", "1"])
+        assert result.exit_code == 1
+        assert "Authentication failed" in result.output
+
+    def test_api_error(self, runner, mock_client):
+        mock_client.get.side_effect = ApiError("Not found")
+        result = runner.invoke(cli, [*CLI_AUTH, "system", "export", "1"])
+        assert result.exit_code == 1
+        assert "Not found" in result.output
+
+
 class TestSystemList:
     def test_happy_path_json(
         self, runner, mock_client, catalog_result, system_list_data
