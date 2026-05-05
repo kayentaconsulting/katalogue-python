@@ -31,9 +31,9 @@ client = KatalogueClient()  # reads KATALOGUE_CLIENT_ID / KATALOGUE_CLIENT_SECRE
 result = client.get("system")
 print(result.data)  # list of dicts
 
-# List systems — selected fields, sorted
+# List systems — selected properties, sorted
 result = client.get("system", GetOptions(
-    fields=["system_id", "system_name"],
+    properties=["system_id", "system_name"],
     sort=[{"system_name": "asc"}],
 ))
 
@@ -46,7 +46,7 @@ result = client.get("datasource", GetOptions(parent_id=1))
 # All PII fields — filtered client-side
 result = client.get("field", GetOptions(
     filters=["is_pii=true"],
-    fields=["field_id", "field_name", "dataset_name"],
+    properties=["field_id", "field_name", "dataset_name"],
 ))
 ```
 
@@ -70,7 +70,7 @@ from katalogue import (
 )
 ```
 
-Internal helpers (`filter_fields`, `sort_resultset`, `format_json`, etc.) are available from their submodules (`katalogue.utils`, `katalogue.formatters`) for advanced use cases.
+Internal helpers (`filter_properties`, `sort_resultset`, `format_json`, etc.) are available from their submodules (`katalogue.utils`, `katalogue.formatters`) for advanced use cases.
 
 ## Credentials
 
@@ -187,7 +187,7 @@ result = client.get(resource, options=GetOptions(...))
 ### List all records
 
 ```python
-result = client.get("system", GetOptions(fields=["system_id", "system_name", "system_type"]))
+result = client.get("system", GetOptions(properties=["system_id", "system_name", "system_type"]))
 # result.data -> [{"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"}, ...]
 ```
 
@@ -203,21 +203,21 @@ result = client.get("system", GetOptions(resource_id=1))
 Walk the full hierarchy: system → datasource → dataset_group → dataset → field.
 
 ```python
-datasources = client.get("datasource", GetOptions(parent_id=1, fields=["datasource_id", "datasource_name"])).data
+datasources = client.get("datasource", GetOptions(parent_id=1, properties=["datasource_id", "datasource_name"])).data
 
 dataset_groups = client.get("dataset_group", GetOptions(
     parent_id=datasources[0]["datasource_id"],
-    fields=["dataset_group_id", "dataset_group_name"],
+    properties=["dataset_group_id", "dataset_group_name"],
 )).data
 
 datasets = client.get("dataset", GetOptions(
     parent_id=dataset_groups[0]["dataset_group_id"],
-    fields=["dataset_id", "dataset_name"],
+    properties=["dataset_id", "dataset_name"],
 )).data
 
 fields = client.get("field", GetOptions(
     parent_id=datasets[0]["dataset_id"],
-    fields=["field_id", "field_name", "data_type", "is_pii"],
+    properties=["field_id", "field_name", "data_type", "is_pii"],
 )).data
 ```
 
@@ -237,7 +237,7 @@ AND-logic filter strings, applied client-side. Syntax: `path OP value`.
 ```python
 result = client.get("field", GetOptions(
     filters=["is_pii=true"],
-    fields=["field_id", "field_name", "dataset_name", "datasource_name", "is_pii"],
+    properties=["field_id", "field_name", "dataset_name", "datasource_name", "is_pii"],
 ))
 
 # Multiple filters are ANDed together
@@ -263,7 +263,7 @@ Multi-column. `"asc"` and `"desc"` are case-insensitive. Null values always sort
 ```python
 result = client.get("system", GetOptions(
     sort=[{"system_name": "asc"}],
-    fields=["system_id", "system_name"],
+    properties=["system_id", "system_name"],
 ))
 
 # Multi-column: primary key first
@@ -276,7 +276,7 @@ Description fields are stored as rich-text JSON. Pass `format_descriptions_as_te
 
 ```python
 result = client.get("system", GetOptions(
-    fields=["system_id", "system_name", "system_description"],
+    properties=["system_id", "system_name", "system_description"],
     format_descriptions_as_text=True,
 ))
 # result.data -> [{"system_id": 1, "system_name": "Katalogue", "system_description": "User-friendly system..."}]
@@ -550,7 +550,7 @@ from katalogue import KatalogueClient, ConfigError, AuthError, ApiError
 
 try:
     client = KatalogueClient()
-    result = client.get("system", GetOptions(fields=["system_id", "system_name"]))
+    result = client.get("system", GetOptions(properties=["system_id", "system_name"]))
     systems = result.data
 except ConfigError as e:
     # Missing or invalid credentials — check env vars / Settings arguments
@@ -584,7 +584,7 @@ You never need to manage tokens manually.
 | `GetOptions.resource_id` | `int \| str \| None` | Fetch a single resource by ID |
 | `GetOptions.parent_id` | `int \| str \| None` | Fetch all children of a parent |
 | `GetOptions.filters` | `list[str] \| None` | Client-side filter expressions |
-| `GetOptions.fields` | `list[str] \| None` | Columns to keep in the result |
+| `GetOptions.properties` | `list[str] \| None` | Columns to keep in the result |
 | `GetOptions.sort` | `list[dict] \| None` | Multi-column sort, e.g. `[{"name": "asc"}]` |
 | `GetOptions.include_children` | `bool` | Fetch resource and all descendants |
 | `GetOptions.format_descriptions_as_text` | `bool` | Convert Draft.js rich-text to plain text |

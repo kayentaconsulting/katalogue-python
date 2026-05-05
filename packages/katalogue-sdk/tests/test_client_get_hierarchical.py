@@ -227,10 +227,10 @@ class TestHierarchicalWithFields:
                 GetOptions(
                     resource_id="sys-1",
                     include_children=True,
-                    fields=["system", "fields"],
+                    properties=["system", "fields"],
                 ),
             )
-        # fields param selects top-level keys from the flat dict
+        # properties param selects top-level keys from the flat dict
         data = result.data
         assert "system" in data
         assert "fields" in data

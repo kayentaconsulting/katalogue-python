@@ -9,10 +9,10 @@ from katalogue_cli.cli.common import (
     build_get_options,
     build_list_options,
     export_output_options,
-    fields_option,
     filter_option,
     format_option,
     get_output_options,
+    properties_option,
     resolve_template_format,
     run_get,
     show_keys,
@@ -27,7 +27,7 @@ def dataset() -> None:
 
 
 @dataset.command("list")
-@fields_option
+@properties_option
 @wide_option
 @filter_option
 @click.option(
@@ -40,7 +40,7 @@ def dataset() -> None:
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
     dataset_group_id: str | None,
@@ -53,7 +53,7 @@ def list_cmd(
         "dataset",
         lambda: build_list_options(
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=fmt,
             parent_id=dataset_group_id,
             default_fields=DEFAULT_FIELDS["dataset"],
@@ -67,14 +67,14 @@ def list_cmd(
 
 
 @dataset.command()
-@fields_option
+@properties_option
 @filter_option
 @get_output_options()
 @click.argument("dataset_id")
 @click.pass_context
 def get(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -95,7 +95,7 @@ def get(
         lambda: build_get_options(
             resource_id=dataset_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             include_children=include_children,
@@ -112,14 +112,14 @@ def get(
 
 
 @dataset.command("export")
-@fields_option
+@properties_option
 @filter_option
 @export_output_options()
 @click.argument("dataset_id")
 @click.pass_context
 def export(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -144,7 +144,7 @@ def export(
             resource="dataset",
             resource_id=dataset_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             output_dir=output_dir,
@@ -169,5 +169,5 @@ def export(
 )
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
-    """List available field names for use with --filter and --fields."""
+    """List available field names for use with --filter and --properties."""
     show_keys(ctx, lambda c: c.list_resource("dataset"), fmt)

@@ -9,10 +9,10 @@ from katalogue_cli.cli.common import (
     build_get_options,
     build_list_options,
     export_output_options,
-    fields_option,
     filter_option,
     format_option,
     get_output_options,
+    properties_option,
     resolve_template_format,
     run_get,
     show_keys,
@@ -27,14 +27,14 @@ def system() -> None:
 
 
 @system.command("list")
-@fields_option
+@properties_option
 @wide_option
 @filter_option
 @format_option("table")
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
     fmt: str,
@@ -45,7 +45,7 @@ def list_cmd(
         "system",
         lambda: build_list_options(
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=fmt,
             default_fields=DEFAULT_FIELDS["system"],
             wide=wide,
@@ -56,14 +56,14 @@ def list_cmd(
 
 
 @system.command()
-@fields_option
+@properties_option
 @filter_option
 @get_output_options()
 @click.argument("system_id")
 @click.pass_context
 def get(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -84,7 +84,7 @@ def get(
         lambda: build_get_options(
             resource_id=system_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             include_children=include_children,
@@ -101,14 +101,14 @@ def get(
 
 
 @system.command("export")
-@fields_option
+@properties_option
 @filter_option
 @export_output_options()
 @click.argument("system_id")
 @click.pass_context
 def export(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -133,7 +133,7 @@ def export(
             resource="system",
             resource_id=system_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             output_dir=output_dir,
@@ -158,5 +158,5 @@ def export(
 )
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
-    """List available field names for use with --filter and --fields."""
+    """List available field names for use with --filter and --properties."""
     show_keys(ctx, lambda c: c.list_resource("system"), fmt)

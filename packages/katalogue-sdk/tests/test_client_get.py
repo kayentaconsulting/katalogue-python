@@ -114,11 +114,11 @@ class TestGetFilter:
         assert len(result.data) == 2
 
 
-class TestGetFields:
-    def test_fields_narrows_columns(self, client):
+class TestGetProperties:
+    def test_properties_narrows_columns(self, client):
         with patch.object(client, "list_resource", return_value=_SYSTEMS):
             result = client.get(
-                "system", GetOptions(fields=["system_id", "system_name"])
+                "system", GetOptions(properties=["system_id", "system_name"])
             )
         assert all("system_type" not in row for row in result.data)
         assert all("system_id" in row for row in result.data)

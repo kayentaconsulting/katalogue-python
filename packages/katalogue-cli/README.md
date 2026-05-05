@@ -87,7 +87,7 @@ katalogue field get <id>
 
 ### keys
 
-Discover available field names for use with `--filter` and `--fields`:
+Discover available field names for use with `--filter` and `--properties`:
 
 ```bash
 katalogue field keys              # one key per line
@@ -118,13 +118,13 @@ katalogue field list --filter 'field_name startswith user_'
 
 All filtering happens client-side after the API fetch.
 
-### --fields
+### --properties
 
-Return only specific columns — useful for large responses or scripting:
+Return only specific properties — useful for large responses or scripting:
 
 ```bash
-katalogue system list --fields system_id,system_name
-katalogue field list --fields field_name,is_pii --format json
+katalogue system list --properties system_id,system_name
+katalogue field list --properties field_name,is_pii --format json
 ```
 
 ### --format

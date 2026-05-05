@@ -18,7 +18,7 @@ from katalogue import (
     OutputOptions,
 )
 from katalogue.config.settings import ConfigError, resolve_settings
-from katalogue.utils import filter_fields as filter_fields
+from katalogue.utils import filter_properties as filter_properties
 from katalogue.utils import unwrap_list
 from katalogue_cli.auth import DiskTokenCache
 from katalogue_cli.config.file import load_config_file
@@ -134,15 +134,17 @@ def emit_result(
     click.echo(repr(result.data))
 
 
-def _resolve_fields(
-    fields: list[str] | None,
+def _resolve_properties(
+    properties: list[str] | None,
     fmt: str,
     *,
     default_fields: list[str] | None = None,
     wide: bool = False,
     group_by: list[tuple[str, str]] | None = None,
 ) -> list[str] | None:
-    effective_fields = fields or (None if wide or fmt != "table" else default_fields)
+    effective_fields = properties or (
+        None if wide or fmt != "table" else default_fields
+    )
     if group_by and effective_fields:
         all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
         extra = [f for f in all_parent_fields if f not in effective_fields]
@@ -189,7 +191,7 @@ def _output_options(
 def build_list_options(
     *,
     filters: tuple[str, ...],
-    fields: list[str] | None,
+    properties: list[str] | None,
     fmt: str,
     parent_id: str | None = None,
     default_fields: list[str] | None = None,
@@ -199,8 +201,8 @@ def build_list_options(
     return GetOptions(
         parent_id=parent_id,
         filters=list(filters) or None,
-        fields=_resolve_fields(
-            fields,
+        properties=_resolve_properties(
+            properties,
             fmt,
             default_fields=default_fields,
             wide=wide,
@@ -214,7 +216,7 @@ def build_get_options(
     *,
     resource_id: str,
     filters: tuple[str, ...],
-    fields: list[str] | None,
+    properties: list[str] | None,
     fmt: str | None,
     template: str | None = None,
     include_children: bool,
@@ -228,7 +230,7 @@ def build_get_options(
     return GetOptions(
         resource_id=resource_id,
         filters=list(filters) or None,
-        fields=fields,
+        properties=properties,
         include_children=include_children,
         output=_output_options(
             fmt,
@@ -299,6 +301,7 @@ def show_keys(
 
 filter_option = click.option(
     "--filter",
+    "-w",
     "filters",
     multiple=True,
     metavar="FILTER",
@@ -308,10 +311,11 @@ filter_option = click.option(
     ),
 )
 
-fields_option = click.option(
-    "--fields",
+properties_option = click.option(
+    "--properties",
+    "-p",
     default=None,
-    help="Comma-separated field names to include in output.",
+    help="Comma-separated property names to include in output.",
     callback=lambda ctx, param, v: v.split(",") if v else None,
     is_eager=False,
 )
@@ -327,6 +331,7 @@ wide_option = click.option(
 def format_option(default: str) -> Callable[[Any], Any]:
     return click.option(
         "--format",
+        "-f",
         "fmt",
         default=default,
         show_default=True,
@@ -337,6 +342,7 @@ def format_option(default: str) -> Callable[[Any], Any]:
 
 template_option = click.option(
     "--template",
+    "-t",
     default=None,
     metavar="TEMPLATE",
     help=_TEMPLATE_HELP,
@@ -358,6 +364,7 @@ def _export_extension(fmt: str | None, template: str | None) -> str:
 def export_format_option() -> Callable[[Any], Any]:
     return click.option(
         "--format",
+        "-f",
         "fmt",
         default="json",
         show_default=True,
@@ -387,16 +394,19 @@ def export_output_options() -> Callable[[Any], Any]:
         )(func)
         func = click.option(
             "--split-by",
+            "-s",
             default=None,
             help="Split into one file per resource level. Files are written to --output-dir.",
         )(func)
         func = click.option(
             "--output-file",
+            "-o",
             default=None,
             help="Override auto-generated filename. Cannot be combined with --split-by.",
         )(func)
         func = click.option(
             "--output-dir",
+            "-d",
             default=".",
             show_default=True,
             help="Directory to write output files.",
@@ -413,7 +423,7 @@ def build_export_options(
     resource: str,
     resource_id: str,
     filters: tuple[str, ...],
-    fields: list[str] | None,
+    properties: list[str] | None,
     fmt: str | None,
     template: str | None,
     output_dir: str,
@@ -459,7 +469,7 @@ def build_export_options(
     return GetOptions(
         resource_id=resource_id,
         filters=list(filters) or None,
-        fields=fields,
+        properties=properties,
         include_children=True,
         output=out,
     )
@@ -481,11 +491,13 @@ def get_output_options(default_format: str = "json") -> Callable[[Any], Any]:
         )(func)
         func = click.option(
             "--output-file",
+            "-o",
             default=None,
             help="Write rendered output to this file.",
         )(func)
         func = click.option(
             "--output-dir",
+            "-d",
             default=None,
             help="Directory for split rendered output files.",
         )(func)
@@ -496,6 +508,7 @@ def get_output_options(default_format: str = "json") -> Callable[[Any], Any]:
         )(func)
         func = click.option(
             "--split-by",
+            "-s",
             default=None,
             help="Split hierarchical output by resource level.",
         )(func)

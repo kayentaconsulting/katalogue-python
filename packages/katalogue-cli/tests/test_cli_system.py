@@ -343,7 +343,7 @@ class TestSystemList:
         assert result.exit_code == 0
         assert "Customer Data Platform" in result.output
         options = _get_options(mock_client)
-        assert options.fields == [
+        assert options.properties == [
             "system_id",
             "system_name",
             "system_type",
@@ -384,7 +384,7 @@ class TestSystemList:
                 *CLI_AUTH,
                 "system",
                 "list",
-                "--fields",
+                "--properties",
                 "system_id,system_name",
                 "--format",
                 "json",
@@ -392,7 +392,7 @@ class TestSystemList:
         )
         assert result.exit_code == 0
         assert json.loads(result.output) == data
-        assert _get_options(mock_client).fields == ["system_id", "system_name"]
+        assert _get_options(mock_client).properties == ["system_id", "system_name"]
 
     def test_wide_bypasses_default_fields_for_table(self, runner, mock_client):
         data = [
@@ -409,7 +409,7 @@ class TestSystemList:
         )
         assert result.exit_code == 0
         assert "owner" in result.output
-        assert _get_options(mock_client).fields is None
+        assert _get_options(mock_client).properties is None
 
     def test_list_compact(self, runner, mock_client, catalog_result):
         data = [

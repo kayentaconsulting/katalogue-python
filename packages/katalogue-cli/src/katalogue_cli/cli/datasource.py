@@ -9,10 +9,10 @@ from katalogue_cli.cli.common import (
     build_get_options,
     build_list_options,
     export_output_options,
-    fields_option,
     filter_option,
     format_option,
     get_output_options,
+    properties_option,
     resolve_template_format,
     run_get,
     show_keys,
@@ -27,7 +27,7 @@ def datasource() -> None:
 
 
 @datasource.command("list")
-@fields_option
+@properties_option
 @wide_option
 @filter_option
 @click.option("--system", "system_id", default=None, help="Filter by system ID.")
@@ -35,7 +35,7 @@ def datasource() -> None:
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
     system_id: str | None,
@@ -48,7 +48,7 @@ def list_cmd(
         "datasource",
         lambda: build_list_options(
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=fmt,
             parent_id=system_id,
             default_fields=DEFAULT_FIELDS["datasource"],
@@ -62,14 +62,14 @@ def list_cmd(
 
 
 @datasource.command()
-@fields_option
+@properties_option
 @filter_option
 @get_output_options()
 @click.argument("datasource_id")
 @click.pass_context
 def get(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -90,7 +90,7 @@ def get(
         lambda: build_get_options(
             resource_id=datasource_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             include_children=include_children,
@@ -107,14 +107,14 @@ def get(
 
 
 @datasource.command("export")
-@fields_option
+@properties_option
 @filter_option
 @export_output_options()
 @click.argument("datasource_id")
 @click.pass_context
 def export(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -139,7 +139,7 @@ def export(
             resource="datasource",
             resource_id=datasource_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             output_dir=output_dir,
@@ -164,5 +164,5 @@ def export(
 )
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
-    """List available field names for use with --filter and --fields."""
+    """List available field names for use with --filter and --properties."""
     show_keys(ctx, lambda c: c.list_resource("datasource"), fmt)
