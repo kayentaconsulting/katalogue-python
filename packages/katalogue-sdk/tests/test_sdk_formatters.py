@@ -210,6 +210,31 @@ class TestFormatCsv:
         assert len(lines) == 2
         assert "line1 line2" in lines[1]
 
+    def test_flat_dict_with_inline_fields_is_one_row(self):
+        # Regression: a non-hierarchical API response that contains a "fields"
+        # key should NOT trigger hierarchical flattening into multiple rows.
+        data = {
+            "dataset_id": 1,
+            "dataset_name": "customers",
+            "fields": [{"field_id": 1, "field_name": "email"}],
+        }
+        out = format_csv(data)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        assert len(reader) == 1
+        assert reader[0]["dataset_name"] == "customers"
+
+    def test_flat_dict_with_inline_datasources_is_one_row(self):
+        # Same regression for a response that contains a "datasources" list.
+        data = {
+            "system_id": 1,
+            "system_name": "Finance",
+            "datasources": [{"datasource_id": 1}],
+        }
+        out = format_csv(data)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        assert len(reader) == 1
+        assert reader[0]["system_name"] == "Finance"
+
 
 class TestFormatResultset:
     def test_fmt_none_returns_python_object(self):
