@@ -154,6 +154,10 @@ def _flatten_for_csv(data: Any) -> list[dict[str, Any]]:
         "dataset",
         "glossary",
     }:
+        # Unwrap single-key list envelopes (e.g. {"systems": [{...}]}).
+        values = list(data.values())
+        if len(data) == 1 and isinstance(values[0], list):
+            return [{k: _scalar(v) for k, v in row.items()} for row in values[0]]
         for key in ("datasource", "dataset_group", "dataset", "field"):
             if isinstance(data.get(key), dict):
                 return [{k: _scalar(v) for k, v in data[key].items()}]

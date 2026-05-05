@@ -235,6 +235,16 @@ class TestFormatCsv:
         assert len(reader) == 1
         assert reader[0]["system_name"] == "Finance"
 
+    def test_single_key_list_envelope_is_unwrapped(self):
+        # Regression: API responses wrapped as {"systems": [{...}]} should
+        # unwrap to the inner list and produce one row per item.
+        data = {"systems": [{"system_id": 1, "system_name": "Finance"}]}
+        out = format_csv(data)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        assert len(reader) == 1
+        assert reader[0]["system_name"] == "Finance"
+        assert "systems" not in reader[0]
+
 
 class TestFormatResultset:
     def test_fmt_none_returns_python_object(self):
