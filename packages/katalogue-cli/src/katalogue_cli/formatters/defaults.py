@@ -33,6 +33,15 @@ DEFAULT_PROPERTIES: dict[str, list[str]] = {
         "field_source_description",
     ],
     "glossary": ["glossary_id", "glossary_name", "glossary_description"],
+    "changelog": [
+        "changelog_id",
+        "created_timestamp",
+        "operation",
+        "object_name",
+        "object_id",
+        "changed_by_user_username",
+        "changed_by_user_fullname",
+    ],
 }
 
 # Immediate parent (id_field, name_field) to group list table output by.

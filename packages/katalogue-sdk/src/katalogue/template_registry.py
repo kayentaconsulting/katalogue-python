@@ -13,6 +13,8 @@ BUILTIN_TEMPLATES: dict[str, str] = {
     "dbt-source": "dbt_source.j2",
     "column-mapping": "column_mapping.j2",
     "json-template": "json_template.j2",
+    "changelog-report": "changelog_report.j2",
+    "changelog-diff": "changelog_diff.j2",
 }
 
 # The format a built-in template naturally renders in.
@@ -20,6 +22,8 @@ BUILTIN_TEMPLATE_FORMATS: dict[str, str] = {
     "dbt-source": "yml",
     "column-mapping": "yml",
     "json-template": "json",
+    "changelog-report": "md",
+    "changelog-diff": "txt",
 }
 
 STANDARD_FORMATS: frozenset[str] = frozenset({"json", "yaml", "yml", "csv"})

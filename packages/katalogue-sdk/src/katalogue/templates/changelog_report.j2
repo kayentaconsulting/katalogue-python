@@ -1,0 +1,15 @@
+# Changelog Report
+{% for entry in changelog %}
+---
+**{{ entry.created_timestamp | default('—', true) }}** — {{ entry.operation | replace('I', 'Insert') | replace('U', 'Update') | replace('D', 'Delete') }}
+Asset: {{ entry.object_name }}/{{ entry.object_id }}
+By: {{ entry.changed_by_user_fullname | default(entry.changed_by_user_username | default('unknown', true), true) }}
+{% if entry.old_data %}
+Old: {{ entry.old_data }}
+{% endif %}
+{% if entry.new_data %}
+New: {{ entry.new_data }}
+{% endif %}
+{% else %}
+No changelog entries found.
+{% endfor %}

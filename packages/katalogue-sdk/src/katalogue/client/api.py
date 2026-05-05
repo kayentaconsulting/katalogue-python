@@ -16,7 +16,7 @@ from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
 from katalogue.config.settings import Settings, resolve_settings
 from katalogue.filters import Filter, FilterParser, apply_filter
 from katalogue.formatters import format_descriptions_to_plaintext
-from katalogue.options import GetOptions
+from katalogue.options import GetOptions, OutputOptions
 from katalogue.output import OutputPipeline
 from katalogue.results import CatalogResult
 from katalogue.utils import filter_properties, sort_resultset, unwrap_list
@@ -46,6 +46,36 @@ _VALID_RESOURCES: frozenset[str] = frozenset(
 )
 _VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
 
+_CHANGELOG_OBJECT_NAMES: frozenset[str] = frozenset(
+    {
+        "system",
+        "datasource",
+        "dataset_group",
+        "dataset",
+        "field",
+        "glossary",
+        "business_term",
+        "connection",
+        "task",
+    }
+)
+
+# (child_resource, parent_resource, parent_id_field, child_id_field)
+_CHANGELOG_CHILD_LEVELS: list[tuple[str, str, str, str]] = [
+    ("datasource", "system", "system_id", "datasource_id"),
+    ("dataset_group", "datasource", "datasource_id", "dataset_group_id"),
+    ("dataset", "dataset_group", "dataset_group_id", "dataset_id"),
+    ("field", "dataset", "dataset_id", "field_id"),
+]
+
+_CHANGELOG_ROOT_ID_FIELD: dict[str, str] = {
+    "system": "system_id",
+    "datasource": "datasource_id",
+    "dataset_group": "dataset_group_id",
+    "dataset": "dataset_id",
+    "field": "field_id",
+}
+
 
 class AuthError(Exception):
     """Raised when the API returns 401 Unauthorized."""
@@ -53,6 +83,28 @@ class AuthError(Exception):
 
 class ApiError(Exception):
     """Raised when the API returns a non-success status code."""
+
+
+def _filter_changelog_by_date(
+    entries: list[Any],
+    from_date: str | None,
+    to_date: str | None,
+) -> list[Any]:
+    if not from_date and not to_date:
+        return entries
+    result = []
+    for entry in entries:
+        ts: str = entry.get("created_timestamp") or ""
+        if not ts:
+            result.append(entry)
+            continue
+        date_part = ts[:10]
+        if from_date and date_part < from_date:
+            continue
+        if to_date and date_part > to_date:
+            continue
+        result.append(entry)
+    return result
 
 
 def _apply_filters_to_list(rows: list[Any], filters: list[Filter]) -> list[Any]:
@@ -340,6 +392,137 @@ class KatalogueClient:
             output_files=output_files,
             metadata={"strategy": strategy},
         )
+
+    def get_changelog(
+        self,
+        object_name: str,
+        object_id: int,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        filters: list[str] | None = None,
+        properties: list[str] | None = None,
+        include_children: bool = False,
+        output: OutputOptions | None = None,
+    ) -> CatalogResult:
+        """Fetch changelog entries for a catalog asset or job.
+
+        Args:
+            object_name: Asset type (system, datasource, dataset, …) or "job".
+            object_id: Numeric ID of the asset or job.
+            from_date: ISO date string "YYYY-MM-DD"; exclude entries before this date.
+            to_date: ISO date string "YYYY-MM-DD"; exclude entries after this date.
+            filters: Filter expressions (same syntax as GetOptions.filters).
+            properties: Field names to keep in each entry.
+            include_children: Also fetch changelog for all child assets in the hierarchy.
+                              Ignored when object_name is "job".
+            output: Rendering and file-output options.
+
+        Returns:
+            CatalogResult with data=list of changelog entries.
+        """
+        object_name = object_name.lower()
+        valid = _CHANGELOG_OBJECT_NAMES | {"job"}
+        if object_name not in valid:
+            raise ValueError(
+                f"Invalid object_name '{object_name}'. "
+                f"Must be one of: {', '.join(sorted(valid))}"
+            )
+
+        if object_name == "job":
+            url = f"{self._base_url}/api/changelog/job/{quote(str(object_id), safe='')}"
+            raw = self._request("GET", url, scope="changelog.read")
+            entries: list[Any] = (
+                raw.get("changelog", []) if isinstance(raw, dict) else []
+            )
+            strategy = "changelog_job"
+        elif include_children:
+            assets = self._collect_changelog_assets(object_name, object_id)
+            entries = []
+            for asset_name, asset_id in assets:
+                url = f"{self._base_url}/api/changelog/{asset_name}/{quote(str(asset_id), safe='')}"
+                raw = self._request("GET", url, scope="changelog.read")
+                chunk: list[Any] = (
+                    raw.get("changelog", []) if isinstance(raw, dict) else []
+                )
+                entries.extend(chunk)
+            strategy = "changelog_hierarchical"
+        else:
+            url = f"{self._base_url}/api/changelog/{object_name}/{quote(str(object_id), safe='')}"
+            raw = self._request("GET", url, scope="changelog.read")
+            entries = raw.get("changelog", []) if isinstance(raw, dict) else []
+            strategy = "changelog_asset"
+
+        entries = _filter_changelog_by_date(entries, from_date, to_date)
+
+        if filters:
+            parsed = FilterParser().parse(filters)
+            if parsed:
+                entries = _apply_filters_to_list(entries, parsed)
+
+        entries = filter_properties(entries, properties)  # type: ignore[assignment]
+
+        entries.sort(key=lambda e: e.get("created_timestamp") or "", reverse=True)
+
+        if output is None:
+            output = OutputOptions()
+
+        pipeline_data: Any = {"changelog": entries} if output.template else entries
+        rendered, output_file, output_files = OutputPipeline().process(
+            pipeline_data, output
+        )
+
+        return CatalogResult(
+            data=entries,
+            output=rendered,
+            output_file=output_file,
+            output_files=output_files,
+            metadata={"strategy": strategy},
+        )
+
+    def _collect_changelog_assets(
+        self, object_name: str, object_id: int
+    ) -> list[tuple[str, int]]:
+        from katalogue.exporting import _unwrap_list
+
+        assets: list[tuple[str, int]] = [(object_name, object_id)]
+
+        start_idx = next(
+            (
+                i
+                for i, (_, pr, _, _) in enumerate(_CHANGELOG_CHILD_LEVELS)
+                if pr == object_name
+            ),
+            None,
+        )
+        if start_idx is None:
+            return assets
+
+        root_id_field = _CHANGELOG_ROOT_ID_FIELD.get(object_name, f"{object_name}_id")
+        current_parents: list[dict[str, Any]] = [{root_id_field: object_id}]
+
+        for (
+            child_resource,
+            parent_resource,
+            parent_id_field,
+            child_id_field,
+        ) in _CHANGELOG_CHILD_LEVELS[start_idx:]:
+            children: list[dict[str, Any]] = []
+            for parent in current_parents:
+                parent_id = parent.get(parent_id_field)
+                if parent_id is None:
+                    continue
+                raw = self.list_by_parent(child_resource, parent_resource, parent_id)
+                children.extend(_unwrap_list(raw, child_resource))
+            for child in children:
+                child_id = child.get(child_id_field)
+                if child_id is not None:
+                    assets.append((child_resource, int(child_id)))
+            current_parents = children
+            if not current_parents:
+                break
+
+        return assets
 
     def get_system_export(self, system_id: int | str) -> dict[str, Any]:
         url = f"{self._base_url}/api/export/system/{quote(str(system_id), safe='')}"

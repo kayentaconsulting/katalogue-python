@@ -1,0 +1,11 @@
+{% for entry in changelog %}
+{{ entry.created_timestamp | default('—', true) }} [{{ entry.operation }}] {{ entry.object_name }}/{{ entry.object_id }} by {{ entry.changed_by_user_username | default('unknown', true) }}
+{% if entry.old_data and entry.old_data != 'null' %}
+  - before: {{ entry.old_data }}
+{% endif %}
+{% if entry.new_data and entry.new_data != 'null' %}
+  + after:  {{ entry.new_data }}
+{% endif %}
+{% else %}
+No changelog entries found.
+{% endfor %}

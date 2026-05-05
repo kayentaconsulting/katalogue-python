@@ -29,7 +29,8 @@ _FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "tab
 _EXPORT_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv"]
 _FORMAT_HELP = "Serialization format for output."
 _TEMPLATE_HELP = (
-    "Template to apply. Built-in: dbt-source, column-mapping, json-template. "
+    "Template to apply. Built-in: dbt-source, column-mapping, json-template, "
+    "changelog-report, changelog-diff. "
     "Repo-local names can be registered in katalogue.toml or [tool.katalogue.templates] "
     "inside pyproject.toml. "
     "Or provide a path to a .j2 file."
