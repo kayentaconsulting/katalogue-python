@@ -5,18 +5,20 @@ from __future__ import annotations
 import click
 
 from katalogue_cli.cli.common import (
+    build_export_options,
     build_get_options,
     build_list_options,
-    fields_option,
+    export_output_options,
     filter_option,
     format_option,
     get_output_options,
+    properties_option,
     resolve_template_format,
     run_get,
     show_keys,
     wide_option,
 )
-from katalogue_cli.formatters.defaults import DEFAULT_FIELDS, PARENT_GROUP
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES, PARENT_GROUP
 
 
 @click.group()
@@ -25,7 +27,7 @@ def dataset() -> None:
 
 
 @dataset.command("list")
-@fields_option
+@properties_option
 @wide_option
 @filter_option
 @click.option(
@@ -38,7 +40,7 @@ def dataset() -> None:
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
     dataset_group_id: str | None,
@@ -51,10 +53,10 @@ def list_cmd(
         "dataset",
         lambda: build_list_options(
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=fmt,
             parent_id=dataset_group_id,
-            default_fields=DEFAULT_FIELDS["dataset"],
+            default_properties=DEFAULT_PROPERTIES["dataset"],
             wide=wide,
             group_by=group_by,
         ),
@@ -65,14 +67,14 @@ def list_cmd(
 
 
 @dataset.command()
-@fields_option
+@properties_option
 @filter_option
 @get_output_options()
 @click.argument("dataset_id")
 @click.pass_context
 def get(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -93,12 +95,60 @@ def get(
         lambda: build_get_options(
             resource_id=dataset_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             include_children=include_children,
             output_file=output_file,
             output_dir=output_dir,
+            split_by=split_by,
+            filename_template=filename_template,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        ),
+        out_fmt,
+        dry_run=dry_run,
+    )
+
+
+@dataset.command("export")
+@properties_option
+@filter_option
+@export_output_options()
+@click.argument("dataset_id")
+@click.pass_context
+def export(
+    ctx: click.Context,
+    properties: list[str] | None,
+    filters: tuple[str, ...],
+    fmt: str,
+    template: str | None,
+    output_dir: str,
+    output_file: str | None,
+    split_by: str | None,
+    filename_template: str | None,
+    overwrite: bool,
+    dry_run: bool,
+    dataset_id: str,
+) -> None:
+    """Export a full dataset hierarchy to file.
+
+    Writes dataset-{id}.json to the current directory by default.
+    Use --split-by to create one file per child resource level.
+    """
+    out_fmt = resolve_template_format(ctx, fmt, template)
+    run_get(
+        ctx,
+        "dataset",
+        lambda: build_export_options(
+            resource="dataset",
+            resource_id=dataset_id,
+            filters=filters,
+            properties=properties,
+            fmt=out_fmt,
+            template=template,
+            output_dir=output_dir,
+            output_file=output_file,
             split_by=split_by,
             filename_template=filename_template,
             overwrite=overwrite,
@@ -119,5 +169,5 @@ def get(
 )
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
-    """List available field names for use with --filter and --fields."""
+    """List available field names for use with --filter and --properties."""
     show_keys(ctx, lambda c: c.list_resource("dataset"), fmt)

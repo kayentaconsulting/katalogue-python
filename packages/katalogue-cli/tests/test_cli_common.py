@@ -6,7 +6,7 @@ from unittest.mock import patch
 import click
 
 from katalogue import CatalogResult, WrittenFile
-from katalogue_cli.cli.common import emit_result, filter_fields, filter_option
+from katalogue_cli.cli.common import emit_result, filter_option, filter_properties
 from katalogue_cli.cli.main import cli
 
 CLI_AUTH = [
@@ -47,42 +47,42 @@ def _emit_table_cmd(ctx: click.Context):
     emit_result(ctx, result, "table")
 
 
-class TestFilterFields:
-    def test_filter_fields_on_list(self):
+class TestFilterProperties:
+    def test_filter_properties_on_list(self):
         rows = [
             {"system_id": 1, "system_name": "Katalogue", "system_type": "Data Catalog"},
             {"system_id": 2, "system_name": "Kayenta", "system_type": "Intranet"},
         ]
-        result = filter_fields(rows, ["system_id", "system_name"])
+        result = filter_properties(rows, ["system_id", "system_name"])
         assert result == [
             {"system_id": 1, "system_name": "Katalogue"},
             {"system_id": 2, "system_name": "Kayenta"},
         ]
 
-    def test_filter_fields_on_dict(self):
+    def test_filter_properties_on_dict(self):
         data = {
             "system_id": 1,
             "system_name": "Katalogue",
             "system_type": "Data Catalog",
         }
-        result = filter_fields(data, ["system_id", "system_name"])
+        result = filter_properties(data, ["system_id", "system_name"])
         assert result == {"system_id": 1, "system_name": "Katalogue"}
 
-    def test_filter_fields_ignores_missing_fields(self):
+    def test_filter_properties_ignores_missing_fields(self):
         rows = [{"system_id": 1, "system_name": "Katalogue"}]
-        result = filter_fields(rows, ["system_id", "nonexistent_field"])
+        result = filter_properties(rows, ["system_id", "nonexistent_field"])
         assert result == [{"system_id": 1}]
 
-    def test_filter_fields_none_returns_unchanged(self):
+    def test_filter_properties_none_returns_unchanged(self):
         rows = [{"system_id": 1, "system_name": "Katalogue"}]
-        result = filter_fields(rows, None)
+        result = filter_properties(rows, None)
         assert result == rows
 
-    def test_filter_fields_empty_list(self):
-        result = filter_fields([], ["system_id"])
+    def test_filter_properties_empty_list(self):
+        result = filter_properties([], ["system_id"])
         assert result == []
 
-    def test_filter_fields_unwraps_resource_key(self):
+    def test_filter_properties_unwraps_resource_key(self):
         wrapped = {
             "systems": [
                 {
@@ -92,7 +92,7 @@ class TestFilterFields:
                 }
             ]
         }
-        result = filter_fields(wrapped, ["system_id", "system_name"])
+        result = filter_properties(wrapped, ["system_id", "system_name"])
         assert result == [{"system_id": 1, "system_name": "Katalogue"}]
 
 

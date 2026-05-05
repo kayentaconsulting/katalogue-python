@@ -138,6 +138,13 @@ class TestFieldKeys:
         assert "Server error" in result.output
 
 
+class TestFieldExport:
+    def test_export_raises_usage_error(self, runner, cli_auth):
+        result = runner.invoke(cli, [*cli_auth, "field", "export", "1"])
+        assert result.exit_code == 2
+        assert "dataset export" in result.output
+
+
 class TestFieldGet:
     def test_happy_path(self, runner, cli_auth, mock_client, catalog_result):
         mock_client.get.return_value = catalog_result(

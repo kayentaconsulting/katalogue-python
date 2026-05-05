@@ -23,41 +23,41 @@ def unwrap_list(data: Any) -> list[Any]:
     return data if isinstance(data, list) else [data]
 
 
-def filter_fields(data: Any, fields: list[str] | None) -> Any:
-    """Keep only the requested fields from a dict or list of dicts.
+def filter_properties(data: Any, properties: list[str] | None) -> Any:
+    """Keep only the requested properties from a dict or list of dicts.
 
-    API responses contain many fields that are rarely needed together.
+    API responses contain many properties that are rarely needed together.
     This lets callers select a subset for display or downstream processing
     without iterating manually. Wrapper dicts (e.g. {"systems": [...]}) are
-    unwrapped to a plain list when fields are requested.
+    unwrapped to a plain list when properties are requested.
 
     # list of dicts
-    filter_fields([{"id": 1, "name": "A", "extra": "x"}], ["id", "name"])
+    filter_properties([{"id": 1, "name": "A", "extra": "x"}], ["id", "name"])
     -> [{"id": 1, "name": "A"}]
 
     # wrapper dict — unwrapped then filtered
-    filter_fields({"systems": [{"id": 1, "name": "A", "extra": "x"}]}, ["id", "name"])
+    filter_properties({"systems": [{"id": 1, "name": "A", "extra": "x"}]}, ["id", "name"])
     -> [{"id": 1, "name": "A"}]
 
     # plain dict
-    filter_fields({"id": 1, "name": "A", "extra": "x"}, ["id", "name"])
+    filter_properties({"id": 1, "name": "A", "extra": "x"}, ["id", "name"])
     -> {"id": 1, "name": "A"}
 
-    # fields=None — data returned unchanged
-    filter_fields([{"id": 1}], None)
+    # properties=None — data returned unchanged
+    filter_properties([{"id": 1}], None)
     -> [{"id": 1}]
     """
-    if not fields:
+    if not properties:
         return data
 
     if isinstance(data, dict):
         values = list(data.values())
         if len(data) == 1 and isinstance(values[0], list):
-            return filter_fields(values[0], fields)
-        return {f: data[f] for f in fields if f in data}
+            return filter_properties(values[0], properties)
+        return {f: data[f] for f in properties if f in data}
 
     if isinstance(data, list):
-        return [{f: row[f] for f in fields if f in row} for row in data]
+        return [{f: row[f] for f in properties if f in row} for row in data]
 
     return data
 

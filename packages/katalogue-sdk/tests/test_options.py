@@ -22,7 +22,7 @@ def test_get_options_defaults() -> None:
     assert g.resource_id is None
     assert g.parent_id is None
     assert g.filters is None
-    assert g.fields is None
+    assert g.properties is None
     assert g.sort is None
     assert g.include_children is False
     assert g.format_descriptions_as_text is False

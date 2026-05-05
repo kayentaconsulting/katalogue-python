@@ -7,16 +7,17 @@ import click
 from katalogue_cli.cli.common import (
     build_get_options,
     build_list_options,
-    fields_option,
     filter_option,
     format_option,
     get_output_options,
+    properties_option,
     resolve_template_format,
     run_get,
     show_keys,
     wide_option,
 )
-from katalogue_cli.formatters.defaults import DEFAULT_FIELDS, PARENT_GROUP
+
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES, PARENT_GROUP
 
 
 @click.group()
@@ -25,7 +26,7 @@ def field() -> None:
 
 
 @field.command("list")
-@fields_option
+@properties_option
 @wide_option
 @filter_option
 @click.option("--dataset", "dataset_id", default=None, help="Filter by dataset ID.")
@@ -33,7 +34,7 @@ def field() -> None:
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
     dataset_id: str | None,
@@ -46,10 +47,10 @@ def list_cmd(
         "field",
         lambda: build_list_options(
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=fmt,
             parent_id=dataset_id,
-            default_fields=DEFAULT_FIELDS["field"],
+            default_properties=DEFAULT_PROPERTIES["field"],
             wide=wide,
             group_by=group_by,
         ),
@@ -60,14 +61,14 @@ def list_cmd(
 
 
 @field.command()
-@fields_option
+@properties_option
 @filter_option
 @get_output_options()
 @click.argument("field_id")
 @click.pass_context
 def get(
     ctx: click.Context,
-    fields: list[str] | None,
+    properties: list[str] | None,
     filters: tuple[str, ...],
     fmt: str,
     template: str | None,
@@ -88,7 +89,7 @@ def get(
         lambda: build_get_options(
             resource_id=field_id,
             filters=filters,
-            fields=fields,
+            properties=properties,
             fmt=out_fmt,
             template=template,
             include_children=include_children,
@@ -104,6 +105,17 @@ def get(
     )
 
 
+@field.command("export")
+@click.argument("field_id")
+@click.pass_context
+def export(ctx: click.Context, field_id: str) -> None:
+    """Fields do not support export."""
+    raise click.UsageError(
+        "Fields do not support export. "
+        "Use 'katalogue dataset export <id>' to export a dataset including all its fields."
+    )
+
+
 @field.command("keys")
 @click.option(
     "--format",
@@ -114,5 +126,5 @@ def get(
 )
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
-    """List available field names for use with --filter and --fields."""
+    """List available field names for use with --filter and --properties."""
     show_keys(ctx, lambda c: c.list_resource("field"), fmt)

@@ -24,7 +24,7 @@ class GetOptions(BaseModel):
     resource_id: int | str | None = None
     parent_id: int | str | None = None
     filters: str | list[str] | list[Filter] | None = None
-    fields: list[str] | None = None
+    properties: list[str] | None = None
     sort: list[dict[str, str]] | None = None
     include_children: bool = False
     format_descriptions_as_text: bool = False

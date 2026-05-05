@@ -19,7 +19,7 @@ from katalogue.formatters import format_descriptions_to_plaintext
 from katalogue.options import GetOptions
 from katalogue.output import OutputPipeline
 from katalogue.results import CatalogResult
-from katalogue.utils import filter_fields, sort_resultset, unwrap_list
+from katalogue.utils import filter_properties, sort_resultset, unwrap_list
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ class KatalogueClient:
         if isinstance(data, list):
             if parsed_filters:
                 data = _apply_filters_to_list(data, parsed_filters)
-            data = filter_fields(data, options.fields)
+            data = filter_properties(data, options.properties)
             if options.sort:
                 data = sort_resultset(data, options.sort)
             if options.format_descriptions_as_text:
@@ -258,7 +258,7 @@ class KatalogueClient:
             ):
                 data = None
             if data is not None:
-                data = filter_fields(data, options.fields)
+                data = filter_properties(data, options.properties)
                 if options.format_descriptions_as_text:
                     data = format_descriptions_to_plaintext(data)
 
@@ -319,11 +319,11 @@ class KatalogueClient:
                 data, parsed_filters, root_resource=resource
             )
 
-        if options.fields:
+        if options.properties:
             from katalogue.exporting import _META_KEYS
 
             preserved = {k: data[k] for k in _META_KEYS if k in data}
-            filtered = filter_fields(data, options.fields)
+            filtered = filter_properties(data, options.properties)
             if isinstance(filtered, dict):
                 filtered.update(preserved)
                 data = filtered
