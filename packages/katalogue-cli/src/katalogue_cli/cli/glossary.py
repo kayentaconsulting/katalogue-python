@@ -18,7 +18,7 @@ from katalogue_cli.cli.common import (
     show_keys,
     wide_option,
 )
-from katalogue_cli.formatters.defaults import DEFAULT_FIELDS
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES
 
 
 @click.group()
@@ -47,7 +47,7 @@ def list_cmd(
             filters=filters,
             properties=properties,
             fmt=fmt,
-            default_fields=DEFAULT_FIELDS["glossary"],
+            default_properties=DEFAULT_PROPERTIES["glossary"],
             wide=wide,
         ),
         fmt,

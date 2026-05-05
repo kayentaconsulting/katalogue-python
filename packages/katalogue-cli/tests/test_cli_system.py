@@ -335,7 +335,7 @@ class TestSystemList:
         assert options.resource_id is None
         assert options.output.format == "json"
 
-    def test_happy_path_table_uses_default_fields(
+    def test_happy_path_table_uses_default_properties(
         self, runner, mock_client, system_list_data
     ):
         mock_client.get.return_value = CatalogResult(data=system_list_data)
@@ -394,7 +394,7 @@ class TestSystemList:
         assert json.loads(result.output) == data
         assert _get_options(mock_client).properties == ["system_id", "system_name"]
 
-    def test_wide_bypasses_default_fields_for_table(self, runner, mock_client):
+    def test_wide_bypasses_default_properties_for_table(self, runner, mock_client):
         data = [
             {
                 "system_id": 1,

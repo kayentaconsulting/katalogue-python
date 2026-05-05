@@ -17,7 +17,7 @@ from katalogue_cli.cli.common import (
     wide_option,
 )
 
-from katalogue_cli.formatters.defaults import DEFAULT_FIELDS, PARENT_GROUP
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES, PARENT_GROUP
 
 
 @click.group()
@@ -50,7 +50,7 @@ def list_cmd(
             properties=properties,
             fmt=fmt,
             parent_id=dataset_id,
-            default_fields=DEFAULT_FIELDS["field"],
+            default_properties=DEFAULT_PROPERTIES["field"],
             wide=wide,
             group_by=group_by,
         ),

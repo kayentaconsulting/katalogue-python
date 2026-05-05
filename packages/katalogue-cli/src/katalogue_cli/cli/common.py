@@ -138,19 +138,19 @@ def _resolve_properties(
     properties: list[str] | None,
     fmt: str,
     *,
-    default_fields: list[str] | None = None,
+    default_properties: list[str] | None = None,
     wide: bool = False,
     group_by: list[tuple[str, str]] | None = None,
 ) -> list[str] | None:
-    effective_fields = properties or (
-        None if wide or fmt != "table" else default_fields
+    effective_properties = properties or (
+        None if wide or fmt != "table" else default_properties
     )
-    if group_by and effective_fields:
-        all_parent_fields = [f for id_f, name_f in group_by for f in (id_f, name_f)]
-        extra = [f for f in all_parent_fields if f not in effective_fields]
+    if group_by and effective_properties:
+        all_parent_properties = [f for id_f, name_f in group_by for f in (id_f, name_f)]
+        extra = [f for f in all_parent_properties if f not in effective_properties]
         if extra:
-            effective_fields = list(effective_fields) + extra
-    return effective_fields
+            effective_properties = list(effective_properties) + extra
+    return effective_properties
 
 
 def _output_options(
@@ -194,7 +194,7 @@ def build_list_options(
     properties: list[str] | None,
     fmt: str,
     parent_id: str | None = None,
-    default_fields: list[str] | None = None,
+    default_properties: list[str] | None = None,
     wide: bool = False,
     group_by: list[tuple[str, str]] | None = None,
 ) -> GetOptions:
@@ -204,7 +204,7 @@ def build_list_options(
         properties=_resolve_properties(
             properties,
             fmt,
-            default_fields=default_fields,
+            default_properties=default_properties,
             wide=wide,
             group_by=group_by,
         ),
@@ -324,7 +324,7 @@ wide_option = click.option(
     "--wide",
     is_flag=True,
     default=False,
-    help="Show all fields in table output (overrides default field selection).",
+    help="Show all properties in table output (overrides default property selection).",
 )
 
 

@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `katalogue-cli` — Click CLI wrapping the SDK with resource-first command structure
 - Commands for all core resources: `system`, `datasource`, `dataset-group`, `dataset`, `field`, `glossary`
 - `list` and `get` verbs for every resource, with parent-scoping flags (e.g. `--system`, `--datasource`)
-- `--where key=value` filtering and `--fields` projection on list commands
+- `--where key=value` filtering and `--properties` projection on list commands
 - `--format json|table|compact` output modes; JSON when piped, table on TTY
 - `katalogue auth login/logout/status` with token caching via system keyring
 - Config file support (`~/.config/katalogue/config.toml`) for persisting base URL and client ID

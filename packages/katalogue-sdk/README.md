@@ -580,7 +580,7 @@ You never need to manage tokens manually.
 |--------|------|-------------|
 | `KatalogueClient` | class | HTTP client; OAuth2 managed internally |
 | `KatalogueClient.get()` | method | High-level fetch with filtering, sorting, and output |
-| `GetOptions` | Pydantic model | Routing, filter, sort, fields, output options |
+| `GetOptions` | Pydantic model | Routing, filter, sort, properties, output options |
 | `GetOptions.resource_id` | `int \| str \| None` | Fetch a single resource by ID |
 | `GetOptions.parent_id` | `int \| str \| None` | Fetch all children of a parent |
 | `GetOptions.filters` | `list[str] \| None` | Client-side filter expressions |

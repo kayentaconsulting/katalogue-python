@@ -1,13 +1,13 @@
-"""Default table fields and parent grouping per resource — single source of truth.
+"""Default table properties and parent grouping per resource — single source of truth.
 
-Table output uses DEFAULT_FIELDS when no --properties flag is given. JSON and compact
+Table output uses DEFAULT_PROPERTIES when no --properties flag is given. JSON and compact
 always return all properties. Use --wide to bypass defaults in table mode.
 PARENT_GROUP defines which (id, name) field pair to group by in table list output.
 """
 
 from __future__ import annotations
 
-DEFAULT_FIELDS: dict[str, list[str]] = {
+DEFAULT_PROPERTIES: dict[str, list[str]] = {
     "system": ["system_id", "system_name", "system_type", "system_description"],
     "datasource": [
         "datasource_id",
