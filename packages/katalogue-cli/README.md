@@ -156,7 +156,7 @@ katalogue system get 1 --include-children --format csv
 
 ### --template
 
-Renders the result using a Jinja2 template. Templates control the structure and shape of the output independently of `--format`.
+Renders the result using a Jinja2 template. Templates control the structure and shape of the output independently of `--format`. See [Writing Custom Templates](../../docs/custom-templates.md) for the template environment settings, available variables, and examples.
 You can reference built-ins, repo-registered templates, or direct `.j2` files.
 Repo-local templates are registered in `katalogue.toml` or in
 `[tool.katalogue.templates]` inside `pyproject.toml`.

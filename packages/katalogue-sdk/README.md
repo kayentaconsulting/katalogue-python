@@ -326,6 +326,21 @@ client.get("system", GetOptions(sort=[{"system_name": "ascending"}]))
 
 Pass `include_children=True` with `resource_id` to fetch a resource and all its descendants in a single call. The result uses a flat canonical shape with all child records in separate top-level lists.
 
+### Assembly strategies
+
+`system` and `glossary` use a **server-side export endpoint** — a single HTTP call that assembles the entire tree on the server. All other resources (`datasource`, `dataset_group`, `dataset`) use **recursive individual calls** — one call per level.
+
+The practical implication: if a system export times out (HTTP 504), the bottleneck is the server-side export query, not the number of API calls the SDK makes. Fetching the same data by starting from a `datasource` or `dataset_group` uses the recursive strategy and is less likely to time out, because no single request carries the full load.
+
+```python
+# Uses the server-side export endpoint — one heavy query on the server
+result = client.get("system", GetOptions(resource_id=1, include_children=True))
+
+# Uses recursive individual calls — lighter per-request load
+result = client.get("datasource", GetOptions(resource_id=5, include_children=True))
+result = client.get("dataset_group", GetOptions(resource_id=12, include_children=True))
+```
+
 ```python
 from katalogue import KatalogueClient, GetOptions
 
@@ -416,8 +431,7 @@ result = client.get("system", GetOptions(
 
 ### Custom template
 
-You can either pass a direct `.j2` path or register templates in a repo-local
-config file.
+You can either pass a direct `.j2` path or register templates in a repo-local config file. See [Writing Custom Templates](../../docs/custom-templates.md) for the Jinja2 environment settings (`trim_blocks`, `lstrip_blocks`, `StrictUndefined`), available context variables per resource type, and worked examples.
 
 `katalogue.toml` in the repository root:
 
