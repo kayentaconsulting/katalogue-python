@@ -201,6 +201,8 @@ katalogue datasource get 5 --include-children --template ./my_template.j2
 Custom template filenames like `my_template.json.j2` or `my_template.yml.j2` are valid.
 `my_template.j2.json` is not, because the template source must still end in `.j2`.
 
+For a full reference on writing your own templates — available context variables, field keys, Jinja2 environment, and worked examples — see [docs/custom-templates.md](../../docs/custom-templates.md).
+
 ### Combining --template and --format
 
 Use `--format` alongside `--template` to convert the template's natural output to another serialization format:

@@ -146,6 +146,113 @@ def _collect_children(
 
 
 # ---------------------------------------------------------------------------
+# Export-endpoint assembly helpers
+# ---------------------------------------------------------------------------
+
+
+def _walk_up_to_system(
+    client: "KatalogueClient",
+    resource: str,
+    resource_id: int | str,
+) -> tuple[int | str, dict[str, dict[str, Any]]]:
+    """Walk the parent chain from resource up to system.
+
+    Returns (system_id, ancestors) where ancestors maps each resource name
+    (including the starting resource) to its record fetched from the API.
+    """
+    from katalogue.client.api import _PARENT_ID_FIELD, _PARENT_RESOURCE
+
+    ancestors: dict[str, dict[str, Any]] = {}
+    current_resource = resource
+    current_id: int | str = resource_id
+
+    while current_resource != "system":
+        record = _unwrap_single(
+            client.get_resource(current_resource, current_id), current_resource
+        )
+        ancestors[current_resource] = record
+        parent_id_field = _PARENT_ID_FIELD[current_resource]
+        current_id = record[parent_id_field]
+        current_resource = _PARENT_RESOURCE[current_resource]
+
+    return current_id, ancestors
+
+
+def _slice_from_system_export(
+    flat: dict[str, Any],
+    resource: str,
+    resource_id: int | str,
+    ancestors: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Slice a flat system export down to the subtree rooted at resource/resource_id.
+
+    Returns the same canonical shape produced by the former individual assemblers.
+    """
+    result: dict[str, Any] = {
+        "resource": resource,
+        "id": str(resource_id),
+        "system": flat["system"],
+    }
+
+    if resource == "datasource":
+        ds = ancestors["datasource"]
+        ds_id = ds.get("datasource_id", resource_id)
+        groups = [g for g in flat["dataset_groups"] if g.get("datasource_id") == ds_id]
+        group_ids = {g["dataset_group_id"] for g in groups}
+        dsets = [d for d in flat["datasets"] if d.get("dataset_group_id") in group_ids]
+        dataset_ids = {d["dataset_id"] for d in dsets}
+        flds = [f for f in flat["fields"] if f.get("dataset_id") in dataset_ids]
+        result.update(
+            {
+                "datasource": ds,
+                "dataset_groups": groups,
+                "datasets": dsets,
+                "fields": flds,
+            }
+        )
+
+    elif resource == "dataset_group":
+        dg = ancestors["dataset_group"]
+        dg_id = dg.get("dataset_group_id", resource_id)
+        dsets = [d for d in flat["datasets"] if d.get("dataset_group_id") == dg_id]
+        dataset_ids = {d["dataset_id"] for d in dsets}
+        flds = [f for f in flat["fields"] if f.get("dataset_id") in dataset_ids]
+        result.update(
+            {
+                "datasource": ancestors["datasource"],
+                "dataset_group": dg,
+                "datasets": dsets,
+                "fields": flds,
+            }
+        )
+
+    elif resource == "dataset":
+        ds_record = ancestors["dataset"]
+        ds_id = ds_record.get("dataset_id", resource_id)
+        flds = [f for f in flat["fields"] if f.get("dataset_id") == ds_id]
+        result.update(
+            {
+                "datasource": ancestors["datasource"],
+                "dataset_group": ancestors["dataset_group"],
+                "dataset": ds_record,
+                "fields": flds,
+            }
+        )
+
+    return result
+
+
+def _assemble_via_system_export(
+    client: "KatalogueClient",
+    resource: str,
+    resource_id: int | str,
+) -> dict[str, Any]:
+    system_id, ancestors = _walk_up_to_system(client, resource, resource_id)
+    flat = flatten_system_export(client.get_system_export(system_id))
+    return _slice_from_system_export(flat, resource, resource_id, ancestors)
+
+
+# ---------------------------------------------------------------------------
 # Public assembly functions
 # ---------------------------------------------------------------------------
 
@@ -160,120 +267,19 @@ def assemble_system(
 def assemble_datasource(
     client: "KatalogueClient", resource_id: int | str
 ) -> dict[str, Any]:
-    datasource = _unwrap_single(
-        client.get_resource("datasource", resource_id), "datasource"
-    )
-    datasource_id = datasource.get("datasource_id", resource_id)
-    system_id = datasource.get("system_id")
-    system: dict[str, Any] = (
-        _unwrap_single(client.get_resource("system", system_id), "system")
-        if system_id is not None
-        else {}
-    )
-    dataset_groups = _unwrap_list(
-        client.list_by_parent("dataset_group", "datasource", datasource_id),
-        "dataset_group",
-    )
-    dataset_groups = [
-        {**row, "datasource_id": row.get("datasource_id", datasource_id)}
-        for row in dataset_groups
-    ]
-    datasets = _collect_children(
-        client, "dataset", "dataset_group", dataset_groups, "dataset_group_id"
-    )
-    fields = _collect_children(client, "field", "dataset", datasets, "dataset_id")
-    return {
-        "resource": "datasource",
-        "id": str(resource_id),
-        "system": system,
-        "datasource": datasource,
-        "dataset_groups": dataset_groups,
-        "datasets": datasets,
-        "fields": fields,
-    }
+    return _assemble_via_system_export(client, "datasource", resource_id)
 
 
 def assemble_dataset_group(
     client: "KatalogueClient", resource_id: int | str
 ) -> dict[str, Any]:
-    dataset_group = _unwrap_single(
-        client.get_resource("dataset_group", resource_id), "dataset_group"
-    )
-    group_id = dataset_group.get("dataset_group_id", resource_id)
-    datasource_id = dataset_group.get("datasource_id")
-    datasource: dict[str, Any] = (
-        _unwrap_single(client.get_resource("datasource", datasource_id), "datasource")
-        if datasource_id is not None
-        else {}
-    )
-    system_id = datasource.get("system_id") if datasource else None
-    system: dict[str, Any] = (
-        _unwrap_single(client.get_resource("system", system_id), "system")
-        if system_id is not None
-        else {}
-    )
-    datasets = _unwrap_list(
-        client.list_by_parent("dataset", "dataset_group", group_id), "dataset"
-    )
-    datasets = [
-        {**row, "dataset_group_id": row.get("dataset_group_id", group_id)}
-        for row in datasets
-    ]
-    fields = _collect_children(client, "field", "dataset", datasets, "dataset_id")
-    return {
-        "resource": "dataset_group",
-        "id": str(resource_id),
-        "system": system,
-        "datasource": datasource,
-        "dataset_group": dataset_group,
-        "datasets": datasets,
-        "fields": fields,
-    }
+    return _assemble_via_system_export(client, "dataset_group", resource_id)
 
 
 def assemble_dataset(
     client: "KatalogueClient", resource_id: int | str
 ) -> dict[str, Any]:
-    dataset = _unwrap_single(client.get_resource("dataset", resource_id), "dataset")
-    dataset_id = dataset.get("dataset_id", resource_id)
-    group_id = dataset.get("dataset_group_id")
-    dataset_group: dict[str, Any] = (
-        _unwrap_single(client.get_resource("dataset_group", group_id), "dataset_group")
-        if group_id is not None
-        else {}
-    )
-    datasource_id = dataset_group.get("datasource_id") if dataset_group else None
-    datasource: dict[str, Any] = (
-        _unwrap_single(client.get_resource("datasource", datasource_id), "datasource")
-        if datasource_id is not None
-        else {}
-    )
-    system_id = datasource.get("system_id") if datasource else None
-    system: dict[str, Any] = (
-        _unwrap_single(client.get_resource("system", system_id), "system")
-        if system_id is not None
-        else {}
-    )
-    fields = _unwrap_list(
-        client.list_by_parent("field", "dataset", dataset_id), "field"
-    )
-    fields = [
-        {
-            **row,
-            "dataset_id": row.get("dataset_id", dataset_id),
-            "dataset_name": row.get("dataset_name", dataset.get("dataset_name", "")),
-        }
-        for row in fields
-    ]
-    return {
-        "resource": "dataset",
-        "id": str(resource_id),
-        "system": system,
-        "datasource": datasource,
-        "dataset_group": dataset_group,
-        "dataset": dataset,
-        "fields": fields,
-    }
+    return _assemble_via_system_export(client, "dataset", resource_id)
 
 
 def assemble_glossary(

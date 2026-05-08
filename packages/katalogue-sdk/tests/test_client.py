@@ -243,3 +243,23 @@ class TestScopeDerivation:
         client._session.fetch_token.assert_called_once()
         call_kwargs = client._session.fetch_token.call_args
         assert call_kwargs[1]["scope"] == "datasource.read"
+
+
+class TestVerboseLogging:
+    def test_request_emits_debug_log_with_method_and_url(self, client, caplog):
+        import logging
+
+        client._session.request.return_value = _make_response(200, [])
+        with caplog.at_level(logging.DEBUG, logger="katalogue.client.api"):
+            client.list_resource("system")
+        assert any(
+            "GET" in r.message and "api/system/all" in r.message for r in caplog.records
+        )
+
+    def test_no_debug_log_at_warning_level(self, client, caplog):
+        import logging
+
+        client._session.request.return_value = _make_response(200, [])
+        with caplog.at_level(logging.WARNING, logger="katalogue.client.api"):
+            client.list_resource("system")
+        assert not any("GET" in r.message for r in caplog.records)

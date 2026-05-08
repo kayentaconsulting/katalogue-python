@@ -144,6 +144,7 @@ class KatalogueClient:
         self._fetch_token(scope)
 
     def _request(self, method: str, url: str, scope: str, **kwargs: Any) -> Any:
+        logger.debug("%s %s (scope=%s)", method, url, scope)
         self._ensure_token(scope)
 
         response = self._session.request(method, url, **kwargs)
@@ -306,9 +307,7 @@ class KatalogueClient:
             "dataset": assemble_dataset,
             "glossary": assemble_glossary,
         }
-        strategy = (
-            "export_endpoint" if resource in ("system", "glossary") else "recursive"
-        )
+        strategy = "export_endpoint"
 
         data = assemblers[resource](self, resource_id)
         raw = data  # flat shape is both raw and processed before filtering
