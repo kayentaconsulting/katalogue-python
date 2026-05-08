@@ -99,50 +99,37 @@ class TestSystemHierarchical:
 
 
 class TestDatasourceHierarchical:
-    def test_calls_recursive_and_strategy_is_recursive(self, client):
+    def test_uses_system_export_endpoint_and_strategy_is_export_endpoint(self, client):
         client.get_resource = Mock(
-            side_effect=[
-                {
-                    "datasource_id": "ds-1",
-                    "datasource_name": "Warehouse",
-                    "system_id": "sys-1",
-                },
-                {"system_id": "sys-1", "system_name": "Finance"},
-            ]
+            return_value={
+                "datasource_id": "ds-1",
+                "datasource_name": "Warehouse",
+                "system_id": "sys-1",
+            }
         )
-        client.list_by_parent = Mock(
-            side_effect=[
-                [{"dataset_group_id": "dg-1", "dataset_group_name": "public"}],
-                [{"dataset_id": "dt-1", "dataset_name": "customers"}],
-                [{"field_id": "f-1", "field_name": "email"}],
-            ]
-        )
-        result = client.get(
-            "datasource", GetOptions(resource_id="ds-1", include_children=True)
-        )
-        assert result.metadata["strategy"] == "recursive"
+        with patch.object(
+            client, "get_system_export", return_value=NESTED_SYSTEM_EXPORT
+        ) as mock_export:
+            result = client.get(
+                "datasource", GetOptions(resource_id="ds-1", include_children=True)
+            )
+        mock_export.assert_called_once_with("sys-1")
+        assert result.metadata["strategy"] == "export_endpoint"
 
     def test_flat_shape_contains_all_levels(self, client):
         client.get_resource = Mock(
-            side_effect=[
-                {
-                    "datasource_id": "ds-1",
-                    "datasource_name": "Warehouse",
-                    "system_id": "sys-1",
-                },
-                {"system_id": "sys-1", "system_name": "Finance"},
-            ]
+            return_value={
+                "datasource_id": "ds-1",
+                "datasource_name": "Warehouse",
+                "system_id": "sys-1",
+            }
         )
-        client.list_by_parent = Mock(
-            side_effect=[
-                [{"dataset_group_id": "dg-1", "dataset_group_name": "public"}],
-                [{"dataset_id": "dt-1", "dataset_name": "customers"}],
-                [{"field_id": "f-1", "field_name": "email"}],
-            ]
-        )
-        result = client.get(
-            "datasource", GetOptions(resource_id="ds-1", include_children=True)
-        )
+        with patch.object(
+            client, "get_system_export", return_value=NESTED_SYSTEM_EXPORT
+        ):
+            result = client.get(
+                "datasource", GetOptions(resource_id="ds-1", include_children=True)
+            )
         data = result.data
         assert data["resource"] == "datasource"
         assert data["dataset_groups"][0]["datasource_id"] == "ds-1"

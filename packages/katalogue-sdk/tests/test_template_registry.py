@@ -104,6 +104,22 @@ def test_pyproject_registry_is_supported(tmp_path, monkeypatch):
     assert get_template_extension("customer") == "json"
 
 
+def test_arbitrary_default_format_is_allowed(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_repo_template(repo, "report.j2", "# {{ system.system_name }}", "md")
+    monkeypatch.chdir(repo)
+
+    assert get_template_extension("report") == "md"
+
+    _, _, written = OutputPipeline().process(
+        _HIERARCHICAL_DATA,
+        OutputOptions(template="report", split_by="dataset", output_dir="out"),
+        root_resource="system",
+    )
+    assert written[0].path.endswith(".md")
+
+
 def test_katalogue_toml_takes_precedence_over_pyproject(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
     repo.mkdir()

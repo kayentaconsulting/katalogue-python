@@ -43,10 +43,9 @@ class TemplateDefinition(BaseModel):
     @field_validator("default_format")
     @classmethod
     def _normalize_default_format(cls, value: str) -> str:
-        fmt = value.lower()
-        if fmt not in STANDARD_FORMATS:
-            allowed = ", ".join(sorted(STANDARD_FORMATS))
-            raise ValueError(f"Invalid default_format {value!r}. Valid: {allowed}.")
+        fmt = value.lower().strip()
+        if not fmt:
+            raise ValueError("default_format cannot be empty.")
         return fmt
 
 
