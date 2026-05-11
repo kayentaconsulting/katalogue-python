@@ -2,8 +2,8 @@
 
 import json
 
-from katalogue import CatalogResult, WrittenFile
-from katalogue.client.api import ApiError
+from katalogue import CatalogResult, WriteResult, WrittenFile
+from katalogue.client.api import ApiError, AuthError
 from katalogue_cli.cli.main import cli
 
 
@@ -107,3 +107,74 @@ class TestGlossaryGet:
         result = runner.invoke(cli, [*cli_auth, "glossary", "get", "999"])
         assert result.exit_code == 1
         assert "Not found" in result.output
+
+
+def _write_result(data=None):
+    return WriteResult(ok=True, message="updated", data=data or [{"glossary_id": 3}])
+
+
+class TestGlossaryUpdate:
+    def test_flag_mode_happy_path(self, runner, cli_auth, mock_client):
+        mock_client.update.return_value = _write_result()
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "3", "--name", "New Name"],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data[0]["glossary_id"] == 3
+
+    def test_only_set_flags_sent(self, runner, cli_auth, mock_client):
+        mock_client.update.return_value = _write_result()
+        runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "3", "--description", "New desc"],
+        )
+        opts = mock_client.update.call_args.args[1]
+        assert opts.changes == {"glossary_description": "New desc"}
+        assert opts.resource_id == 3
+
+    def test_from_file_happy_path(self, runner, cli_auth, mock_client, tmp_path):
+        mock_client.update.return_value = _write_result()
+        changes = tmp_path / "glossaries.json"
+        changes.write_text('[{"glossary_id": 3, "glossary_name": "Updated"}]')
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "--from-file", str(changes)],
+        )
+        assert result.exit_code == 0
+        opts = mock_client.update.call_args.args[1]
+        assert opts.records[0]["glossary_id"] == 3
+
+    def test_missing_id_and_file(self, runner, cli_auth, mock_client):
+        result = runner.invoke(cli, [*cli_auth, "glossary", "update"])
+        assert result.exit_code == 2
+
+    def test_id_and_file_mutually_exclusive(
+        self, runner, cli_auth, mock_client, tmp_path
+    ):
+        changes = tmp_path / "glossaries.json"
+        changes.write_text('[{"glossary_id": 3}]')
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "3", "--from-file", str(changes)],
+        )
+        assert result.exit_code == 2
+
+    def test_auth_error(self, runner, cli_auth, mock_client):
+        mock_client.update.side_effect = AuthError("Token expired")
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "3", "--name", "x"],
+        )
+        assert result.exit_code == 1
+        assert "Token expired" in result.output
+
+    def test_api_error(self, runner, cli_auth, mock_client):
+        mock_client.update.side_effect = ApiError("Server error")
+        result = runner.invoke(
+            cli,
+            [*cli_auth, "glossary", "update", "3", "--name", "x"],
+        )
+        assert result.exit_code == 1
+        assert "Server error" in result.output

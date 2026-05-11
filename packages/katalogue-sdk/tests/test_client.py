@@ -263,3 +263,86 @@ class TestVerboseLogging:
         with caplog.at_level(logging.WARNING, logger="katalogue.client.api"):
             client.list_resource("system")
         assert not any("GET" in r.message for r in caplog.records)
+
+    def test_request_body_logged_at_debug(self, client, caplog):
+        import logging
+
+        client._session.request.return_value = _make_response(
+            200, {"business_terms": []}
+        )
+        with caplog.at_level(logging.DEBUG, logger="katalogue.client.api"):
+            client._put_resource(
+                "business_term", "business_term.write", {"business_terms": [{"id": 1}]}
+            )
+        assert any("Request body" in r.message for r in caplog.records)
+
+
+class TestExtractErrorMessage:
+    def test_detail_string(self):
+        resp = _make_response(400, {"detail": "business_term_name is required"})
+        assert (
+            KatalogueClient._extract_error_message(resp)
+            == "business_term_name is required"
+        )
+
+    def test_detail_list_fastapi_format(self):
+        resp = _make_response(
+            422,
+            {
+                "detail": [
+                    {
+                        "loc": ["body", "business_terms", 0, "business_term_name"],
+                        "msg": "field required",
+                        "type": "value_error.missing",
+                    },
+                ]
+            },
+        )
+        msg = KatalogueClient._extract_error_message(resp)
+        assert "business_term_name" in msg
+        assert "field required" in msg
+
+    def test_falls_back_to_message(self):
+        resp = _make_response(400, {"message": "something went wrong"})
+        assert KatalogueClient._extract_error_message(resp) == "something went wrong"
+
+    def test_generic_fallback(self):
+        resp = _make_response(400, {})
+        assert KatalogueClient._extract_error_message(resp) == "API error (HTTP 400)"
+
+    def test_data_validation_error_format(self):
+        resp = _make_response(
+            400,
+            {
+                "dataValidationError": [
+                    {
+                        "type": "field",
+                        "msg": "Field business_term_name must be provided",
+                        "path": "business_terms[0].business_term_name",
+                        "location": "body",
+                    },
+                    {
+                        "type": "field",
+                        "msg": "Field glossary_id must be provided",
+                        "path": "business_terms[0].glossary_id",
+                        "location": "body",
+                    },
+                ]
+            },
+        )
+        msg = KatalogueClient._extract_error_message(resp)
+        assert "business_term_name" in msg
+        assert "glossary_id" in msg
+        assert "must be provided" in msg
+
+    def test_data_validation_error_takes_precedence_over_detail(self):
+        resp = _make_response(
+            400,
+            {
+                "dataValidationError": [{"msg": "field error", "path": "x"}],
+                "detail": "should not appear",
+            },
+        )
+        msg = KatalogueClient._extract_error_message(resp)
+        assert "field error" in msg
+        assert "should not appear" not in msg

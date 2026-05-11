@@ -57,8 +57,10 @@ from katalogue import (
     KatalogueClient,
     GetOptions,
     OutputOptions,
+    UpdateOptions,
     Filter,
     CatalogResult,
+    WriteResult,
     WrittenFile,
     Settings,
     resolve_settings,
@@ -67,6 +69,7 @@ from katalogue import (
     ConfigError,
     TokenCache,
     TokenEntry,
+    load_records,
 )
 ```
 
@@ -321,6 +324,66 @@ client.get("ssystem")
 client.get("system", GetOptions(sort=[{"system_name": "ascending"}]))
 # ValueError: Invalid sort direction 'ascending' for column 'system_name'. Must be 'asc' or 'desc'.
 ```
+
+## Updating Resources
+
+`update()` is the single entry point for writing back to `business_term`, `field_description`, and `glossary`. It uses **sparse input** — supply only the fields you want to change. The SDK fetches the current record, merges your changes over it, and sends a single batch PUT.
+
+```python
+from katalogue import KatalogueClient, UpdateOptions
+
+client = KatalogueClient()
+
+# Single record
+result = client.update(
+    "business_term",
+    UpdateOptions(resource_id=42, changes={"business_term_description": "New description"}),
+)
+print(result.ok, result.message)
+print(result.data)   # list of updated records from the API
+
+# Batch from in-memory records
+result = client.update(
+    "business_term",
+    UpdateOptions(records=[
+        {"business_term_id": 42, "business_term_description": "A"},
+        {"business_term_id": 43, "business_term_description": "B"},
+    ]),
+)
+
+# Batch from a YAML / JSON / CSV file
+from katalogue import load_records
+
+result = client.update(
+    "business_term",
+    UpdateOptions(records=load_records("changes.yml")),
+)
+```
+
+All records in a batch are validated before any API calls are made. If any record is invalid the full list of errors is reported and nothing is written.
+
+To **clear a field**, set its value to `None` in `changes` or in a batch record dict. Omitting the key preserves the server value:
+
+```python
+result = client.update(
+    "business_term",
+    UpdateOptions(resource_id=42, changes={"business_term_description": None}),
+)
+```
+
+To **continue past individual failures** in a batch, set `continue_on_error=True`. This sends one PUT per record and collects per-record results instead of raising on the first error:
+
+```python
+result = client.update(
+    "business_term",
+    UpdateOptions(records=load_records("changes.csv"), continue_on_error=True),
+)
+for r in result.partial_results:
+    status = "OK" if r.ok else f"FAILED: {r.message}"
+    print(f"id={r.record_id}: {status}")
+```
+
+See [docs/write/update/](../../docs/write/update/) for the full reference — [common.md](../../docs/write/update/common.md) covers file formats, updatable fields, and validation; [sdk.md](../../docs/write/update/sdk.md) covers the Python API.
 
 ## Hierarchical Retrieval
 
@@ -580,6 +643,7 @@ You never need to manage tokens manually.
 |--------|------|-------------|
 | `KatalogueClient` | class | HTTP client; OAuth2 managed internally |
 | `KatalogueClient.get()` | method | High-level fetch with filtering, sorting, and output |
+| `KatalogueClient.update()` | method | Sparse update via read-modify-write; returns `WriteResult` |
 | `GetOptions` | Pydantic model | Routing, filter, sort, properties, output options |
 | `GetOptions.resource_id` | `int \| str \| None` | Fetch a single resource by ID |
 | `GetOptions.parent_id` | `int \| str \| None` | Fetch all children of a parent |
@@ -598,6 +662,15 @@ You never need to manage tokens manually.
 | `OutputOptions.filename_template` | `str \| None` | Jinja2 expression for naming split files |
 | `OutputOptions.overwrite` | `bool` | Overwrite existing files (default `False`) |
 | `OutputOptions.dry_run` | `bool` | Plan files without writing them (default `False`) |
+| `UpdateOptions` | Pydantic model | Update input: `resource_id` + `changes` (single) or `records` (batch) |
+| `UpdateOptions.resource_id` | `int \| str \| None` | ID of the record to update (single-record mode) |
+| `UpdateOptions.changes` | `dict` | Fields to overwrite; `None` value clears the field (single-record mode) |
+| `UpdateOptions.records` | `list[dict]` | Batch of records; each must include the resource ID field |
+| `UpdateOptions.continue_on_error` | `bool` | Send one PUT per record; collect failures instead of raising |
+| `WriteResult` | Pydantic model | Write response: `ok`, `message`, `data` (updated records), `raw` |
+| `WriteResult.record_id` | `int \| str \| None` | Set on per-record results inside `partial_results` |
+| `WriteResult.partial_results` | `list[WriteResult] \| None` | Populated when `continue_on_error=True`; one entry per record |
+| `load_records` | function | Parse a YAML / JSON / CSV file into `list[dict]` |
 | `Filter` | Pydantic model | Parsed filter expression (path, operator, value) |
 | `CatalogResult` | Pydantic model | Result envelope: data, raw, output, output_file, output_files |
 | `WrittenFile` | Pydantic model | Single written file record from a split export |

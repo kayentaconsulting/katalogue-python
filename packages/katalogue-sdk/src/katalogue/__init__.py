@@ -6,8 +6,9 @@ from katalogue.config.settings import (
     resolve_settings,
 )
 from katalogue.filters import Filter
-from katalogue.options import GetOptions, OutputOptions
-from katalogue.results import CatalogResult, WrittenFile
+from katalogue.file_input import load_records
+from katalogue.options import GetOptions, OutputOptions, UpdateOptions
+from katalogue.results import CatalogResult, WrittenFile, WriteResult
 
 __all__ = [
     # Client
@@ -25,6 +26,10 @@ __all__ = [
     "Filter",
     "GetOptions",
     "OutputOptions",
+    "UpdateOptions",
     "CatalogResult",
     "WrittenFile",
+    "WriteResult",
+    # File input utility
+    "load_records",
 ]

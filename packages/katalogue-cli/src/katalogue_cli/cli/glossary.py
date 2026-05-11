@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import click
 
+from katalogue import UpdateOptions, load_records
 from katalogue_cli.cli.common import (
+    _resolve_str_flag,
     build_export_options,
     build_get_options,
     build_list_options,
@@ -15,6 +17,7 @@ from katalogue_cli.cli.common import (
     properties_option,
     resolve_template_format,
     run_get,
+    run_update,
     show_keys,
     wide_option,
 )
@@ -146,6 +149,63 @@ def export(
         out_fmt,
         dry_run=dry_run,
     )
+
+
+@glossary.command("update")
+@click.argument("glossary_id", required=False, type=int)
+@click.option("--name", default=None, help="Glossary name.")
+@click.option("--description", default=None, help="Glossary description.")
+@click.option(
+    "--from-file",
+    default=None,
+    metavar="FILE",
+    help="YAML, JSON, or CSV file with records to update. Mutually exclusive with ID.",
+)
+@click.option(
+    "--continue-on-error",
+    is_flag=True,
+    default=False,
+    help="Update each record individually; continue past failures and report all results.",
+)
+@click.pass_context
+def update(
+    ctx: click.Context,
+    glossary_id: int | None,
+    name: str | None,
+    description: str | None,
+    from_file: str | None,
+    continue_on_error: bool,
+) -> None:
+    """Update one or more glossaries.
+
+    Provide a glossary ID and flags for single-record updates,
+    or --from-file for batch updates.
+    """
+    if glossary_id is not None and from_file:
+        raise click.UsageError("ID and --from-file are mutually exclusive.")
+    if glossary_id is None and not from_file:
+        raise click.UsageError("Provide a glossary ID or --from-file.")
+
+    def _options() -> UpdateOptions:
+        if from_file:
+            return UpdateOptions(
+                records=load_records(from_file), continue_on_error=continue_on_error
+            )
+        changes: dict = {}
+        for param, key, raw in [
+            ("name", "glossary_name", name),
+            ("description", "glossary_description", description),
+        ]:
+            given, val = _resolve_str_flag(ctx, param, raw)
+            if given:
+                changes[key] = val
+        return UpdateOptions(
+            resource_id=glossary_id,
+            changes=changes,
+            continue_on_error=continue_on_error,
+        )
+
+    run_update(ctx, "glossary", _options)
 
 
 @glossary.command("keys")

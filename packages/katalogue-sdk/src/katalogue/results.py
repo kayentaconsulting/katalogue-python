@@ -3,6 +3,16 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class WriteResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ok: bool
+    message: str
+    data: list[dict[str, Any]] = Field(default_factory=list)
+    raw: Any | None = None
+    record_id: int | str | None = None
+    partial_results: list["WriteResult"] | None = None
+
+
 class WrittenFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
     path: str
