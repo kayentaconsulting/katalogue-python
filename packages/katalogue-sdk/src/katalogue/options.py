@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -43,4 +43,22 @@ class GetOptions(BaseModel):
             raise ValueError("split_by requires output_dir")
         if out.output_file and out.output_dir:
             raise ValueError("output_file and output_dir are mutually exclusive")
+        return self
+
+
+class UpdateOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    resource_id: int | str | None = None
+    changes: dict[str, Any] = Field(default_factory=dict)
+    records: list[dict[str, Any]] = Field(default_factory=list)
+    continue_on_error: bool = False
+
+    @model_validator(mode="after")
+    def _validate_mode(self) -> "UpdateOptions":
+        has_single = self.resource_id is not None
+        has_batch = bool(self.records)
+        if has_single and has_batch:
+            raise ValueError("resource_id/changes and records are mutually exclusive")
+        if not has_single and not has_batch:
+            raise ValueError("Either resource_id or records must be provided")
         return self

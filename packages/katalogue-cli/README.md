@@ -59,12 +59,14 @@ The hierarchy is: **system → datasource → dataset-group → dataset → fiel
 
 | Resource | Commands |
 |----------|----------|
-| `system` | `list`, `get`, `keys` |
-| `datasource` | `list`, `get`, `keys` |
-| `dataset-group` | `list`, `get`, `keys` |
-| `dataset` | `list`, `get`, `keys` |
-| `field` | `list`, `get`, `keys` |
-| `glossary` | `list`, `get`, `keys` |
+| `system` | `list`, `get`, `export`, `keys` |
+| `datasource` | `list`, `get`, `export`, `keys` |
+| `dataset-group` | `list`, `get`, `export`, `keys` |
+| `dataset` | `list`, `get`, `export`, `keys` |
+| `field` | `list`, `get`, `export`, `keys` |
+| `glossary` | `list`, `get`, `export`, `keys`, `update` |
+| `business-term` | `update` |
+| `field-description` | `update` |
 
 ## Commands
 
@@ -201,7 +203,7 @@ katalogue datasource get 5 --include-children --template ./my_template.j2
 Custom template filenames like `my_template.json.j2` or `my_template.yml.j2` are valid.
 `my_template.j2.json` is not, because the template source must still end in `.j2`.
 
-For a full reference on writing your own templates — available context variables, field keys, Jinja2 environment, and worked examples — see [docs/custom-templates.md](../../docs/custom-templates.md).
+For a full reference on writing your own templates — available context variables, field keys, Jinja2 environment, and worked examples — see [docs/read/custom-templates.md](../../docs/read/custom-templates.md).
 
 ### Combining --template and --format
 
@@ -291,6 +293,52 @@ Preview planned files without writing them:
 katalogue system get 1 --include-children --template dbt-source \
   --split-by dataset --output-dir ./out --dry-run
 ```
+
+## Updating resources
+
+Use `update` to modify existing catalog records. Only the fields you provide are changed — the rest are preserved from the current record automatically.
+
+### Single record
+
+```bash
+katalogue business-term update 42 --description "New description"
+katalogue business-term update 42 --name "Updated Name" --definition "How it is calculated"
+
+katalogue field-description update 7 --description "New text" --pii
+katalogue field-description update 7 --no-pii
+
+katalogue glossary update 3 --name "New Name" --description "Updated description"
+```
+
+To clear a field, pass `null`, `none`, or `NULL` as the value:
+
+```bash
+katalogue business-term update 42 --description null
+```
+
+### Batch from file
+
+Pass a YAML, JSON, or CSV file with `--from-file`. Each record must include the resource ID; all other fields are optional:
+
+```bash
+katalogue business-term update --from-file changes.yml
+katalogue field-description update --from-file fields.json
+katalogue glossary update --from-file glossaries.csv
+```
+
+`--from-file` and a positional ID are mutually exclusive.
+
+### Continue on error
+
+By default all records in a batch are sent in one PUT — if the API rejects it, all fail together. Use `--continue-on-error` to send one PUT per record and continue past individual failures:
+
+```bash
+katalogue business-term update --from-file changes.csv --continue-on-error
+```
+
+Exit code is `1` if any record failed, `0` if all succeeded.
+
+See [docs/write/update/cli.md](../../docs/write/update/cli.md) for the full reference including all flags per resource and file format examples.
 
 ## Global flags
 

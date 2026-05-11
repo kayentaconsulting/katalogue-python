@@ -16,6 +16,7 @@ from katalogue import (
     GetOptions,
     KatalogueClient,
     OutputOptions,
+    UpdateOptions,
 )
 from katalogue.config.settings import ConfigError, resolve_settings
 from katalogue.utils import filter_properties as filter_properties
@@ -25,6 +26,7 @@ from katalogue_cli.config.file import load_config_file
 from katalogue_cli.formatters.output import format_json, format_output
 
 _NULL_BACKENDS = {"Keyring", "NullKeyring"}
+_NULL_SENTINELS = frozenset({"null", "none"})
 _FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "table"]
 _EXPORT_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv"]
 _FORMAT_HELP = "Serialization format for output."
@@ -245,6 +247,25 @@ def build_get_options(
     )
 
 
+def _resolve_str_flag(
+    ctx: click.Context, param_name: str, value: str | None
+) -> tuple[bool, str | None]:
+    """Check if a string CLI flag was explicitly provided and resolve its value.
+
+    Returns (was_given, resolved_value):
+    - (False, None)  flag was not provided — skip
+    - (True, None)   flag given as null/none/"" — explicit clear
+    - (True, str)    flag given with a real value — update
+    """
+    from click.core import ParameterSource
+
+    if ctx.get_parameter_source(param_name) == ParameterSource.DEFAULT:
+        return False, None
+    if value is None or value == "" or value.lower() in _NULL_SENTINELS:
+        return True, None
+    return True, value
+
+
 def resolve_template_format(
     ctx: click.Context, fmt: str, template: str | None
 ) -> str | None:
@@ -279,6 +300,35 @@ def run_get(
     if result is None:
         return
     emit_result(ctx, result, fmt, group_by=group_by, wide=wide, dry_run=dry_run)
+
+
+def run_update(
+    ctx: click.Context,
+    resource: str,
+    options_factory: Callable[[], UpdateOptions],
+) -> None:
+    try:
+        options = options_factory()
+    except (ValidationError, ValueError, FileNotFoundError) as e:
+        raise click.UsageError(str(e)) from None
+
+    result = _handle_sdk_call(ctx, lambda client: client.update(resource, options))
+    if result is None:
+        return
+
+    if result.partial_results is not None:
+        for r in result.partial_results:
+            prefix = "OK  " if r.ok else "FAIL"
+            click.echo(f"[{prefix}] id={r.record_id}: {r.message}")
+        if not result.ok:
+            ctx.exit(1)
+        return
+
+    if not result.ok:
+        click.echo(f"Error: {result.message}", err=True)
+        ctx.exit(1)
+        return
+    click.echo(format_json(result.data))
 
 
 def show_keys(

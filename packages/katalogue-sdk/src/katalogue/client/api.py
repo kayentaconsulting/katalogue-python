@@ -16,9 +16,9 @@ from katalogue.client.cache import InMemoryTokenCache, TokenCache, TokenEntry
 from katalogue.config.settings import Settings, resolve_settings
 from katalogue.filters import Filter, FilterParser, apply_filter
 from katalogue.formatters import format_descriptions_to_plaintext
-from katalogue.options import GetOptions
+from katalogue.options import GetOptions, UpdateOptions
 from katalogue.output import OutputPipeline
-from katalogue.results import CatalogResult
+from katalogue.results import CatalogResult, WriteResult
 from katalogue.utils import filter_properties, sort_resultset, unwrap_list
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,18 @@ _PARENT_ID_FIELD: dict[str, str] = {
 _VALID_RESOURCES: frozenset[str] = frozenset(
     {"system", "datasource", "dataset_group", "dataset", "field", "glossary"}
 )
+
+_UPDATE_ID_FIELDS: dict[str, str] = {
+    "business_term": "business_term_id",
+    "field_description": "field_description_id",
+    "glossary": "glossary_id",
+}
+
+
+def _id_field(resource: str) -> str:
+    return _UPDATE_ID_FIELDS[resource]
+
+
 _VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
 
 
@@ -145,6 +157,8 @@ class KatalogueClient:
 
     def _request(self, method: str, url: str, scope: str, **kwargs: Any) -> Any:
         logger.debug("%s %s (scope=%s)", method, url, scope)
+        if kwargs.get("json") is not None:
+            logger.debug("Request body: %s", kwargs["json"])
         self._ensure_token(scope)
 
         response = self._session.request(method, url, **kwargs)
@@ -156,6 +170,12 @@ class KatalogueClient:
             response = self._session.request(method, url, **kwargs)
 
         return self._handle_response(response)
+
+    def _put_resource(
+        self, resource: str, scope: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        url = f"{self._base_url}/api/{resource}"
+        return self._request("PUT", url, scope=scope, json=payload)
 
     def list_resource(self, resource: str) -> list[dict[str, Any]]:
         url = f"{self._base_url}/api/{resource}/all"
@@ -276,6 +296,40 @@ class KatalogueClient:
             metadata={"strategy": strategy},
         )
 
+    def update(self, resource: str, options: UpdateOptions) -> WriteResult:
+        """Update one or more records. Fetches current state, merges changes, PUTs back.
+
+        Accepts either a single record (resource_id + changes) or a batch (records list).
+        """
+        from katalogue.updating import (
+            update_business_term,
+            update_field_description,
+            update_glossary,
+        )
+
+        _VALID_UPDATE_RESOURCES: frozenset[str] = frozenset(
+            {"business_term", "field_description", "glossary"}
+        )
+        if resource not in _VALID_UPDATE_RESOURCES:
+            raise ValueError(
+                f"Resource '{resource}' does not support update. "
+                f"Valid resources: {', '.join(sorted(_VALID_UPDATE_RESOURCES))}"
+            )
+
+        if options.records:
+            updates = options.records
+        else:
+            updates = [{**options.changes, _id_field(resource): options.resource_id}]
+
+        dispatchers = {
+            "business_term": update_business_term,
+            "field_description": update_field_description,
+            "glossary": update_glossary,
+        }
+        return dispatchers[resource](
+            self, updates, continue_on_error=options.continue_on_error
+        )
+
     def _get_hierarchical(self, resource: str, options: GetOptions) -> CatalogResult:
         """Dispatch to hierarchical assembly for include_children=True."""
         from katalogue.exporting import (
@@ -352,6 +406,10 @@ class KatalogueClient:
         try:
             response.raise_for_status()
         except HTTPError:
+            try:
+                logger.debug("Error response body: %s", response.json())
+            except Exception:
+                pass
             msg = self._extract_error_message(response)
             if response.status_code == 401:
                 raise AuthError(msg) from None
@@ -362,6 +420,25 @@ class KatalogueClient:
     def _extract_error_message(response: Any) -> str:
         try:
             body = response.json()
+            data_errors = body.get("dataValidationError")
+            if data_errors and isinstance(data_errors, list):
+                parts = [
+                    f"{e.get('path', '')}: {e.get('msg', '')}"
+                    if e.get("path")
+                    else e.get("msg", "")
+                    for e in data_errors
+                ]
+                return "; ".join(parts)
+            detail = body.get("detail")
+            if detail:
+                if isinstance(detail, list):
+                    parts = []
+                    for err in detail:
+                        loc = " → ".join(str(p) for p in err.get("loc", []))
+                        msg = err.get("msg", "")
+                        parts.append(f"{loc}: {msg}" if loc else msg)
+                    return "; ".join(parts)
+                return str(detail)
             return (
                 body.get("message")
                 or body.get("error")

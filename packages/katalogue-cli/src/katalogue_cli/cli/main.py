@@ -7,6 +7,8 @@ import importlib.metadata
 import click
 
 from katalogue_cli.cli.auth import auth
+from katalogue_cli.cli.business_term import business_term
+from katalogue_cli.cli.field_description import field_description
 from katalogue_cli.logging import configure_logging
 from katalogue_cli.cli.dataset import dataset
 from katalogue_cli.cli.dataset_group import dataset_group
@@ -75,6 +77,8 @@ def cli(
 
 
 cli.add_command(auth)
+cli.add_command(business_term)
+cli.add_command(field_description)
 cli.add_command(system)
 cli.add_command(datasource)
 cli.add_command(dataset_group)
