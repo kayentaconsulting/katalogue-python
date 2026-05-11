@@ -7,7 +7,7 @@ fields:
 {% for f in fields %}
   - name: {{ f.field_name }}
     dataset: {{ f.dataset_name | default('') }}
-    type: {{ f.datatype_fullname | default(f.field_datatype | default('unknown', true), true) }}
+    type: {{ f.datatype_converted | default(f.datatype_fullname | default(f.field_datatype | default('unknown', true), true), true) }}
     pii: {{ f.is_pii | default(f.field_is_pii | default(false, true), true) | string | lower }}
     description: "{{ f.field_source_description | default(f.description | default('', true), true) }}"
 {% endfor %}

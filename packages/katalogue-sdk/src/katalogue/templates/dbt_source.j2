@@ -12,7 +12,7 @@ sources:
 {% for f in fields if f.dataset_id == ds.dataset_id %}
           - name: {{ f.field_name }}
             description: '{{ f.field_source_description | default(f.description | default('', true), true) }}'
-            data_type: {{ f.datatype_fullname | default(f.field_datatype | default('', true), true) }}
+            data_type: {{ f.datatype_converted | default(f.datatype_fullname | default(f.field_datatype | default('', true), true), true) }}
 {% set is_primary_key = f.field_is_primary_key | default(false, true) %}
 {% set is_pii = f.is_pii | default(f.field_is_pii | default(false, true), true) %}
 {% if is_pii == true or is_primary_key == true %}
@@ -42,7 +42,7 @@ sources:
 {% for f in fields if f.dataset_id == ds.dataset_id %}
           - name: {{ f.field_name }}
             description: '{{ f.field_source_description | default(f.description | default('', true), true) }}'
-            data_type: {{ f.datatype_fullname | default(f.field_datatype | default('', true), true) }}
+            data_type: {{ f.datatype_converted | default(f.datatype_fullname | default(f.field_datatype | default('', true), true), true) }}
 {% set is_primary_key = f.field_is_primary_key | default(false, true) %}
 {% set is_pii = f.is_pii | default(f.field_is_pii | default(false, true), true) %}
 {% if is_pii == true or is_primary_key == true %}

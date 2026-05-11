@@ -327,6 +327,16 @@ class KatalogueClient:
                 filtered.update(preserved)
                 data = filtered
 
+        if options.datatype_converter and isinstance(data, dict) and "fields" in data:
+            from katalogue.datatype_converter import (
+                enrich_fields_with_converted_datatype,
+            )
+            from katalogue.datatype_converter_registry import load_datatype_converter
+
+            enrich_fields_with_converted_datatype(
+                data["fields"], load_datatype_converter(options.datatype_converter)
+            )
+
         output, output_file, output_files = OutputPipeline().process(
             data, options.output, root_resource=resource
         )

@@ -172,3 +172,6 @@ __pypackages__/
 # backups
 *~
 git_ignored/
+
+# crash dumps
+*.stackdump

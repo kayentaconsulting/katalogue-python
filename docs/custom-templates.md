@@ -46,6 +46,7 @@ Fields are API objects — the available keys depend on your Katalogue instance 
 | `is_pii` | Boolean — field contains PII (preferred) |
 | `field_is_pii` | Fallback PII flag |
 | `field_is_primary_key` | Boolean — field is a primary key |
+| `datatype_converted` | Target platform type string — present only when `--datatype-converter` is set |
 
 To discover all available keys for your data, render using the built-in `json-template`:
 

@@ -1,0 +1,48 @@
+source: db2
+target: pyspark
+mappings:
+  # String types
+  CHAR: StringType()
+  CHARACTER: StringType()
+  VARCHAR: StringType()
+  CHARACTER_VARYING: StringType()
+  LONG_VARCHAR: StringType()
+  CLOB: StringType()
+  DBCLOB: StringType()
+  GRAPHIC: StringType()
+  VARGRAPHIC: StringType()
+  LONG_VARGRAPHIC: StringType()
+  NCHAR: StringType()
+  NVARCHAR: StringType()
+  NCLOB: StringType()
+
+  # Exact numerics — preserve precision/scale: DECIMAL(10,2) → DecimalType(10,2)
+  DECIMAL: "DecimalType{args}"
+  NUMERIC: "DecimalType{args}"
+  DEC: "DecimalType{args}"
+
+  # Integer types
+  SMALLINT: ShortType()
+  INTEGER: IntegerType()
+  INT: IntegerType()
+  BIGINT: LongType()
+
+  # Approximate numerics
+  FLOAT: DoubleType()
+  REAL: FloatType()
+  DOUBLE: DoubleType()
+  DECFLOAT: DoubleType()
+
+  # Date/time types
+  # Standard DB2 TIMESTAMP has no TZ info → TimestampNTZType() (Spark 3.4+)
+  DATE: DateType()
+  TIME: StringType()
+  TIMESTAMP: TimestampNTZType()
+
+  # Binary types
+  BINARY: BinaryType()
+  VARBINARY: BinaryType()
+  BLOB: BinaryType()
+
+  # Boolean
+  BOOLEAN: BooleanType()

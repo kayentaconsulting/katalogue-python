@@ -67,6 +67,8 @@ from katalogue import (
     ConfigError,
     TokenCache,
     TokenEntry,
+    DatatypeConverterConfig,
+    load_datatype_converter,
 )
 ```
 
@@ -588,6 +590,7 @@ You never need to manage tokens manually.
 | `GetOptions.sort` | `list[dict] \| None` | Multi-column sort, e.g. `[{"name": "asc"}]` |
 | `GetOptions.include_children` | `bool` | Fetch resource and all descendants |
 | `GetOptions.format_descriptions_as_text` | `bool` | Convert Draft.js rich-text to plain text |
+| `GetOptions.datatype_converter` | `str \| None` | Built-in name, registered name, or `.yaml` path — adds `datatype_converted` to each field |
 | `GetOptions.output` | `OutputOptions` | Output rendering and file options |
 | `OutputOptions` | Pydantic model | Serialization, template, file output, split-by, dry-run |
 | `OutputOptions.format` | `str \| None` | Serialization format: `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv` |
@@ -608,3 +611,5 @@ You never need to manage tokens manually.
 | `ApiError` | exception | Any other HTTP error (4xx, 5xx) |
 | `TokenCache` | protocol | Interface for custom token cache backends |
 | `TokenEntry` | Pydantic model | Single cached token; implement `TokenCache` with this |
+| `DatatypeConverterConfig` | Pydantic model | Loaded datatype converter: `source`, `target`, `mappings: dict[str, str]` |
+| `load_datatype_converter()` | function | Resolve and load a mapping by name, registered name, or `.yaml` path |

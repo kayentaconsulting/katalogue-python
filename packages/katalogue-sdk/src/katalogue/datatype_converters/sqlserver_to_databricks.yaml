@@ -1,0 +1,44 @@
+source: sqlserver
+target: databricks
+mappings:
+  # String types — Databricks STRING has no length limit
+  CHAR: STRING
+  NCHAR: STRING
+  VARCHAR: STRING
+  NVARCHAR: STRING
+  TEXT: STRING
+  NTEXT: STRING
+  UNIQUEIDENTIFIER: STRING
+  XML: VARIANT
+
+  # Exact numerics — preserve precision/scale
+  DECIMAL: "DECIMAL{args}"
+  NUMERIC: "DECIMAL{args}"
+  MONEY: "DECIMAL(19,4)"
+  SMALLMONEY: "DECIMAL(10,4)"
+
+  # Integer types
+  BIT: BOOLEAN
+  TINYINT: TINYINT
+  SMALLINT: SMALLINT
+  INT: INT
+  BIGINT: BIGINT
+
+  # Approximate numerics
+  FLOAT: DOUBLE
+  REAL: FLOAT
+
+  # Date/time types
+  # DATETIMEOFFSET carries TZ info → TIMESTAMP_LTZ (TZ-aware)
+  # DATETIME / DATETIME2 / SMALLDATETIME have no TZ → TIMESTAMP_NTZ
+  DATE: DATE
+  TIME: STRING
+  DATETIME: TIMESTAMP_NTZ
+  DATETIME2: TIMESTAMP_NTZ
+  SMALLDATETIME: TIMESTAMP_NTZ
+  DATETIMEOFFSET: TIMESTAMP_LTZ
+
+  # Binary types
+  BINARY: BINARY
+  VARBINARY: BINARY
+  IMAGE: BINARY

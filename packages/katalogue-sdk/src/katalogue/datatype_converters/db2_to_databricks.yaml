@@ -1,0 +1,48 @@
+source: db2
+target: databricks
+mappings:
+  # String types
+  CHAR: STRING
+  CHARACTER: STRING
+  VARCHAR: STRING
+  CHARACTER_VARYING: STRING
+  LONG_VARCHAR: STRING
+  CLOB: STRING
+  DBCLOB: STRING
+  GRAPHIC: STRING
+  VARGRAPHIC: STRING
+  LONG_VARGRAPHIC: STRING
+  NCHAR: STRING
+  NVARCHAR: STRING
+  NCLOB: STRING
+
+  # Exact numerics — preserve precision/scale
+  DECIMAL: "DECIMAL{args}"
+  NUMERIC: "DECIMAL{args}"
+  DEC: "DECIMAL{args}"
+
+  # Integer types
+  SMALLINT: SMALLINT
+  INTEGER: INT
+  INT: INT
+  BIGINT: BIGINT
+
+  # Approximate numerics
+  FLOAT: DOUBLE
+  REAL: FLOAT
+  DOUBLE: DOUBLE
+  DECFLOAT: DOUBLE
+
+  # Date/time types
+  # Standard DB2 TIMESTAMP has no TZ info → TIMESTAMP_NTZ
+  DATE: DATE
+  TIME: STRING
+  TIMESTAMP: TIMESTAMP_NTZ
+
+  # Binary types
+  BINARY: BINARY
+  VARBINARY: BINARY
+  BLOB: BINARY
+
+  # Boolean
+  BOOLEAN: BOOLEAN
