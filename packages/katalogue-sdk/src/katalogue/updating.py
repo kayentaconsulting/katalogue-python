@@ -20,10 +20,10 @@ if TYPE_CHECKING:
     from katalogue.client.api import KatalogueClient
 
 
-def _unwrap(response: Any, resource: str) -> Any:
+def _unwrap(response: Any, resource: str, plural: str | None = None) -> Any:
     """Unwrap API envelope: {"business_term": {...}} or {"business_terms": [{...}]}."""
     if isinstance(response, dict):
-        for key in (resource, f"{resource}s"):
+        for key in filter(None, (plural, resource, f"{resource}s")):
             if key in response:
                 inner = response[key]
                 return inner[0] if isinstance(inner, list) and inner else inner
@@ -46,9 +46,12 @@ def _prepare(
     id_field: str,
     record_id: int | str,
     changes: dict[str, Any],
+    record_key: str | None = None,
 ) -> dict[str, Any]:
     """GET current record, filter to model fields, convert Draft.js, merge changes."""
-    current = _unwrap(client.get_resource(resource, record_id), resource)
+    current = _unwrap(
+        client.get_resource(resource, record_id), resource, plural=record_key
+    )
     current = {
         k: (_draftjs_to_text(val) if isinstance(val, str) else val)
         for k, val in current.items()
@@ -81,7 +84,15 @@ def _fetch_and_put(
             changes = _dump_changes(v)
             record_id = changes[id_field]
             try:
-                merged = _prepare(client, resource, model, id_field, record_id, changes)
+                merged = _prepare(
+                    client,
+                    resource,
+                    model,
+                    id_field,
+                    record_id,
+                    changes,
+                    record_key=record_key,
+                )
                 raw = client._put_resource(
                     resource, scope_write, {record_key: [merged]}
                 )
@@ -113,7 +124,17 @@ def _fetch_and_put(
             if getattr(v, field) is None:
                 changes[field] = None
         record_id = changes[id_field]
-        merged.append(_prepare(client, resource, model, id_field, record_id, changes))
+        merged.append(
+            _prepare(
+                client,
+                resource,
+                model,
+                id_field,
+                record_id,
+                changes,
+                record_key=record_key,
+            )
+        )
 
     raw = client._put_resource(resource, scope_write, {record_key: merged})
     return WriteResult(

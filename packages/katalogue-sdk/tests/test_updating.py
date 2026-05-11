@@ -357,16 +357,17 @@ class TestUpdateFieldDescription:
 
 
 class TestUpdateGlossary:
+    _STORED = {
+        "glossary_id": 3,
+        "glossary_name": "Finance",
+        "glossary_description": "Old",
+        "owner_principal_id": 1,
+        "status_id": 2,
+    }
+
     def test_fetches_then_puts(self, client):
-        stored = {
-            "glossary_id": 3,
-            "glossary_name": "Finance",
-            "glossary_description": "Old",
-            "owner_principal_id": 1,
-            "status_id": 2,
-        }
         client._session.request.side_effect = [
-            _make_response(200, {"glossaries": [stored]}),
+            _make_response(200, {"glossaries": [self._STORED]}),
             _make_response(200, {"ok": True, "message": "ok", "glossaries": []}),
         ]
         result = update_glossary(
@@ -374,3 +375,27 @@ class TestUpdateGlossary:
         )
         assert result.ok is True
         assert client._session.request.call_count == 2
+
+    def test_required_fields_filled_from_get(self, client):
+        client._session.request.side_effect = [
+            _make_response(200, {"glossaries": [self._STORED]}),
+            _make_response(200, {"ok": True, "message": "ok", "glossaries": []}),
+        ]
+        update_glossary(
+            client, [{"glossary_id": 3, "glossary_description": "New desc"}]
+        )
+        sent = client._session.request.call_args_list[1].kwargs["json"]["glossaries"][0]
+        assert sent["glossary_name"] == "Finance"
+        assert sent["owner_principal_id"] == 1
+
+    def test_user_change_overrides_fetched_name(self, client):
+        client._session.request.side_effect = [
+            _make_response(200, {"glossaries": [self._STORED]}),
+            _make_response(200, {"ok": True, "message": "ok", "glossaries": []}),
+        ]
+        update_glossary(
+            client, [{"glossary_id": 3, "glossary_name": "Finance Updated"}]
+        )
+        sent = client._session.request.call_args_list[1].kwargs["json"]["glossaries"][0]
+        assert sent["glossary_name"] == "Finance Updated"
+        assert sent["owner_principal_id"] == 1
