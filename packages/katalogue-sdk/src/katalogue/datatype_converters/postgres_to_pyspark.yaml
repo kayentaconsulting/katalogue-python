@@ -1,0 +1,60 @@
+source: postgres
+target: pyspark
+mappings:
+  # String types
+  CHAR: StringType()
+  CHARACTER: StringType()
+  VARCHAR: StringType()
+  CHARACTER_VARYING: StringType()
+  TEXT: StringType()
+  UUID: StringType()
+  XML: StringType()
+  JSON: StringType()
+  JSONB: StringType()
+  CITEXT: StringType()
+
+  # Exact numerics — preserve precision/scale: NUMERIC(10,2) → DecimalType(10,2)
+  DECIMAL: "DecimalType{args}"
+  NUMERIC: "DecimalType{args}"
+  MONEY: "DecimalType(19,4)"
+
+  # Integer types
+  SMALLINT: ShortType()
+  INT2: ShortType()
+  INTEGER: IntegerType()
+  INT: IntegerType()
+  INT4: IntegerType()
+  BIGINT: LongType()
+  INT8: LongType()
+  SMALLSERIAL: ShortType()
+  SERIAL: IntegerType()
+  BIGSERIAL: LongType()
+
+  # Approximate numerics
+  REAL: FloatType()
+  FLOAT4: FloatType()
+  DOUBLE_PRECISION: DoubleType()
+  FLOAT8: DoubleType()
+
+  # Boolean
+  BOOLEAN: BooleanType()
+  BOOL: BooleanType()
+
+  # Date/time types
+  # TIMESTAMPTZ / TIMESTAMP WITH TIME ZONE carries TZ info → TimestampType() (TZ-aware)
+  # TIMESTAMP / TIMESTAMP WITHOUT TIME ZONE has no TZ → TimestampNTZType() (Spark 3.4+)
+  DATE: DateType()
+  TIME: StringType()
+  TIMETZ: StringType()
+  TIME_WITH_TIME_ZONE: StringType()
+  TIMESTAMP: TimestampNTZType()
+  TIMESTAMP_WITHOUT_TIME_ZONE: TimestampNTZType()
+  TIMESTAMPTZ: TimestampType()
+  TIMESTAMP_WITH_TIME_ZONE: TimestampType()
+
+  # Binary
+  BYTEA: BinaryType()
+
+  # Bit strings
+  BIT: StringType()
+  BIT_VARYING: StringType()

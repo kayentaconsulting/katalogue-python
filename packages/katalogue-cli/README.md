@@ -154,6 +154,31 @@ katalogue system get 1 --include-children --format csv
 # -> one CSV row per field, with system/datasource/dataset columns denormalized into each row
 ```
 
+### --datatype-converter
+
+Converts source database types to target platform types. Each field in the output gains a `datatype_converted` property alongside the original `datatype_fullname`.
+
+Built-in mappings:
+
+| Name | Source | Target |
+|------|--------|--------|
+| `sqlserver-to-databricks` | SQL Server | Databricks SQL |
+| `sqlserver-to-pyspark` | SQL Server | PySpark types |
+| `db2-to-databricks` | IBM DB2 | Databricks SQL |
+| `db2-to-pyspark` | IBM DB2 | PySpark types |
+| `postgres-to-databricks` | PostgreSQL | Databricks SQL |
+| `postgres-to-pyspark` | PostgreSQL | PySpark types |
+
+```bash
+# See datatype_converted in JSON output
+katalogue dataset get <id> --include-children --datatype-converter sqlserver-to-databricks --format json
+
+# Use datatype_converted in column-mapping template
+katalogue datasource get <id> --include-children --datatype-converter postgres-to-databricks --template column-mapping
+```
+
+Custom mappings are registered in `katalogue.toml` or `[tool.katalogue.datatype_converters]` in `pyproject.toml`, or provided as a direct `.yaml` file path. Repo-registered names override built-ins with the same name. See [docs/datatype-converter.md](../../docs/datatype-converter.md) for the full reference.
+
 ### --template
 
 Renders the result using a Jinja2 template. Templates control the structure and shape of the output independently of `--format`.

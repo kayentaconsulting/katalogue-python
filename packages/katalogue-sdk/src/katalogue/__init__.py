@@ -8,6 +8,8 @@ from katalogue.config.settings import (
 from katalogue.filters import Filter
 from katalogue.options import GetOptions, OutputOptions
 from katalogue.results import CatalogResult, WrittenFile
+from katalogue.datatype_converter import DatatypeConverterConfig
+from katalogue.datatype_converter_registry import load_datatype_converter
 
 __all__ = [
     # Client
@@ -27,4 +29,7 @@ __all__ = [
     "OutputOptions",
     "CatalogResult",
     "WrittenFile",
+    # Type mapping
+    "DatatypeConverterConfig",
+    "load_datatype_converter",
 ]

@@ -28,6 +28,11 @@ _NULL_BACKENDS = {"Keyring", "NullKeyring"}
 _FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "table"]
 _EXPORT_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv"]
 _FORMAT_HELP = "Serialization format for output."
+_TYPE_MAPPING_HELP = (
+    "Type mapping to apply. Built-in: sqlserver-to-databricks, db2-to-databricks. "
+    "Repo-local names can be registered in katalogue.toml or [tool.katalogue.datatype_converters] "
+    "inside pyproject.toml. Or provide a path to a .yaml file."
+)
 _TEMPLATE_HELP = (
     "Template to apply. Built-in: dbt-source, column-mapping, json-template. "
     "Repo-local names can be registered in katalogue.toml or [tool.katalogue.templates] "
@@ -226,12 +231,14 @@ def build_get_options(
     filename_template: str | None,
     overwrite: bool,
     dry_run: bool,
+    datatype_converter: str | None = None,
 ) -> GetOptions:
     return GetOptions(
         resource_id=resource_id,
         filters=list(filters) or None,
         properties=properties,
         include_children=include_children,
+        datatype_converter=datatype_converter,
         output=_output_options(
             fmt,
             template=template,
@@ -348,6 +355,13 @@ template_option = click.option(
     help=_TEMPLATE_HELP,
 )
 
+datatype_converter_option = click.option(
+    "--datatype-converter",
+    default=None,
+    metavar="MAPPING",
+    help=_TYPE_MAPPING_HELP,
+)
+
 
 def _export_extension(fmt: str | None, template: str | None) -> str:
     if template and not fmt:
@@ -411,6 +425,7 @@ def export_output_options() -> Callable[[Any], Any]:
             show_default=True,
             help="Directory to write output files.",
         )(func)
+        func = datatype_converter_option(func)
         func = template_option(func)
         func = export_format_option()(func)
         return func
@@ -432,6 +447,7 @@ def build_export_options(
     filename_template: str | None,
     overwrite: bool,
     dry_run: bool,
+    datatype_converter: str | None = None,
 ) -> GetOptions:
     from pathlib import Path
 
@@ -471,6 +487,7 @@ def build_export_options(
         filters=list(filters) or None,
         properties=properties,
         include_children=True,
+        datatype_converter=datatype_converter,
         output=out,
     )
 
@@ -518,6 +535,7 @@ def get_output_options(default_format: str = "json") -> Callable[[Any], Any]:
             default=False,
             help="Fetch the resource and its child resources.",
         )(func)
+        func = datatype_converter_option(func)
         func = template_option(func)
         func = format_option(default_format)(func)
         return func

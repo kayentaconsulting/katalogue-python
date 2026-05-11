@@ -1,0 +1,44 @@
+source: sqlserver
+target: pyspark
+mappings:
+  # String types
+  CHAR: StringType()
+  NCHAR: StringType()
+  VARCHAR: StringType()
+  NVARCHAR: StringType()
+  TEXT: StringType()
+  NTEXT: StringType()
+  UNIQUEIDENTIFIER: StringType()
+  XML: StringType()
+
+  # Exact numerics — preserve precision/scale: DECIMAL(10,2) → DecimalType(10,2)
+  DECIMAL: "DecimalType{args}"
+  NUMERIC: "DecimalType{args}"
+  MONEY: "DecimalType(19,4)"
+  SMALLMONEY: "DecimalType(10,4)"
+
+  # Integer types
+  BIT: BooleanType()
+  TINYINT: ByteType()
+  SMALLINT: ShortType()
+  INT: IntegerType()
+  BIGINT: LongType()
+
+  # Approximate numerics
+  FLOAT: DoubleType()
+  REAL: FloatType()
+
+  # Date/time types
+  # DATETIMEOFFSET carries TZ info → TimestampType() (TZ-aware)
+  # DATETIME / DATETIME2 / SMALLDATETIME have no TZ → TimestampNTZType() (Spark 3.4+)
+  DATE: DateType()
+  TIME: StringType()
+  DATETIME: TimestampNTZType()
+  DATETIME2: TimestampNTZType()
+  SMALLDATETIME: TimestampNTZType()
+  DATETIMEOFFSET: TimestampType()
+
+  # Binary types
+  BINARY: BinaryType()
+  VARBINARY: BinaryType()
+  IMAGE: BinaryType()

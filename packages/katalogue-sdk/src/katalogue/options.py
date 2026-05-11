@@ -28,6 +28,7 @@ class GetOptions(BaseModel):
     sort: list[dict[str, str]] | None = None
     include_children: bool = False
     format_descriptions_as_text: bool = False
+    datatype_converter: str | None = None
     output: OutputOptions = Field(default_factory=OutputOptions)
 
     @model_validator(mode="after")
