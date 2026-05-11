@@ -43,7 +43,7 @@ def client():
             token_url="https://api.example.com/oauth/token",
         )
         c = KatalogueClient(settings=settings)
-        c._session = mock_session
+        object.__setattr__(c, "_session", mock_session)
         yield c
 
 

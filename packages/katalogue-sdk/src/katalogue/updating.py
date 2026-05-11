@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from katalogue.client.api import KatalogueClient
 
 
-def _unwrap(response: Any, resource: str) -> dict[str, Any]:
+def _unwrap(response: Any, resource: str) -> Any:
     """Unwrap API envelope: {"business_term": {...}} or {"business_terms": [{...}]}."""
     if isinstance(response, dict):
         for key in (resource, f"{resource}s"):

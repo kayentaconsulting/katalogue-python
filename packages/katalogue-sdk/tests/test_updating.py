@@ -47,7 +47,7 @@ def client():
             token_url="https://api.example.com/oauth/token",
         )
         c = KatalogueClient(settings=settings)
-        c._session = mock_session
+        object.__setattr__(c, "_session", mock_session)
         yield c
 
 
@@ -283,6 +283,7 @@ class TestContinueOnError:
             continue_on_error=True,
         )
         assert result.ok is True
+        assert result.partial_results is not None
         assert all(r.ok for r in result.partial_results)
 
     def test_one_fails_result_ok_false(self, client):
@@ -299,6 +300,7 @@ class TestContinueOnError:
             continue_on_error=True,
         )
         assert result.ok is False
+        assert result.partial_results is not None
         assert result.partial_results[0].ok is True
         assert result.partial_results[1].ok is False
         assert result.partial_results[1].record_id == 43

@@ -16,7 +16,7 @@ from katalogue.update_models import (
 class TestBusinessTermUpdate:
     def test_requires_id(self):
         with pytest.raises(ValidationError, match="business_term_id"):
-            BusinessTermUpdate()
+            BusinessTermUpdate()  # type: ignore[call-arg]
 
     def test_all_content_fields_optional(self):
         m = BusinessTermUpdate(business_term_id=42)
@@ -27,11 +27,11 @@ class TestBusinessTermUpdate:
         assert m.business_term_example is None
 
     def test_unknown_fields_ignored(self):
-        m = BusinessTermUpdate(business_term_id=1, extra_col="ignored")
+        m = BusinessTermUpdate(business_term_id=1, extra_col="ignored")  # type: ignore[call-arg]
         assert not hasattr(m, "extra_col")
 
     def test_string_id_coerced_to_int(self):
-        m = BusinessTermUpdate(business_term_id="42")
+        m = BusinessTermUpdate(business_term_id="42")  # type: ignore[arg-type]
         assert m.business_term_id == 42
 
     def test_partial_fields_round_trip(self):
@@ -46,7 +46,7 @@ class TestBusinessTermUpdate:
 class TestFieldDescriptionUpdate:
     def test_requires_id(self):
         with pytest.raises(ValidationError, match="field_description_id"):
-            FieldDescriptionUpdate()
+            FieldDescriptionUpdate()  # type: ignore[call-arg]
 
     def test_is_pii_accepts_bool(self):
         m = FieldDescriptionUpdate(field_description_id=3, is_pii=True)
@@ -54,18 +54,18 @@ class TestFieldDescriptionUpdate:
 
     def test_is_pii_string_coercion(self):
         # Pydantic coerces "true"/"false" strings to bool
-        m = FieldDescriptionUpdate(field_description_id=3, is_pii="true")
+        m = FieldDescriptionUpdate(field_description_id=3, is_pii="true")  # type: ignore[arg-type]
         assert m.is_pii is True
 
     def test_unknown_fields_ignored(self):
-        m = FieldDescriptionUpdate(field_description_id=1, garbage="x")
+        m = FieldDescriptionUpdate(field_description_id=1, garbage="x")  # type: ignore[call-arg]
         assert not hasattr(m, "garbage")
 
 
 class TestGlossaryUpdate:
     def test_requires_id(self):
         with pytest.raises(ValidationError, match="glossary_id"):
-            GlossaryUpdate()
+            GlossaryUpdate()  # type: ignore[call-arg]
 
     def test_optional_fields_default_none(self):
         m = GlossaryUpdate(glossary_id=5)
@@ -98,7 +98,7 @@ class TestValidateRecords:
         ]
         result = validate_records(BusinessTermUpdate, records)
         assert len(result) == 2
-        assert result[0].business_term_id == 1
+        assert result[0].business_term_id == 1  # type: ignore[attr-defined]
 
     def test_collects_all_errors_not_just_first(self):
         records = [
