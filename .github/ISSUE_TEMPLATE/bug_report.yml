@@ -1,0 +1,60 @@
+name: Bug Report
+description: Something is not working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out as much detail as possible to help us reproduce and fix the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the project is affected?
+      options:
+        - katalogue-cli (CLI commands)
+        - katalogue-sdk (SDK / HTTP client)
+        - Output formatting (json/yaml/csv/table)
+        - Templates (dbt-source/column-mapping/json-template)
+        - Authentication / OAuth2
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `katalogue system get 123 --format json`
+        2. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        OS: macOS 15 / Ubuntu 24.04 / Windows 11
+        Python version: 3.12.x
+        Package version: (uv run katalogue --version)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      render: shell
+    validations:
+      required: false
