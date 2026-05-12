@@ -47,6 +47,23 @@ def _emit_table_cmd(ctx: click.Context):
     emit_result(ctx, result, "table")
 
 
+@click.command()
+@click.pass_context
+def _emit_no_match_cmd(ctx: click.Context):
+    result = CatalogResult(
+        data={
+            "resource": "dataset_group",
+            "id": "26",
+            "system": {"system_id": 10, "system_name": "Kayenta Apps"},
+            "datasource": {"datasource_id": 10, "datasource_name": "kayenta_apps"},
+            "dataset_group": {"dataset_group_id": 26, "dataset_group_name": "stage"},
+            "datasets": [],
+            "fields": [],
+        }
+    )
+    emit_result(ctx, result, None)
+
+
 class TestFilterProperties:
     def test_filter_properties_on_list(self):
         rows = [
@@ -140,6 +157,14 @@ class TestEmitResult:
         assert result.exit_code == 0
         assert "name" in result.output
         assert "CRM" in result.output
+
+    def test_empty_hierarchical_result_prints_concise_warning(self, runner):
+        result = runner.invoke(_emit_no_match_cmd)
+        assert result.exit_code == 0
+        combined = result.output + getattr(result, "stderr", "")
+        assert "No datasets matched the filter for dataset_group 26." in combined
+        assert "No files were written." in combined
+        assert "{'resource': 'dataset_group'" not in combined
 
 
 class TestLazyClientResolution:

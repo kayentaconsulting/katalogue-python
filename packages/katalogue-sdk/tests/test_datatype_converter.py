@@ -46,6 +46,19 @@ def test_case_insensitive_lookup():
     assert apply_datatype_converter("Decimal(10,2)", _MAPPINGS) == "DECIMAL(10,2)"
 
 
+def test_spaced_type_names_normalize_to_underscored_keys():
+    mappings = {"DOUBLE_PRECISION": "DoubleType()"}
+    assert apply_datatype_converter("DOUBLE PRECISION", mappings) == "DoubleType()"
+
+
+def test_spaced_type_names_are_case_insensitive():
+    mappings = {"TIMESTAMP_WITH_TIME_ZONE": "TimestampType()"}
+    assert (
+        apply_datatype_converter("timestamp with time zone", mappings)
+        == "TimestampType()"
+    )
+
+
 def test_unknown_type_passthrough():
     assert apply_datatype_converter("BLOB", _MAPPINGS) == "BLOB"
     assert apply_datatype_converter("BLOB(1024)", _MAPPINGS) == "BLOB(1024)"
@@ -78,6 +91,12 @@ def test_enrich_adds_datatype_converted():
 
 def test_enrich_strips_precision_when_no_args_placeholder():
     fields = [{"field_name": "name", "datatype_fullname": "VARCHAR(100)"}]
+    enrich_fields_with_converted_datatype(fields, _CONFIG)
+    assert fields[0]["datatype_converted"] == "STRING"
+
+
+def test_enrich_falls_back_to_field_datatype():
+    fields = [{"field_name": "name", "field_datatype": "VARCHAR(100)"}]
     enrich_fields_with_converted_datatype(fields, _CONFIG)
     assert fields[0]["datatype_converted"] == "STRING"
 

@@ -1,5 +1,6 @@
 source: sqlserver
 target: pyspark
+
 mappings:
   # String types
   CHAR: StringType()
@@ -9,9 +10,13 @@ mappings:
   TEXT: StringType()
   NTEXT: StringType()
   UNIQUEIDENTIFIER: StringType()
+  SYSNAME: StringType()
   XML: StringType()
 
-  # Exact numerics — preserve precision/scale: DECIMAL(10,2) → DecimalType(10,2)
+  # Semi-structured / dynamic
+  SQL_VARIANT: VariantType()
+
+  # Exact numerics — preserve precision/scale: DECIMAL(10,2) -> DecimalType(10,2)
   DECIMAL: "DecimalType{args}"
   NUMERIC: "DecimalType{args}"
   MONEY: "DecimalType(19,4)"
@@ -22,6 +27,7 @@ mappings:
   TINYINT: ByteType()
   SMALLINT: ShortType()
   INT: IntegerType()
+  INTEGER: IntegerType()
   BIGINT: LongType()
 
   # Approximate numerics
@@ -29,16 +35,30 @@ mappings:
   REAL: FloatType()
 
   # Date/time types
-  # DATETIMEOFFSET carries TZ info → TimestampType() (TZ-aware)
-  # DATETIME / DATETIME2 / SMALLDATETIME have no TZ → TimestampNTZType() (Spark 3.4+)
   DATE: DateType()
   TIME: StringType()
+
+  # SQL Server date/time values without offset.
+  # Use TimestampNTZType() on Spark 3.4+.
   DATETIME: TimestampNTZType()
   DATETIME2: TimestampNTZType()
   SMALLDATETIME: TimestampNTZType()
+
+  # SQL Server DATETIMEOFFSET stores offset information.
+  # Spark TimestampType() represents an instant with session time-zone rendering
+  # and does not preserve the original offset.
   DATETIMEOFFSET: TimestampType()
 
   # Binary types
   BINARY: BinaryType()
   VARBINARY: BinaryType()
   IMAGE: BinaryType()
+
+  # SQL Server TIMESTAMP is rowversion binary data, not datetime
+  ROWVERSION: BinaryType()
+  TIMESTAMP: BinaryType()
+
+  # Spatial / hierarchy types
+  GEOGRAPHY: StringType()
+  GEOMETRY: StringType()
+  HIERARCHYID: StringType()

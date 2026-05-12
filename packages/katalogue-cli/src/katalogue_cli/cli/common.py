@@ -132,11 +132,41 @@ def emit_result(
         click.echo(result.output)
         return
 
+    no_match_message = _summarize_empty_hierarchical_result(result)
+    if no_match_message is not None:
+        click.echo(no_match_message, err=True)
+        return
+
     if fmt == "table":
         click.echo(format_output(result.data, "table", group_by=group_by, wide=wide))
         return
 
     click.echo(repr(result.data))
+
+
+def _summarize_empty_hierarchical_result(result: CatalogResult) -> str | None:
+    """Return a concise warning for split exports that filtered everything away."""
+    data = result.data
+    if not isinstance(data, dict):
+        return None
+
+    datasets = data.get("datasets")
+    fields = data.get("fields")
+    if not isinstance(datasets, list) or datasets:
+        return None
+    if fields is not None and not isinstance(fields, list):
+        return None
+    if fields is not None and fields:
+        return None
+
+    resource = data.get("resource")
+    resource_id = data.get("id")
+    if resource and resource_id is not None:
+        return (
+            f"No datasets matched the filter for {resource} {resource_id}. "
+            "No files were written."
+        )
+    return "No datasets matched the filter. No files were written."
 
 
 def _resolve_properties(

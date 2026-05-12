@@ -258,6 +258,46 @@ class TestSystemExport:
         assert options.output.output_file is not None
         assert Path(options.output.output_file).name == "system-1.csv"
 
+    def test_split_export_with_empty_dataset_list_prints_warning(
+        self, runner, mock_client
+    ):
+        mock_client.get.return_value = CatalogResult(
+            data={
+                "resource": "system",
+                "id": "1",
+                "system": {"system_id": 1, "system_name": "Finance"},
+                "datasources": [{"datasource_id": 10, "datasource_name": "Sales"}],
+                "dataset_groups": [
+                    {
+                        "dataset_group_id": 26,
+                        "datasource_id": 10,
+                        "dataset_group_name": "stage",
+                    }
+                ],
+                "datasets": [],
+                "fields": [],
+            }
+        )
+        result = runner.invoke(
+            cli,
+            [
+                *CLI_AUTH,
+                "system",
+                "export",
+                "1",
+                "--template",
+                "dbt-source",
+                "--split-by",
+                "dataset",
+                "--output-dir",
+                "./out",
+            ],
+        )
+        assert result.exit_code == 0
+        combined = result.output + getattr(result, "stderr", "")
+        assert "No datasets matched the filter for system 1." in combined
+        assert "{'resource': 'system'" not in combined
+
     def test_template_uses_natural_extension(self, runner, mock_client):
         mock_client.get.return_value = CatalogResult(
             data={}, output="version: 2", output_file="system-1.yml"
