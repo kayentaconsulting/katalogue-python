@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/kayentaconsulting/katalogue-python/blob/main/README.md
+    about: Check the documentation before opening an issue
+  - name: Contributing Guide
+    url: https://github.com/kayentaconsulting/katalogue-python/blob/main/CONTRIBUTING.md
+    about: Read this before contributing a fix or feature

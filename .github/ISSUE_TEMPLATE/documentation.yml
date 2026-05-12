@@ -1,0 +1,31 @@
+name: Documentation Improvement
+description: Report missing, unclear or incorrect documentation
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve the docs by describing what is missing or unclear.
+
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: Which file or section needs improvement?
+      placeholder: e.g. README.md, CONTRIBUTING.md, --help output for `katalogue system get`
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is missing or unclear?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+    validations:
+      required: false

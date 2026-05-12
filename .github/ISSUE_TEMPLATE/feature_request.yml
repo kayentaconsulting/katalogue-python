@@ -1,0 +1,46 @@
+name: Feature Request
+description: Suggest a new command or capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the feature you'd like and why it would be useful.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Is this a CLI or SDK request?
+      options:
+        - katalogue-cli (CLI command / flag / output)
+        - katalogue-sdk (SDK API / client / model)
+        - Both
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this feature solve? Who needs it and why?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should it work from a user's perspective? CLI example preferred.
+      placeholder: |
+        katalogue <resource> <verb> [options]
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why you ruled them out.
+    validations:
+      required: false
