@@ -1,4 +1,4 @@
-"""Core type mapping — apply source-to-target datatype conversions to field dicts."""
+"""Core datatype converter logic — apply source-to-target conversions to field dicts."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def normalize_datatype_mappings(mappings: dict[str, str]) -> dict[str, str]:
         previous = originals.get(canonical)
         if previous is not None and normalized[canonical] != value:
             raise ValueError(
-                "Conflicting datatype mapping keys normalize to "
+                "Conflicting datatype converter keys normalize to "
                 f"{canonical!r}: {previous!r} and {key!r}"
             )
         normalized[canonical] = value

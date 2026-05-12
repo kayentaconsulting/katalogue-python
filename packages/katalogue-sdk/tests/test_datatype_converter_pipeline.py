@@ -1,4 +1,4 @@
-"""Integration tests: type mapping enriches fields in the SDK pipeline."""
+"""Integration tests: datatype conversion enriches fields in the SDK pipeline."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Tests for type mapping registry resolution."""
+"""Tests for datatype converter registry resolution."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def test_load_builtin_postgres_to_databricks():
 
 
 def test_unknown_name_raises_value_error():
-    with pytest.raises(ValueError, match="Unknown type mapping"):
+    with pytest.raises(ValueError, match="Unknown datatype converter"):
         load_datatype_converter("oracle-to-snowflake")
 
 

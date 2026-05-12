@@ -28,10 +28,10 @@ _NULL_BACKENDS = {"Keyring", "NullKeyring"}
 _FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv", "table"]
 _EXPORT_FORMAT_CHOICES = ["json", "yaml", "yml", "json-compact", "compact", "csv"]
 _FORMAT_HELP = "Serialization format for output."
-_TYPE_MAPPING_HELP = (
-    "Type mapping to apply. Built-in: sqlserver-to-databricks, db2-to-databricks. "
+_DATATYPE_CONVERTER_HELP = (
+    "Datatype converter to apply. Built-in: sqlserver-to-databricks, db2-to-databricks. "
     "Repo-local names can be registered in katalogue.toml or [tool.katalogue.datatype_converters] "
-    "inside pyproject.toml. Or provide a path to a .yaml file."
+    "inside pyproject.toml. Or provide a path to a .yaml or .yml file."
 )
 _TEMPLATE_HELP = (
     "Template to apply. Built-in: dbt-source, column-mapping, json-template. "
@@ -389,7 +389,7 @@ datatype_converter_option = click.option(
     "--datatype-converter",
     default=None,
     metavar="MAPPING",
-    help=_TYPE_MAPPING_HELP,
+    help=_DATATYPE_CONVERTER_HELP,
 )
 
 

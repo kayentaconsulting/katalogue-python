@@ -1,4 +1,4 @@
-"""Tests for type mapping — apply_datatype_converter and enrich_fields_with_converted_datatype."""
+"""Tests for datatype conversion — apply_datatype_converter and enrich_fields_with_converted_datatype."""
 
 from __future__ import annotations
 
