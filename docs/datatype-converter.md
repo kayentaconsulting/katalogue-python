@@ -1,6 +1,6 @@
 # Datatype Converter
 
-Type mapping converts native source database types (e.g. `VARCHAR(255)` from SQL Server) to target platform types (e.g. `STRING` for Databricks, `StringType()` for PySpark). When active, every field in the output gains a `datatype_converted` property.
+Datatype conversion converts native source database types (e.g. `VARCHAR(255)` from SQL Server) to target platform types (e.g. `STRING` for Databricks, `StringType()` for PySpark). When active, every field record in hierarchical exports and direct field results gains a `datatype_converted` property.
 
 ## CLI usage
 
@@ -25,6 +25,10 @@ result = client.get("system", GetOptions(
 # Each field dict in result.data["fields"] now has "datatype_converted"
 for field in result.data["fields"]:
     print(field["field_name"], field["datatype_fullname"], "->", field.get("datatype_converted"))
+
+# The same conversion also applies to field get/list responses
+field = client.get("field", GetOptions(resource_id=123, datatype_converter="sqlserver-to-databricks"))
+print(field.data["datatype_converted"])
 ```
 
 ## Built-in mappings
@@ -60,7 +64,9 @@ Rules containing `{args}` preserve the parenthesised portion:
 - `DECIMAL(10,2)` → `DECIMAL(10,2)` (Databricks)
 - `DECIMAL(10,2)` → `DecimalType(10,2)` (PySpark)
 
-Lookup is case-insensitive: `varchar`, `VARCHAR`, and `Varchar` all match the same rule.
+Lookup is case-insensitive, and spaces or repeated separators are normalized to underscores before matching. For example, `TIMESTAMP WITH TIME ZONE` and `TIMESTAMP_WITH_TIME_ZONE` resolve to the same rule.
+
+Conflicting mapping keys that normalize to the same canonical name are rejected when the YAML file is loaded.
 
 Unknown types pass through unchanged — if no rule matches, `datatype_converted` equals the original `datatype_fullname`.
 
@@ -88,6 +94,8 @@ Use a direct path without registration:
 ```bash
 katalogue dataset get <id> --include-children --datatype-converter ./mappings/oracle_snowflake.yaml
 ```
+
+Direct `.yml` paths work too.
 
 ## Registering custom mappings by name
 

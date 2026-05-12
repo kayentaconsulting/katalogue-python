@@ -1,24 +1,40 @@
 source: db2
 target: pyspark
+
 mappings:
   # String types
   CHAR: StringType()
   CHARACTER: StringType()
   VARCHAR: StringType()
   CHARACTER_VARYING: StringType()
+  CHAR_VARYING: StringType()
   LONG_VARCHAR: StringType()
   CLOB: StringType()
-  DBCLOB: StringType()
+  CHARACTER_LARGE_OBJECT: StringType()
+  CHAR_LARGE_OBJECT: StringType()
+
+  # Unicode / national character types
+  NCHAR: StringType()
+  NATIONAL_CHAR: StringType()
+  NATIONAL_CHARACTER: StringType()
+  NVARCHAR: StringType()
+  NCHAR_VARYING: StringType()
+  NATIONAL_CHAR_VARYING: StringType()
+  NATIONAL_CHARACTER_VARYING: StringType()
+  NCLOB: StringType()
+  NCHAR_LARGE_OBJECT: StringType()
+  NATIONAL_CHARACTER_LARGE_OBJECT: StringType()
+
+  # Graphic string types
   GRAPHIC: StringType()
   VARGRAPHIC: StringType()
   LONG_VARGRAPHIC: StringType()
-  NCHAR: StringType()
-  NVARCHAR: StringType()
-  NCLOB: StringType()
+  DBCLOB: StringType()
 
-  # Exact numerics — preserve precision/scale: DECIMAL(10,2) → DecimalType(10,2)
+  # Exact numerics — preserve precision/scale: DECIMAL(10,2) -> DecimalType(10,2)
   DECIMAL: "DecimalType{args}"
   NUMERIC: "DecimalType{args}"
+  NUM: "DecimalType{args}"
   DEC: "DecimalType{args}"
 
   # Integer types
@@ -31,18 +47,45 @@ mappings:
   FLOAT: DoubleType()
   REAL: FloatType()
   DOUBLE: DoubleType()
+  DOUBLE_PRECISION: DoubleType()
+
+  # Decimal floating point
+  # Pragmatic approximation:
   DECFLOAT: DoubleType()
+  # Safer decimal-semantics alternative:
+  # DECFLOAT: DecimalType(38,16)
 
   # Date/time types
-  # Standard DB2 TIMESTAMP has no TZ info → TimestampNTZType() (Spark 3.4+)
   DATE: DateType()
   TIME: StringType()
+
+  # Standard DB2 TIMESTAMP has no TZ info.
+  # Use TimestampNTZType() on Spark 3.4+.
   TIMESTAMP: TimestampNTZType()
+  TIMESTMP: TimestampNTZType()
+  TIMESTAMP_WITHOUT_TIME_ZONE: TimestampNTZType()
+
+  # DB2 timestamp with time zone.
+  # Spark TimestampType stores instants with session time-zone interpretation.
+  TIMESTAMP_WITH_TIME_ZONE: TimestampType()
+  TIMESTAMPTZ: TimestampType()
 
   # Binary types
   BINARY: BinaryType()
   VARBINARY: BinaryType()
+  BINARY_VARYING: BinaryType()
   BLOB: BinaryType()
+  BINARY_LARGE_OBJECT: BinaryType()
+
+  # Character FOR BIT DATA variants
+  CHAR_FOR_BIT_DATA: BinaryType()
+  CHARACTER_FOR_BIT_DATA: BinaryType()
+  VARCHAR_FOR_BIT_DATA: BinaryType()
+  CHARACTER_VARYING_FOR_BIT_DATA: BinaryType()
+  CHAR_VARYING_FOR_BIT_DATA: BinaryType()
+
+  # Semi-structured / unsupported
+  XML: StringType()
 
   # Boolean
   BOOLEAN: BooleanType()

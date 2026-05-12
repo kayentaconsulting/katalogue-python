@@ -1,19 +1,24 @@
 source: postgres
 target: pyspark
+
 mappings:
   # String types
   CHAR: StringType()
   CHARACTER: StringType()
   VARCHAR: StringType()
   CHARACTER_VARYING: StringType()
+  CHAR_VARYING: StringType()
+  VARCHAR2: StringType()
   TEXT: StringType()
   UUID: StringType()
   XML: StringType()
-  JSON: StringType()
-  JSONB: StringType()
   CITEXT: StringType()
 
-  # Exact numerics — preserve precision/scale: NUMERIC(10,2) → DecimalType(10,2)
+  # Semi-structured
+  JSON: VariantType()
+  JSONB: VariantType()
+
+  # Exact numerics — preserve precision/scale: NUMERIC(10,2) -> DecimalType(10,2)
   DECIMAL: "DecimalType{args}"
   NUMERIC: "DecimalType{args}"
   MONEY: "DecimalType(19,4)"
@@ -26,29 +31,41 @@ mappings:
   INT4: IntegerType()
   BIGINT: LongType()
   INT8: LongType()
+
+  # Serial pseudo-types — data type only, sequence/default semantics are not preserved
   SMALLSERIAL: ShortType()
   SERIAL: IntegerType()
   BIGSERIAL: LongType()
+  SERIAL2: ShortType()
+  SERIAL4: IntegerType()
+  SERIAL8: LongType()
 
   # Approximate numerics
   REAL: FloatType()
   FLOAT4: FloatType()
+  DOUBLE: DoubleType()
   DOUBLE_PRECISION: DoubleType()
   FLOAT8: DoubleType()
+  FLOAT: DoubleType()
 
   # Boolean
   BOOLEAN: BooleanType()
   BOOL: BooleanType()
 
   # Date/time types
-  # TIMESTAMPTZ / TIMESTAMP WITH TIME ZONE carries TZ info → TimestampType() (TZ-aware)
-  # TIMESTAMP / TIMESTAMP WITHOUT TIME ZONE has no TZ → TimestampNTZType() (Spark 3.4+)
   DATE: DateType()
   TIME: StringType()
+  TIME_WITHOUT_TIME_ZONE: StringType()
   TIMETZ: StringType()
   TIME_WITH_TIME_ZONE: StringType()
+
+  # Postgres TIMESTAMP means WITHOUT TIME ZONE.
+  # Use TimestampNTZType() on Spark 3.4+.
   TIMESTAMP: TimestampNTZType()
   TIMESTAMP_WITHOUT_TIME_ZONE: TimestampNTZType()
+
+  # Postgres TIMESTAMPTZ represents an instant.
+  # Spark TimestampType() uses session time-zone semantics and does not preserve original offset.
   TIMESTAMPTZ: TimestampType()
   TIMESTAMP_WITH_TIME_ZONE: TimestampType()
 
@@ -58,3 +75,44 @@ mappings:
   # Bit strings
   BIT: StringType()
   BIT_VARYING: StringType()
+  VARBIT: StringType()
+
+  # Network / identifiers
+  INET: StringType()
+  CIDR: StringType()
+  MACADDR: StringType()
+  MACADDR8: StringType()
+
+  # Full text search
+  TSVECTOR: StringType()
+  TSQUERY: StringType()
+
+  # Geometric types
+  POINT: StringType()
+  LINE: StringType()
+  LSEG: StringType()
+  BOX: StringType()
+  PATH: StringType()
+  POLYGON: StringType()
+  CIRCLE: StringType()
+
+  # Ranges
+  INT4RANGE: StringType()
+  INT8RANGE: StringType()
+  NUMRANGE: StringType()
+  TSRANGE: StringType()
+  TSTZRANGE: StringType()
+  DATERANGE: StringType()
+
+  # Multiranges
+  INT4MULTIRANGE: StringType()
+  INT8MULTIRANGE: StringType()
+  NUMMULTIRANGE: StringType()
+  TSMULTIRANGE: StringType()
+  TSTZMULTIRANGE: StringType()
+  DATEMULTIRANGE: StringType()
+
+  # Other
+  INTERVAL: StringType()
+  PG_LSN: StringType()
+  TXID_SNAPSHOT: StringType()

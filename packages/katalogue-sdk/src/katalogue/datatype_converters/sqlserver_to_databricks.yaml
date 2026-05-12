@@ -1,5 +1,6 @@
 source: sqlserver
 target: databricks
+
 mappings:
   # String types — Databricks STRING has no length limit
   CHAR: STRING
@@ -9,7 +10,13 @@ mappings:
   TEXT: STRING
   NTEXT: STRING
   UNIQUEIDENTIFIER: STRING
-  XML: VARIANT
+  SYSNAME: STRING
+
+  # XML is not JSON-style semi-structured data; keep as text unless parsed separately
+  XML: STRING
+
+  # Semi-structured / dynamic
+  SQL_VARIANT: VARIANT
 
   # Exact numerics — preserve precision/scale
   DECIMAL: "DECIMAL{args}"
@@ -22,6 +29,7 @@ mappings:
   TINYINT: TINYINT
   SMALLINT: SMALLINT
   INT: INT
+  INTEGER: INT
   BIGINT: BIGINT
 
   # Approximate numerics
@@ -29,16 +37,28 @@ mappings:
   REAL: FLOAT
 
   # Date/time types
-  # DATETIMEOFFSET carries TZ info → TIMESTAMP_LTZ (TZ-aware)
-  # DATETIME / DATETIME2 / SMALLDATETIME have no TZ → TIMESTAMP_NTZ
   DATE: DATE
   TIME: STRING
+
+  # SQL Server date/time values without offset
   DATETIME: TIMESTAMP_NTZ
   DATETIME2: TIMESTAMP_NTZ
   SMALLDATETIME: TIMESTAMP_NTZ
-  DATETIMEOFFSET: TIMESTAMP_LTZ
+
+  # SQL Server DATETIMEOFFSET stores offset information.
+  # Databricks TIMESTAMP represents an instant but does not preserve original offset.
+  DATETIMEOFFSET: TIMESTAMP
 
   # Binary types
   BINARY: BINARY
   VARBINARY: BINARY
   IMAGE: BINARY
+
+  # SQL Server TIMESTAMP is a rowversion binary value, not a datetime
+  ROWVERSION: BINARY
+  TIMESTAMP: BINARY
+
+  # Spatial / hierarchy types
+  GEOGRAPHY: STRING
+  GEOMETRY: STRING
+  HIERARCHYID: STRING

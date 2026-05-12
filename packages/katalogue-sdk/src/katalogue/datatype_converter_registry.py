@@ -1,4 +1,4 @@
-"""Type mapping registry — resolve built-in, repo-registered, and file-path mappings."""
+"""Datatype converter registry — resolve built-in, repo-registered, and file-path converters."""
 
 from __future__ import annotations
 
@@ -31,14 +31,14 @@ class DatatypeConverterDefinition(BaseModel):
     @classmethod
     def _validate_path(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("Type mapping path cannot be empty")
+            raise ValueError("Datatype converter path cannot be empty")
         return value
 
 
 def load_datatype_converter(
     name_or_path: str, start_dir: Path | None = None
 ) -> DatatypeConverterConfig:
-    """Resolve and load a type mapping by name or file path.
+    """Resolve and load a datatype converter by name or file path.
 
     Resolution order:
     1. Repo-registered name (katalogue.toml / [tool.katalogue] in pyproject.toml)
@@ -66,14 +66,14 @@ def load_datatype_converter(
     if _looks_like_path(name_or_path):
         path = Path(name_or_path).expanduser()
         if not path.exists():
-            raise FileNotFoundError(f"Type mapping file not found: {path}")
+            raise FileNotFoundError(f"Datatype converter file not found: {path}")
         return _parse_yaml(path)
 
     builtins = ", ".join(sorted(BUILTIN_DATATYPE_CONVERTERS))
     raise ValueError(
-        f"Unknown type mapping '{name_or_path}'. "
+        f"Unknown datatype converter '{name_or_path}'. "
         f"Built-in mappings: {builtins}. "
-        "Register a repo mapping in katalogue.toml, or provide a path to a .yaml file."
+        "Register a repo datatype converter in katalogue.toml, or provide a path to a .yaml file."
     )
 
 

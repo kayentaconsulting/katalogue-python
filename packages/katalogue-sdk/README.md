@@ -590,7 +590,7 @@ You never need to manage tokens manually.
 | `GetOptions.sort` | `list[dict] \| None` | Multi-column sort, e.g. `[{"name": "asc"}]` |
 | `GetOptions.include_children` | `bool` | Fetch resource and all descendants |
 | `GetOptions.format_descriptions_as_text` | `bool` | Convert Draft.js rich-text to plain text |
-| `GetOptions.datatype_converter` | `str \| None` | Built-in name, registered name, or `.yaml` path — adds `datatype_converted` to each field |
+| `GetOptions.datatype_converter` | `str \| None` | Built-in name, registered name, or `.yaml` / `.yml` path - adds `datatype_converted` to each field record |
 | `GetOptions.output` | `OutputOptions` | Output rendering and file options |
 | `OutputOptions` | Pydantic model | Serialization, template, file output, split-by, dry-run |
 | `OutputOptions.format` | `str \| None` | Serialization format: `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv` |
@@ -612,4 +612,26 @@ You never need to manage tokens manually.
 | `TokenCache` | protocol | Interface for custom token cache backends |
 | `TokenEntry` | Pydantic model | Single cached token; implement `TokenCache` with this |
 | `DatatypeConverterConfig` | Pydantic model | Loaded datatype converter: `source`, `target`, `mappings: dict[str, str]` |
-| `load_datatype_converter()` | function | Resolve and load a mapping by name, registered name, or `.yaml` path |
+| `load_datatype_converter()` | function | Resolve and load a datatype converter by built-in name, registered name, or `.yaml` / `.yml` path |
+
+## Custom Datatype Converters
+
+Create your own datatype converter by writing a YAML file with `source`, `target`, and a `mappings` table:
+
+```yaml
+source: oracle
+target: snowflake
+mappings:
+  VARCHAR2: VARCHAR
+  NUMBER: "NUMBER{args}"
+  TIMESTAMP WITH TIME ZONE: TIMESTAMP_LTZ
+```
+
+`{args}` preserves the original parenthesised suffix, so `NUMBER(10,2)` stays `NUMBER(10,2)` while `NUMBER` stays `NUMBER`.
+
+You can use it in either of these ways:
+
+- pass the file path directly to `GetOptions.datatype_converter`
+- register the file in `katalogue.toml` or `[tool.katalogue.datatype_converters]` in `pyproject.toml`
+
+Repo-registered names override built-ins with the same name. Both `.yaml` and `.yml` file paths are supported. See [docs/datatype-converter.md](../../docs/datatype-converter.md) for the full reference.

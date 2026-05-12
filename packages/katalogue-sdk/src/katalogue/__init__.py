@@ -29,7 +29,7 @@ __all__ = [
     "OutputOptions",
     "CatalogResult",
     "WrittenFile",
-    # Type mapping
+    # Datatype converter
     "DatatypeConverterConfig",
     "load_datatype_converter",
 ]

@@ -1,4 +1,4 @@
-"""Integration tests: type mapping enriches fields in the SDK pipeline."""
+"""Integration tests: datatype conversion enriches fields in the SDK pipeline."""
 
 from __future__ import annotations
 
@@ -99,6 +99,43 @@ def test_datatype_converter_not_set_leaves_no_datatype_converted(client):
         )
     for field in result.data["fields"]:
         assert "datatype_converted" not in field
+
+
+def test_datatype_converter_enriches_field_get(client):
+    record = {
+        "field_id": "f-1",
+        "field_name": "amount",
+        "field_datatype": "DECIMAL(10,2)",
+    }
+    with patch.object(client, "get_resource", return_value=record):
+        result = client.get(
+            "field",
+            GetOptions(
+                resource_id="f-1",
+                datatype_converter="sqlserver-to-databricks",
+            ),
+        )
+    assert result.data["datatype_converted"] == "DECIMAL(10,2)"
+    assert result.raw == record
+    assert "datatype_converted" not in result.raw
+
+
+def test_datatype_converter_enriches_field_list(client):
+    rows = [
+        {
+            "field_id": "f-1",
+            "field_name": "amount",
+            "field_datatype": "DECIMAL(10,2)",
+        }
+    ]
+    with patch.object(client, "list_resource", return_value=rows):
+        result = client.get(
+            "field",
+            GetOptions(datatype_converter="sqlserver-to-databricks"),
+        )
+    assert result.data[0]["datatype_converted"] == "DECIMAL(10,2)"
+    assert result.raw == rows
+    assert "datatype_converted" not in result.raw[0]
 
 
 def test_get_options_datatype_converter_field():

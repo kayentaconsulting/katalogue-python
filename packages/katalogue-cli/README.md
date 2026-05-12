@@ -156,9 +156,9 @@ katalogue system get 1 --include-children --format csv
 
 ### --datatype-converter
 
-Converts source database types to target platform types. Each field in the output gains a `datatype_converted` property alongside the original `datatype_fullname`.
+Converts source database types to target platform types. Each field record in hierarchical exports and direct field responses gains a `datatype_converted` property alongside the original `datatype_fullname` or `field_datatype`.
 
-Built-in mappings:
+Built-in datatype converters:
 
 | Name | Source | Target |
 |------|--------|--------|
@@ -175,9 +175,32 @@ katalogue dataset get <id> --include-children --datatype-converter sqlserver-to-
 
 # Use datatype_converted in column-mapping template
 katalogue datasource get <id> --include-children --datatype-converter postgres-to-databricks --template column-mapping
+
+# Field list/get responses are also enriched
+katalogue field list --datatype-converter sqlserver-to-databricks --format json
 ```
 
-Custom mappings are registered in `katalogue.toml` or `[tool.katalogue.datatype_converters]` in `pyproject.toml`, or provided as a direct `.yaml` file path. Repo-registered names override built-ins with the same name. See [docs/datatype-converter.md](../../docs/datatype-converter.md) for the full reference.
+### Add your own datatype converter
+
+Create a YAML file with `source`, `target`, and a `mappings` table:
+
+```yaml
+source: oracle
+target: snowflake
+mappings:
+  VARCHAR2: VARCHAR
+  NUMBER: "NUMBER{args}"
+  TIMESTAMP WITH TIME ZONE: TIMESTAMP_LTZ
+```
+
+`{args}` preserves the original parenthesised suffix, so `NUMBER(10,2)` stays `NUMBER(10,2)` while `NUMBER` stays `NUMBER`.
+
+Then either:
+
+- reference it directly with `--datatype-converter ./mappings/oracle_snowflake.yaml`
+- or register it in `katalogue.toml` or `[tool.katalogue.datatype_converters]` in `pyproject.toml`
+
+Repo-registered names override built-ins with the same name. Direct `.yml` paths work too. See [docs/datatype-converter.md](../../docs/datatype-converter.md) for the full reference.
 
 ### --template
 

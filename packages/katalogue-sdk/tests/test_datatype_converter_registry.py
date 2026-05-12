@@ -1,4 +1,4 @@
-"""Tests for type mapping registry resolution."""
+"""Tests for datatype converter registry resolution."""
 
 from __future__ import annotations
 
@@ -67,15 +67,15 @@ def test_load_builtin_postgres_to_databricks():
     assert config.mappings["VARCHAR"] == "STRING"
     assert config.mappings["INTEGER"] == "INT"
     assert config.mappings["NUMERIC"] == "DECIMAL{args}"
-    assert config.mappings["TIMESTAMPTZ"] == "TIMESTAMP_LTZ"
+    assert config.mappings["TIMESTAMPTZ"] == "TIMESTAMP"
     assert config.mappings["TIMESTAMP"] == "TIMESTAMP_NTZ"
     assert config.mappings["JSON"] == "VARIANT"
     assert config.mappings["JSONB"] == "VARIANT"
-    assert config.mappings["XML"] == "VARIANT"
+    assert config.mappings["XML"] == "STRING"
 
 
 def test_unknown_name_raises_value_error():
-    with pytest.raises(ValueError, match="Unknown type mapping"):
+    with pytest.raises(ValueError, match="Unknown datatype converter"):
         load_datatype_converter("oracle-to-snowflake")
 
 
@@ -98,11 +98,12 @@ def test_load_from_yaml_file(tmp_path):
 def test_load_from_yml_extension(tmp_path):
     mapping_file = tmp_path / "my_mapping.yml"
     mapping_file.write_text(
-        "mappings:\n  INT: BIGINT\n",
+        "mappings:\n  TIMESTAMP WITH TIME ZONE: TimestampType()\n  INT: BIGINT\n",
         encoding="utf-8",
     )
     config = load_datatype_converter(str(mapping_file))
     assert config.mappings["INT"] == "BIGINT"
+    assert config.mappings["TIMESTAMP_WITH_TIME_ZONE"] == "TimestampType()"
 
 
 def test_file_not_found_raises(tmp_path):
@@ -151,3 +152,15 @@ def test_repo_registered_overrides_builtin(tmp_path, monkeypatch):
     monkeypatch.chdir(repo)
     config = load_datatype_converter("sqlserver-to-databricks")
     assert config.mappings["VARCHAR"] == "CUSTOM_STRING"
+
+
+def test_normalized_mapping_key_collisions_raise():
+    with pytest.raises(ValueError, match="normalize to"):
+        DatatypeConverterConfig(
+            source="x",
+            target="y",
+            mappings={
+                "TIMESTAMP WITH TIME ZONE": "TimestampType()",
+                "TIMESTAMP_WITH_TIME_ZONE": "TimestampNTZType()",
+            },
+        )

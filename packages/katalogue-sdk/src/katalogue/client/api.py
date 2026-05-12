@@ -75,6 +75,48 @@ def _normalize_flat_filters(resource: str, filters: list[Filter]) -> list[Filter
     return normalized
 
 
+def _apply_datatype_converter_to_data(data: Any, datatype_converter: str) -> Any:
+    from katalogue.datatype_converter import apply_datatype_converter
+    from katalogue.datatype_converter_registry import load_datatype_converter
+
+    config = load_datatype_converter(datatype_converter)
+
+    def _transform(value: Any) -> Any:
+        if isinstance(value, list):
+            updated_list: list[Any] | None = None
+            for index, item in enumerate(value):
+                transformed = _transform(item)
+                if updated_list is not None:
+                    updated_list.append(transformed)
+                elif transformed is not item:
+                    updated_list = value[:index]
+                    updated_list.append(transformed)
+            return value if updated_list is None else updated_list
+
+        if isinstance(value, dict):
+            updated_dict: dict[str, Any] | None = None
+            for key, child in value.items():
+                transformed = _transform(child)
+                if updated_dict is not None:
+                    updated_dict[key] = transformed
+                elif transformed is not child:
+                    updated_dict = dict(value)
+                    updated_dict[key] = transformed
+
+            result: dict[str, Any] = value if updated_dict is None else updated_dict
+            raw = result.get("datatype_fullname") or result.get("field_datatype")
+            if isinstance(raw, str):
+                converted = apply_datatype_converter(raw, config.mappings)
+                if result is value:
+                    result = dict(value)
+                result["datatype_converted"] = converted
+            return result
+
+        return value
+
+    return _transform(data)
+
+
 class KatalogueClient:
     def __init__(
         self, settings: Settings | None = None, token_cache: TokenCache | None = None
@@ -247,6 +289,10 @@ class KatalogueClient:
         if isinstance(data, list):
             if parsed_filters:
                 data = _apply_filters_to_list(data, parsed_filters)
+            if options.datatype_converter:
+                data = _apply_datatype_converter_to_data(
+                    data, options.datatype_converter
+                )
             data = filter_properties(data, options.properties)
             if options.sort:
                 data = sort_resultset(data, options.sort)
@@ -259,6 +305,10 @@ class KatalogueClient:
             ):
                 data = None
             if data is not None:
+                if options.datatype_converter:
+                    data = _apply_datatype_converter_to_data(
+                        data, options.datatype_converter
+                    )
                 data = filter_properties(data, options.properties)
                 if options.format_descriptions_as_text:
                     data = format_descriptions_to_plaintext(data)
@@ -318,6 +368,9 @@ class KatalogueClient:
                 data, parsed_filters, root_resource=resource
             )
 
+        if options.datatype_converter:
+            data = _apply_datatype_converter_to_data(data, options.datatype_converter)
+
         if options.properties:
             from katalogue.exporting import _META_KEYS
 
@@ -326,16 +379,6 @@ class KatalogueClient:
             if isinstance(filtered, dict):
                 filtered.update(preserved)
                 data = filtered
-
-        if options.datatype_converter and isinstance(data, dict) and "fields" in data:
-            from katalogue.datatype_converter import (
-                enrich_fields_with_converted_datatype,
-            )
-            from katalogue.datatype_converter_registry import load_datatype_converter
-
-            enrich_fields_with_converted_datatype(
-                data["fields"], load_datatype_converter(options.datatype_converter)
-            )
 
         output, output_file, output_files = OutputPipeline().process(
             data, options.output, root_resource=resource
