@@ -13,6 +13,7 @@ BUILTIN_TEMPLATES: dict[str, str] = {
     "dbt-source": "dbt_source.j2",
     "column-mapping": "column_mapping.j2",
     "json-template": "json_template.j2",
+    "nested-yml": "nested_yml.j2",
 }
 
 # The format a built-in template naturally renders in.
@@ -20,6 +21,7 @@ BUILTIN_TEMPLATE_FORMATS: dict[str, str] = {
     "dbt-source": "yml",
     "column-mapping": "yml",
     "json-template": "json",
+    "nested-yml": "yml",
 }
 
 STANDARD_FORMATS: frozenset[str] = frozenset({"json", "yaml", "yml", "csv"})
@@ -55,6 +57,15 @@ class TemplateRegistry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     templates: dict[str, TemplateDefinition] = Field(default_factory=dict)
+
+
+def load_macro_paths(start_dir: Path | None = None) -> list[Path]:
+    """Return project-registered macro search paths resolved to absolute paths."""
+    for directory in _iter_search_directories(start_dir):
+        paths = _load_macro_paths_from_directory(directory)
+        if paths is not None:
+            return paths
+    return []
 
 
 def load_template_registry(
@@ -204,3 +215,43 @@ def _read_template_text(path: Path) -> str:
     if not path.exists():
         raise FileNotFoundError(f"Template file not found: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def _load_macro_paths_from_directory(directory: Path) -> list[Path] | None:
+    katalogue_toml = directory / "katalogue.toml"
+    if katalogue_toml.is_file():
+        raw = _extract_macro_paths(_load_toml_file(katalogue_toml), is_pyproject=False)
+        if raw is not None:
+            return [_resolve_macro_path(p, katalogue_toml.parent) for p in raw]
+
+    pyproject_toml = directory / "pyproject.toml"
+    if pyproject_toml.is_file():
+        raw = _extract_macro_paths(_load_toml_file(pyproject_toml), is_pyproject=True)
+        if raw is not None:
+            return [_resolve_macro_path(p, pyproject_toml.parent) for p in raw]
+
+    return None
+
+
+def _extract_macro_paths(
+    data: dict[str, Any], *, is_pyproject: bool
+) -> list[str] | None:
+    if is_pyproject:
+        section = data.get("tool", {}).get("katalogue", {}).get("macro_paths")
+    else:
+        section = data.get("macro_paths")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ValueError("macro_paths must be a table with a 'paths' key.")
+    paths = section.get("paths", [])
+    if not isinstance(paths, list):
+        raise ValueError("macro_paths.paths must be an array of strings.")
+    return [str(p) for p in paths]
+
+
+def _resolve_macro_path(path_str: str, config_dir: Path) -> Path:
+    path = Path(path_str).expanduser()
+    if not path.is_absolute():
+        path = config_dir / path
+    return path.resolve()
