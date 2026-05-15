@@ -1,0 +1,34 @@
+system: TEST_SYS
+datasources:
+  - name: TEST_DB
+    dataset_groups:
+      - name: TEST_DB
+        datasets:
+          - name: TEST_TABLE
+            fields:
+            - name: ID
+              data_type: char(20)
+              description: "Primary key"
+            - name: COUNT
+              data_type: smallint
+              description: "An integer count"
+            - name: EFFECTIVE_DT
+              data_type: date
+              description: "Effective date"
+            - name: CREATED_TS
+              data_type: timestmp
+              description: "Creation timestamp"
+            - name: METADATA
+              data_type: object
+              description: "Nested object field"
+              fields:
+              - name: source
+                data_type: string
+                description: "Child string field of METADATA object"
+            - name: TAGS
+              data_type: array
+              description: "Array field"
+              fields:
+              - name: value
+                data_type: string
+                description: "Child string element of TAGS array"
