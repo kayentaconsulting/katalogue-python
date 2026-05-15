@@ -1,34 +1,7 @@
+{% set _groups = dataset_groups if (dataset_groups is defined and dataset_groups) else ([dataset_group] if (dataset_group is defined and dataset_group) else []) %}
 version: 2
 sources:
-{% if dataset_group is defined and dataset_group %}
-  - name: {{ dataset_group.dataset_group_name }}
-    database: {{ datasource.datasource_name | default('', true) }}
-    schema: {{ dataset_group.dataset_group_name }}
-    tables:
-{% for ds in datasets %}
-      - name: {{ ds.dataset_name }}
-        description: '{{ ds.dataset_description | default(ds.description | default('', true), true) }}'
-        columns:
-{% for f in fields if f.dataset_id == ds.dataset_id %}
-          - name: {{ f.field_name }}
-            description: '{{ f.field_source_description | default(f.description | default('', true), true) }}'
-            data_type: {{ f.datatype_converted | default(f.datatype_fullname | default(f.field_datatype | default('', true), true), true) }}
-{% set is_primary_key = f.field_is_primary_key | default(false, true) %}
-{% set is_pii = f.is_pii | default(f.field_is_pii | default(false, true), true) %}
-{% if is_pii == true or is_primary_key == true %}
-            config:
-              meta:
-{% if is_primary_key == true %}
-                is_primary_key: true
-{% endif %}
-{% if is_pii == true %}
-                is_pii: true
-{% endif %}
-{% endif %}
-{% endfor %}
-{% endfor %}
-{% else %}
-{% for dg in dataset_groups %}
+{% for dg in _groups %}
 {% set dg_datasource = datasource if datasource is defined and datasource else (datasources | selectattr('datasource_id', 'equalto', dg.datasource_id) | list | first | default({})) %}
 {% set dg_datasets = datasets | selectattr('dataset_group_id', 'equalto', dg.dataset_group_id) | list %}
   - name: {{ dg.dataset_group_name }}
@@ -37,25 +10,23 @@ sources:
     tables:
 {% for ds in dg_datasets %}
       - name: {{ ds.dataset_name }}
-        description: '{{ ds.dataset_description | default(ds.description | default('', true), true) }}'
+        description: '{{ dataset_desc(ds) }}'
         columns:
-{% for f in fields if f.dataset_id == ds.dataset_id %}
-          - name: {{ f.field_name }}
-            description: '{{ f.field_source_description | default(f.description | default('', true), true) }}'
-            data_type: {{ f.datatype_converted | default(f.datatype_fullname | default(f.field_datatype | default('', true), true), true) }}
-{% set is_primary_key = f.field_is_primary_key | default(false, true) %}
-{% set is_pii = f.is_pii | default(f.field_is_pii | default(false, true), true) %}
-{% if is_pii == true or is_primary_key == true %}
+{% for f in fields_tree(ds.dataset_id) recursive %}
+          - name: {{ f.field_path }}
+            data_type: {{ field_type(f) }}
+            description: '{{ field_desc(f) }}'
+{% if field_is_primary_key(f) or field_is_pii(f) %}
             config:
               meta:
-{% if is_primary_key == true %}
+{% if field_is_primary_key(f) %}
                 is_primary_key: true
 {% endif %}
-{% if is_pii == true %}
+{% if field_is_pii(f) %}
                 is_pii: true
 {% endif %}
 {% endif %}
+{{ loop(f.children) }}
+{%- endfor %}
 {% endfor %}
 {% endfor %}
-{% endfor %}
-{% endif %}

@@ -1,0 +1,46 @@
+{# Renders the in-scope hierarchy as nested YAML, at any resource scope.
+   Singletons (datasource, dataset_group, dataset) are promoted into 1-item
+   lists so one nested loop handles every scope uniformly.
+   Trusts the SDK contract that all hierarchy keys are present in the context
+   (singletons as {} when not in scope, plurals as []). #}
+{% set datasources    = datasources    or ([datasource]    if datasource    else []) %}
+{% set dataset_groups = dataset_groups or ([dataset_group] if dataset_group else []) %}
+{% set datasets       = datasets       or ([dataset]       if dataset       else []) %}
+{% if system %}
+system: {{ system.system_name }}
+{% endif %}
+{% if datasources %}
+datasources:
+{% for ds in datasources %}
+  - name: {{ ds.datasource_name }}
+{% set ds_groups = dataset_groups | selectattr('datasource_id', 'equalto', ds.datasource_id) | list %}
+{% if ds_groups %}
+    dataset_groups:
+{% for dg in ds_groups %}
+      - name: {{ dg.dataset_group_name }}
+{% set dg_datasets = datasets | selectattr('dataset_group_id', 'equalto', dg.dataset_group_id) | list %}
+{% if dg_datasets %}
+        datasets:
+{% for d in dg_datasets %}
+          - name: {{ d.dataset_name }}
+{% set fields = fields_tree(d.dataset_id) %}
+{% if fields %}
+            fields:
+{% for f in fields recursive %}
+{{ '  ' * (loop.depth0 + 6) }}- name: {{ f.field_name }}
+{{ '  ' * (loop.depth0 + 6) }}  data_type: {{ field_type(f) }}
+{% if field_desc(f) %}
+{{ '  ' * (loop.depth0 + 6) }}  description: "{{ field_desc(f) }}"
+{% endif %}
+{% if f.children %}
+{{ '  ' * (loop.depth0 + 6) }}  fields:
+{{ loop(f.children) -}}
+{% endif %}
+{%- endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
