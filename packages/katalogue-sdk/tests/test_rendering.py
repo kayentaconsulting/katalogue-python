@@ -6,12 +6,6 @@ from pathlib import Path
 
 import jinja2
 import pytest
-
-
-def _fixture(name: str) -> dict:
-    p = Path(__file__).parent / "fixtures" / "api_responses" / name
-    return json.loads(p.read_text(encoding="utf-8"))
-
 from katalogue.rendering import (
     _build_fields_tree,
     auto_filename,
@@ -27,6 +21,12 @@ from katalogue.rendering import (
     render_filename,
     render_template,
 )
+
+
+def _fixture(name: str) -> dict:
+    p = Path(__file__).parent / "fixtures" / "api_responses" / name
+    return json.loads(p.read_text(encoding="utf-8"))
+
 
 # --- format detection ---
 
