@@ -174,7 +174,7 @@ Built-in datatype converters:
 katalogue dataset get <id> --include-children --datatype-converter sqlserver-to-databricks --format json
 
 # Use datatype_converted in column-mapping template
-katalogue datasource get <id> --include-children --datatype-converter postgres-to-databricks --template column-mapping
+katalogue datasource export <id> --datatype-converter postgres-to-databricks --template column-mapping
 
 # Field list/get responses are also enriched
 katalogue field list --datatype-converter sqlserver-to-databricks --format json
@@ -232,20 +232,21 @@ If a repo defines the same name as a built-in template, the repo version wins.
 | `dbt-source` | YAML | dbt `sources.yml` structure |
 | `column-mapping` | YAML | Field-level column mapping |
 | `json-template` | JSON | Full hierarchical context as JSON |
+| `nested-yml` | YAML | Nested object/array fields rendered as indented YAML |
 | `customer-mapping` | depends | Repo-registered template name |
 | `./path/to/file.j2` | depends | Custom Jinja2 template file |
 
 ```bash
 # Built-in templates — use natural format (YAML or JSON)
-katalogue datasource get 5 --include-children --template dbt-source
-katalogue datasource get 5 --include-children --template column-mapping
-katalogue datasource get 5 --include-children --template json-template
+katalogue datasource export 5 --template dbt-source
+katalogue datasource export 5 --template column-mapping
+katalogue datasource export 5 --template json-template
 
 # Custom .j2 file
-katalogue datasource get 5 --include-children --template ./my_template.j2
+katalogue datasource export 5 --template ./my_template.j2
 ```
 
-`--template` requires `--include-children` for hierarchical data (datasource, system, etc.).
+Template rendering uses the `export` command, which assembles the full hierarchy under the resource before rendering. `system`, `datasource`, `dataset-group`, and `dataset` each have an `export` subcommand.
 Custom template filenames like `my_template.json.j2` or `my_template.yml.j2` are valid.
 `my_template.j2.json` is not, because the template source must still end in `.j2`.
 
@@ -257,13 +258,13 @@ Use `--format` alongside `--template` to convert the template's natural output t
 
 ```bash
 # dbt-source renders YAML by default; convert to JSON
-katalogue datasource get 5 --include-children --template dbt-source --format json
+katalogue datasource export 5 --template dbt-source --format json
 
 # Convert dbt-source YAML to compact JSON
-katalogue datasource get 5 --include-children --template dbt-source --format json-compact
+katalogue datasource export 5 --template dbt-source --format json-compact
 
 # json-template renders JSON by default; convert to YAML
-katalogue datasource get 5 --include-children --template json-template --format yaml
+katalogue datasource export 5 --template json-template --format yaml
 ```
 
 `--format table` cannot be combined with `--template`.
@@ -287,10 +288,10 @@ Use `--output-file` to write the rendered output to a file instead of printing i
 katalogue system get 1 --include-children --format json --output-file ./export.json
 
 # Write dbt-source YAML to a file
-katalogue datasource get 5 --include-children --template dbt-source --output-file ./sources.yml
+katalogue datasource export 5 --template dbt-source --output-file ./sources.yml
 
 # Overwrite existing file
-katalogue datasource get 5 --include-children --template dbt-source \
+katalogue datasource export 5 --template dbt-source \
   --output-file ./sources.yml --overwrite
 ```
 
@@ -304,11 +305,11 @@ katalogue system get 1 --include-children --format json \
   --split-by dataset --output-dir ./out/
 
 # One dbt-source YAML file per dataset
-katalogue system get 1 --include-children --template dbt-source \
+katalogue system export 1 --template dbt-source \
   --split-by dataset --output-dir ./dbt/models/
 
 # One file per datasource, converted to JSON
-katalogue system get 1 --include-children --template dbt-source --format json \
+katalogue system export 1 --template dbt-source --format json \
   --split-by datasource --output-dir ./out/
 ```
 
@@ -326,7 +327,7 @@ Valid `--split-by` levels depend on the root resource:
 ### Custom filename template
 
 ```bash
-katalogue system get 1 --include-children --template dbt-source \
+katalogue system export 1 --template dbt-source \
   --split-by dataset --output-dir ./out \
   --filename-template '{{ dataset.dataset_name }}.yml'
 ```
@@ -336,7 +337,7 @@ katalogue system get 1 --include-children --template dbt-source \
 Preview planned files without writing them:
 
 ```bash
-katalogue system get 1 --include-children --template dbt-source \
+katalogue system export 1 --template dbt-source \
   --split-by dataset --output-dir ./out --dry-run
 ```
 

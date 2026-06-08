@@ -2,11 +2,21 @@
 
 Datatype conversion converts native source database types (e.g. `VARCHAR(255)` from SQL Server) to target platform types (e.g. `STRING` for Databricks, `StringType()` for PySpark). When active, every field record in hierarchical exports and direct field results gains a `datatype_converted` property.
 
+## Contents
+
+- [CLI usage](#cli-usage)
+- [SDK usage](#sdk-usage)
+- [Built-in mappings](#built-in-mappings)
+- [Precision handling](#precision-handling)
+- [Custom mapping files](#custom-mapping-files)
+- [Registering custom mappings by name](#registering-custom-mappings-by-name)
+- [Using datatype_converted in templates](#using-datatype_converted-in-templates)
+
 ## CLI usage
 
 ```bash
 katalogue dataset get <id> --include-children --datatype-converter sqlserver-to-databricks --format json
-katalogue datasource get <id> --include-children --datatype-converter postgres-to-databricks --template column-mapping
+katalogue datasource export <id> --datatype-converter postgres-to-databricks --template column-mapping
 katalogue system export <id> --datatype-converter db2-to-pyspark --split-by dataset --output-dir ./out
 ```
 

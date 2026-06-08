@@ -92,3 +92,16 @@ Cover per slice: happy path (json + table), auth failure, API error, empty resul
 
 - Pydantic `BaseModel` for all models — no plain dataclasses
 - `SecretStr` for secrets, `field_validator` for validation
+- Prefer type-narrowing over `# type: ignore`
+- Jinja2 templates use `StrictUndefined` — always guard optional keys with `is defined` or `.get()`
+
+## Git & PR Workflow
+
+- Use the GitHub MCP server for all PR creation, updates, and issue management — `gh` CLI is not installed in this environment.
+- Never push directly to `main`. Always use a feature branch and open a PR.
+- When a push or PR action is blocked, surface the command for manual approval rather than retrying.
+
+## Exploration Discipline
+
+- When the user points to specific docs or files, read those directly — do not launch Agent sweeps or broad Glob searches first.
+- When a bug is reported, reproduce it by running the exact failing command/test before exploring the codebase.

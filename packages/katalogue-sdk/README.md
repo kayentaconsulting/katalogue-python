@@ -365,6 +365,7 @@ Combine `include_children=True` with `OutputOptions(template=...)` to render the
 | `dbt-source` | YAML | dbt `sources.yml` structure |
 | `column-mapping` | YAML | Field-level column mapping |
 | `json-template` | JSON | Full hierarchical context as a JSON object |
+| `nested-yml` | YAML | Nested object/array fields rendered as indented YAML |
 
 ### Template only — natural format
 
@@ -448,6 +449,32 @@ default_format = "json"
 Registry entries use the logical name passed to `template=...`, plus the source
 path and default output format. If a repo defines the same name as a built-in
 template, the repo version wins.
+
+Templates receive a small set of domain helpers in the Jinja2 context:
+
+- `field_type(f)`, `field_desc(f)`, `field_is_pii(f)`, `field_is_primary_key(f)` — collapse the multi-key fallback chains for each field property
+- `dataset_desc(ds)` — same for dataset descriptions
+- `fields_tree(dataset_id=None)` — reshape the flat `fields` list into a `parent_field_id` tree (each node has a `children` list and a dotted `field_path`), so nested-column templates use Jinja2's `{% for ... recursive %}` loop instead of hand-written macros
+
+See [docs/custom-templates.md](../../docs/custom-templates.md) for the full reference and copy-paste recipes.
+
+To share reusable Jinja2 macro files across templates, register macro search paths in the same config file:
+
+`katalogue.toml`:
+
+```toml
+[macro_paths]
+paths = ["macros/"]
+```
+
+`pyproject.toml`:
+
+```toml
+[tool.katalogue.macro_paths]
+paths = ["macros/"]
+```
+
+Macro files placed next to a `.j2` template file are also importable automatically, with no config needed. See [docs/custom-templates.md](../../docs/custom-templates.md) for the full reference.
 
 Pass a path to a `.j2` file directly:
 

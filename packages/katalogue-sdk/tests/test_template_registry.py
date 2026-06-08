@@ -7,6 +7,7 @@ from pathlib import Path
 from katalogue.options import OutputOptions
 from katalogue.output import OutputPipeline
 from katalogue.rendering import get_template_extension, load_template, render_template
+from katalogue.template_registry import load_macro_paths
 
 _HIERARCHICAL_DATA = {
     "resource": "system",
@@ -153,3 +154,39 @@ def test_katalogue_toml_takes_precedence_over_pyproject(tmp_path, monkeypatch):
 
     assert render_template(load_template("override"), _HIERARCHICAL_DATA) == "catalogue"
     assert get_template_extension("override") == "yaml"
+
+
+# --- load_macro_paths ---
+
+
+def test_load_macro_paths_from_katalogue_toml(tmp_path):
+    (tmp_path / "katalogue.toml").write_text(
+        '[macro_paths]\npaths = ["macros/", "shared/macros/"]\n', encoding="utf-8"
+    )
+    paths = load_macro_paths(start_dir=tmp_path)
+    assert len(paths) == 2
+    assert paths[0] == (tmp_path / "macros").resolve()
+    assert paths[1] == (tmp_path / "shared" / "macros").resolve()
+
+
+def test_load_macro_paths_from_pyproject_toml(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.katalogue.macro_paths]\npaths = ["macros/"]\n', encoding="utf-8"
+    )
+    paths = load_macro_paths(start_dir=tmp_path)
+    assert len(paths) == 1
+    assert paths[0] == (tmp_path / "macros").resolve()
+
+
+def test_load_macro_paths_returns_empty_when_no_config(tmp_path):
+    assert load_macro_paths(start_dir=tmp_path) == []
+
+
+def test_load_macro_paths_resolves_relative_to_config_dir(tmp_path):
+    sub = tmp_path / "project"
+    sub.mkdir()
+    (sub / "katalogue.toml").write_text(
+        '[macro_paths]\npaths = ["macros/"]\n', encoding="utf-8"
+    )
+    paths = load_macro_paths(start_dir=sub)
+    assert paths[0] == (sub / "macros").resolve()
