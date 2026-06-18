@@ -29,6 +29,4 @@ runs:
     - name: Publish ${{ inputs.package_name }} to PyPI
       if: inputs.mode == 'pypi'
       shell: bash
-      run: |
-        echo "Would publish to PyPI:"
-        ls ${{ inputs.dist_glob }}
+      run: uv publish --trusted-publishing always ${{ inputs.dist_glob }}
