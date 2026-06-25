@@ -257,6 +257,7 @@ result = client.get("system", GetOptions(
 
 Operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
 String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
+Boolean values are matched tolerantly: `true` and `false` match both the JSON boolean form and any casing of the string form (`"true"`, `"True"`, `"TRUE"`).
 
 ### Sort
 

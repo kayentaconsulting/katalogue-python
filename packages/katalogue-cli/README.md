@@ -110,6 +110,7 @@ katalogue system list --filter system_type=Database
 
 Supported operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
 String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
+Boolean values are matched tolerantly: `true` and `false` match both the JSON boolean form and any casing of the string form (`"true"`, `"True"`, `"TRUE"`).
 
 ```bash
 katalogue system list --filter 'system_name contains CRM'

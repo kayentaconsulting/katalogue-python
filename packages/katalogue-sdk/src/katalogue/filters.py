@@ -107,9 +107,19 @@ def parse_filters(
 
 
 def _str_eq(a: Any, b: Any) -> bool:
-    """Case-insensitive equality for strings; exact equality otherwise."""
+    """Case-insensitive equality for strings; exact equality otherwise.
+
+    Bool/string mismatches are normalised so that the JSON boolean true and
+    the string "true" (or "True", "TRUE") are considered equal. This lets
+    filter expressions like value=true match regardless of how the API chose
+    to serialise the value.
+    """
     if isinstance(a, str) and isinstance(b, str):
         return a.lower() == b.lower()
+    if isinstance(a, bool) and isinstance(b, str):
+        return str(a).lower() == b.lower()
+    if isinstance(a, str) and isinstance(b, bool):
+        return a.lower() == str(b).lower()
     return a == b
 
 
