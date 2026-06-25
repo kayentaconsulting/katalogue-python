@@ -6,6 +6,7 @@ from pathlib import Path
 
 import jinja2
 import pytest
+import yaml
 from katalogue.rendering import (
     _build_fields_tree,
     auto_filename,
@@ -20,6 +21,7 @@ from katalogue.rendering import (
     looks_like_template_path,
     render_filename,
     render_template,
+    yaml_str,
 )
 
 
@@ -538,3 +540,114 @@ def test_helpers_registered_as_jinja_globals():
         f={"datatype_converted": "INT", "description": "n", "is_pii": True}
     )
     assert out == "INT|n|True"
+
+
+# --- yaml_str filter ---
+
+
+@pytest.mark.parametrize(
+    "value, check",
+    [
+        # empty → quoted empty string
+        ("", lambda r: r == "''"),
+        # plain string → no quotes
+        ("simple text", lambda r: r == "simple text"),
+        # YAML special char (colon-space) → PyYAML quotes it
+        (
+            "status: active",
+            lambda r: yaml.safe_load(f"k: {r}")["k"] == "status: active",
+        ),
+        # single quote in value → PyYAML handles safely
+        ("say 'hello'", lambda r: yaml.safe_load(f"k: {r}")["k"] == "say 'hello'"),
+        # multiline → double-quoted with \n escape (indent-safe at any template depth)
+        ("line1\nline2", lambda r: r == '"line1\\nline2"'),
+        # three-line
+        ("a\nb\nc", lambda r: r == '"a\\nb\\nc"'),
+        # unicode → preserved plain
+        ("Åke Söderström", lambda r: r == "Åke Söderström"),
+    ],
+)
+def test_yaml_str(value: str, check) -> None:
+    assert check(yaml_str(value))
+
+
+def test_yaml_str_roundtrips_multiline() -> None:
+    value = "first line\nsecond line\nthird line"
+    result = yaml_str(value)
+    parsed = yaml.safe_load(f"key: {result}\n")
+    assert parsed["key"] == value
+
+
+def test_yaml_str_available_as_jinja_filter() -> None:
+    from katalogue.rendering import _env
+
+    tmpl = _env().from_string("description: {{ desc | yaml_str }}")
+    assert tmpl.render(desc="hello\nworld") == 'description: "hello\\nworld"'
+
+
+# --- template multiline description safety ---
+
+
+def _ctx_with_multiline_desc() -> dict:
+    ctx = dict(_DBT_CTX)
+    ctx["datasets"] = [
+        {
+            **ctx["datasets"][0],
+            "dataset_description": "First line.\nSecond line.",
+        }
+    ]
+    ctx["fields"] = [
+        {
+            **ctx["fields"][0],
+            "field_source_description": "Line one.\nLine two.",
+        },
+        ctx["fields"][1],
+    ]
+    return ctx
+
+
+def test_dbt_source_multiline_description_is_valid_yaml() -> None:
+    output = render_template(load_template("dbt-source"), _ctx_with_multiline_desc())
+    yaml.safe_load(output)  # must not raise
+
+
+def test_dbt_source_multiline_description_preserves_newlines() -> None:
+    output = render_template(load_template("dbt-source"), _ctx_with_multiline_desc())
+    parsed = yaml.safe_load(output)
+    table = parsed["sources"][0]["tables"][0]
+    assert table["description"] == "First line.\nSecond line."
+
+
+def test_dbt_source_multiline_field_description_preserves_newlines() -> None:
+    output = render_template(load_template("dbt-source"), _ctx_with_multiline_desc())
+    parsed = yaml.safe_load(output)
+    col = parsed["sources"][0]["tables"][0]["columns"][0]
+    assert col["description"] == "Line one.\nLine two."
+
+
+def _nested_ctx_with_multiline_desc() -> dict:
+    ctx = dict(_NESTED_CTX)
+    ctx["fields"] = [
+        {
+            **ctx["fields"][0],
+            "field_source_description": "Alpha.\nBeta.",
+        },
+        *ctx["fields"][1:],
+    ]
+    return ctx
+
+
+def test_nested_yml_multiline_description_is_valid_yaml() -> None:
+    output = render_template(
+        load_template("nested-yml"), _nested_ctx_with_multiline_desc()
+    )
+    yaml.safe_load(output)  # must not raise
+
+
+def test_nested_yml_multiline_description_preserves_newlines() -> None:
+    output = render_template(
+        load_template("nested-yml"), _nested_ctx_with_multiline_desc()
+    )
+    parsed = yaml.safe_load(output)
+    field = parsed["datasources"][0]["dataset_groups"][0]["datasets"][0]["fields"][0]
+    assert field["description"] == "Alpha.\nBeta."

@@ -30,7 +30,7 @@ datasources:
 {{ '  ' * (loop.depth0 + 6) }}- name: {{ f.field_name }}
 {{ '  ' * (loop.depth0 + 6) }}  data_type: {{ field_type(f) }}
 {% if field_desc(f) %}
-{{ '  ' * (loop.depth0 + 6) }}  description: "{{ field_desc(f) }}"
+{{ '  ' * (loop.depth0 + 6) }}  description: {{ field_desc(f) | yaml_str }}
 {% endif %}
 {% if f.children %}
 {{ '  ' * (loop.depth0 + 6) }}  fields:

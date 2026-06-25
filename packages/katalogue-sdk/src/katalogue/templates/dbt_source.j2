@@ -10,12 +10,12 @@ sources:
     tables:
 {% for ds in dg_datasets %}
       - name: {{ ds.dataset_name }}
-        description: '{{ dataset_desc(ds) }}'
+        description: {{ dataset_desc(ds) | yaml_str }}
         columns:
 {% for f in fields_tree(ds.dataset_id) recursive %}
           - name: {{ f.field_path }}
             data_type: {{ field_type(f) }}
-            description: '{{ field_desc(f) }}'
+            description: {{ field_desc(f) | yaml_str }}
 {% if field_is_primary_key(f) or field_is_pii(f) %}
             config:
               meta:
