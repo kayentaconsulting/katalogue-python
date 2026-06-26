@@ -11,6 +11,11 @@ The SDK has no Click dependency and can be used in any Python environment. The C
 
 ## Installation
 
+| Package | PyPI |
+|---------|------|
+| `katalogue-cli` | [pypi.org/project/katalogue-cli](https://pypi.org/project/katalogue-cli/) |
+| `katalogue-sdk` | [pypi.org/project/katalogue-sdk](https://pypi.org/project/katalogue-sdk/) |
+
 ```bash
 # CLI (includes the SDK as a dependency)
 pip install katalogue-cli
