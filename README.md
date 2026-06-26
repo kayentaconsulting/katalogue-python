@@ -9,6 +9,16 @@ Monorepo with Python utility tools for [Katalogue](https://katalogue.se). These 
 
 The SDK has no Click dependency and can be used in any Python environment. The CLI is a thin consumer of the SDK.
 
+## Installation
+
+```bash
+# CLI (includes the SDK as a dependency)
+pip install katalogue-cli
+
+# SDK only (for use in scripts, notebooks, and services)
+pip install katalogue-sdk
+```
+
 ## Development
 
 ```bash
