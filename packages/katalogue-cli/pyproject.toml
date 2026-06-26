@@ -29,8 +29,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://katalogue.se"
-Repository = "https://github.com/kayentaconsulting/katalogue-cli"
-"Bug Tracker" = "https://github.com/kayentaconsulting/katalogue-cli/issues"
+Repository = "https://github.com/kayentaconsulting/katalogue-python"
+"Bug Tracker" = "https://github.com/kayentaconsulting/katalogue-python/issues"
 
 [project.scripts]
 katalogue = "katalogue_cli.cli.main:cli"
