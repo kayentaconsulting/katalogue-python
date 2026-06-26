@@ -14,10 +14,10 @@ Before the package is published to PyPI, install directly from GitHub:
 
 ```bash
 # with uv
-uv pip install "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk"
+uv pip install "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk"
 
 # or with pip
-pip install "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk"
+pip install "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk"
 ```
 
 ## Quick Start
