@@ -36,8 +36,10 @@ uv run katalogue --help    # smoke test the CLI entry point
 
 ## Package docs
 
-- [katalogue-sdk](packages/katalogue-sdk/README.md) — installation, credentials, client methods, error handling
-- [katalogue-cli](packages/katalogue-cli/README.md) — commands, filtering, output formats, global flags
+| Package | Topics |
+|---------|--------|
+| [katalogue-sdk](packages/katalogue-sdk/README.md) | Installation, credentials, client methods, error handling |
+| [katalogue-cli](packages/katalogue-cli/README.md) | Commands, filtering, output formats, global flags |
 
 ## Usage
 
