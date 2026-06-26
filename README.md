@@ -9,6 +9,21 @@ Monorepo with Python utility tools for [Katalogue](https://katalogue.se). These 
 
 The SDK has no Click dependency and can be used in any Python environment. The CLI is a thin consumer of the SDK.
 
+## Installation
+
+| Package | PyPI |
+|---------|------|
+| `katalogue-cli` | [pypi.org/project/katalogue-cli](https://pypi.org/project/katalogue-cli/) |
+| `katalogue-sdk` | [pypi.org/project/katalogue-sdk](https://pypi.org/project/katalogue-sdk/) |
+
+```bash
+# CLI (includes the SDK as a dependency)
+pip install katalogue-cli
+
+# SDK only (for use in scripts, notebooks, and services)
+pip install katalogue-sdk
+```
+
 ## Development
 
 ```bash
@@ -21,8 +36,10 @@ uv run katalogue --help    # smoke test the CLI entry point
 
 ## Package docs
 
-- [katalogue-sdk](packages/katalogue-sdk/README.md) — installation, credentials, client methods, error handling
-- [katalogue-cli](packages/katalogue-cli/README.md) — commands, filtering, output formats, global flags
+| Package | Topics |
+|---------|--------|
+| [katalogue-sdk](packages/katalogue-sdk/README.md) | Installation, credentials, client methods, error handling |
+| [katalogue-cli](packages/katalogue-cli/README.md) | Commands, filtering, output formats, global flags |
 
 ## Usage
 

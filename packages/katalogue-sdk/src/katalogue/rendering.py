@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from jinja2 import (
     ChoiceLoader,
     FileSystemLoader,
@@ -66,6 +68,25 @@ def dataset_desc(ds: dict[str, Any]) -> str:
     return ds.get("dataset_description") or ds.get("description") or ""
 
 
+def yaml_str(value: object) -> str:
+    """Render a value as the most readable valid YAML scalar.
+
+    - Multiline strings  → ``|-`` block scalar header followed by unindented
+      content lines; pair with Jinja2's ``indent(n, first=False)`` in the
+      template to position the content at the correct column.
+    - Simple strings     → plain scalar (no quotes)
+    - Strings with special YAML chars → quoted scalar via PyYAML
+    - Empty string       → ''
+    """
+    s = str(value)
+    if not s:
+        return "''"
+    if "\n" in s:
+        return f"|-\n{s}"
+    # yaml.dump appends '\n...\n' after plain scalars; take only the first line
+    return yaml.dump(s, allow_unicode=True, default_flow_style=False).split("\n")[0]
+
+
 def _build_fields_tree(
     fields: list[dict[str, Any]], dataset_id: Any = None
 ) -> list[dict[str, Any]]:
@@ -121,6 +142,7 @@ def _env(extra_search_paths: list[Path] | None = None) -> SandboxedEnvironment:
         undefined=StrictUndefined,
     )
     env.globals.update(_HELPER_GLOBALS)
+    env.filters["yaml_str"] = yaml_str
     return env
 
 

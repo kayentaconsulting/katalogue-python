@@ -158,7 +158,7 @@ fields:
 {{ '  ' * loop.depth0 }}- name: {{ f.field_name }}    {# 2 #}
 {{ '  ' * loop.depth0 }}  data_type: {{ field_type(f) }}
 {% if field_desc(f) %}
-{{ '  ' * loop.depth0 }}  description: "{{ field_desc(f) }}"
+{{ '  ' * loop.depth0 }}  description: {{ field_desc(f) | yaml_str | indent(loop.depth0 * 2 + 4, first=False) }}
 {% endif %}
 {% if f.children %}
 {{ '  ' * loop.depth0 }}  fields:
@@ -191,7 +191,7 @@ sources:
 {% for f in fields_tree(ds.dataset_id) recursive %}
           - name: {{ f.field_path }}
             data_type: {{ field_type(f) }}
-            description: '{{ field_desc(f) }}'
+            description: {{ field_desc(f) | yaml_str | indent(14, first=False) }}
 {{ loop(f.children) -}}
 {%- endfor %}
 {% endfor %}
@@ -341,6 +341,7 @@ Templates have access to a small set of domain helpers that absorb the most comm
 | `field_is_primary_key(f)` | `True` if `field_is_primary_key` is set | PK flag fallback |
 | `dataset_desc(ds)` | `ds.dataset_description` → `ds.description` → `''` | Dataset description fallback |
 | `fields_tree(dataset_id=None)` | List of root field dicts with `children` and `field_path` attached recursively | Manual `selectattr` + recursive macros |
+| `\| yaml_str` | *(filter)* Encodes any value as a valid YAML scalar — plain for simple strings, `|-` block scalar header for multiline (pair with `\| indent(n, first=False)` to position content), PyYAML-quoted for special characters, `''` for empty | Manual quoting / escaping in templates |
 
 `fields_tree` builds a nested view of the flat `fields` list using `parent_field_id`. With `dataset_id` it returns roots for that dataset only; with no argument it returns roots across all datasets in scope. Each node carries two derived keys:
 

@@ -9,28 +9,28 @@ sources:
         columns:
           - name: ID
             data_type: char(20)
-            description: 'Primary key'
+            description: Primary key
             config:
               meta:
                 is_primary_key: true
           - name: COUNT
             data_type: smallint
-            description: 'An integer count'
+            description: An integer count
           - name: EFFECTIVE_DT
             data_type: date
-            description: 'Effective date'
+            description: Effective date
           - name: CREATED_TS
             data_type: timestmp
-            description: 'Creation timestamp'
+            description: Creation timestamp
           - name: METADATA
             data_type: object
-            description: 'Nested object field'
+            description: Nested object field
           - name: METADATA.source
             data_type: string
-            description: 'Child string field of METADATA object'
+            description: Child string field of METADATA object
           - name: TAGS
             data_type: array
-            description: 'Array field'
+            description: Array field
           - name: TAGS.value
             data_type: string
-            description: 'Child string element of TAGS array'
+            description: Child string element of TAGS array

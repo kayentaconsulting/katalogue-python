@@ -15,13 +15,13 @@ Before the package is published to PyPI, install directly from GitHub. The CLI d
 ```bash
 # with uv
 uv pip install \
-  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk" \
-  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-cli"
+  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk" \
+  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-cli"
 
 # or with pip
 pip install \
-  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-sdk" \
-  "git+https://github.com/kayentaconsulting/katalogue-cli.git#subdirectory=packages/katalogue-cli"
+  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk" \
+  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-cli"
 ```
 
 **For development:**

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `yaml_str` Jinja2 filter for safe YAML scalar encoding in custom templates — single-line strings render as plain scalars, multiline strings render as `|-` block scalars; pair with Jinja2's native `indent(n, first=False)` to position content at the correct column, including dynamic depth inside recursive loops
+
+### Fixed
+
+- Tolerant boolean comparison in filters — `true`/`false` now match both the JSON boolean form and any casing of the string form (`"true"`, `"True"`, `"TRUE"`) (#85)
+
 ## [0.1.0] - TBD
 
 ### Added
@@ -25,5 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PyPI publish workflow with dry-run, TestPyPI, and production modes
 - VCS-based versioning via `hatch-vcs` — version derived from git tags
 
-[Unreleased]: https://github.com/kayentaconsulting/katalogue-cli/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/kayentaconsulting/katalogue-cli/releases/tag/v0.1.0
+[Unreleased]: https://github.com/kayentaconsulting/katalogue-python/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/kayentaconsulting/katalogue-python/releases/tag/v0.1.0
