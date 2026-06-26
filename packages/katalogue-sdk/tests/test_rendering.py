@@ -559,10 +559,10 @@ def test_helpers_registered_as_jinja_globals():
         ),
         # single quote in value → PyYAML handles safely
         ("say 'hello'", lambda r: yaml.safe_load(f"k: {r}")["k"] == "say 'hello'"),
-        # multiline → double-quoted with \n escape (indent-safe at any template depth)
-        ("line1\nline2", lambda r: r == '"line1\\nline2"'),
+        # multiline → block scalar header; pair with indent() in template
+        ("line1\nline2", lambda r: r == "|-\nline1\nline2"),
         # three-line
-        ("a\nb\nc", lambda r: r == '"a\\nb\\nc"'),
+        ("a\nb\nc", lambda r: r == "|-\na\nb\nc"),
         # unicode → preserved plain
         ("Åke Söderström", lambda r: r == "Åke Söderström"),
     ],
@@ -571,18 +571,23 @@ def test_yaml_str(value: str, check) -> None:
     assert check(yaml_str(value))
 
 
-def test_yaml_str_roundtrips_multiline() -> None:
+def test_yaml_str_roundtrips_multiline_with_indent() -> None:
+    from katalogue.rendering import _env
+
     value = "first line\nsecond line\nthird line"
-    result = yaml_str(value)
-    parsed = yaml.safe_load(f"key: {result}\n")
+    tmpl = _env().from_string("key: {{ v | yaml_str | indent(2, first=False) }}")
+    parsed = yaml.safe_load(tmpl.render(v=value))
     assert parsed["key"] == value
 
 
 def test_yaml_str_available_as_jinja_filter() -> None:
     from katalogue.rendering import _env
 
-    tmpl = _env().from_string("description: {{ desc | yaml_str }}")
-    assert tmpl.render(desc="hello\nworld") == 'description: "hello\\nworld"'
+    tmpl = _env().from_string(
+        "description: {{ desc | yaml_str | indent(2, first=False) }}"
+    )
+    result = tmpl.render(desc="hello\nworld")
+    assert yaml.safe_load(result)["description"] == "hello\nworld"
 
 
 # --- template multiline description safety ---

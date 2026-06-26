@@ -71,7 +71,9 @@ def dataset_desc(ds: dict[str, Any]) -> str:
 def yaml_str(value: object) -> str:
     """Render a value as the most readable valid YAML scalar.
 
-    - Multiline strings  → double-quoted with \\n escapes (indent-safe at any depth)
+    - Multiline strings  → ``|-`` block scalar header followed by unindented
+      content lines; pair with Jinja2's ``indent(n, first=False)`` in the
+      template to position the content at the correct column.
     - Simple strings     → plain scalar (no quotes)
     - Strings with special YAML chars → quoted scalar via PyYAML
     - Empty string       → ''
@@ -80,8 +82,7 @@ def yaml_str(value: object) -> str:
     if not s:
         return "''"
     if "\n" in s:
-        escaped = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
-        return f'"{escaped}"'
+        return f"|-\n{s}"
     # yaml.dump appends '\n...\n' after plain scalars; take only the first line
     return yaml.dump(s, allow_unicode=True, default_flow_style=False).split("\n")[0]
 
