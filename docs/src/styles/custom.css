@@ -343,15 +343,19 @@ code {
 }
 
 /* Home page hero */
+.content-panel h1:first-child {
+  margin-bottom: 0.4rem;
+}
+
 .hero-section {
-  padding: 2.5rem 0 2rem;
+  padding: 0.5rem 0 2rem;
 }
 
 .hero-section h1 {
   font-size: 2.8rem;
   font-weight: 700;
   line-height: 1.15;
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
   color: var(--text-color-main);
 }
 
