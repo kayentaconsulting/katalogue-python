@@ -341,7 +341,36 @@ Templates have access to a small set of domain helpers that absorb the most comm
 | `field_is_primary_key(f)` | `True` if `field_is_primary_key` is set | PK flag fallback |
 | `dataset_desc(ds)` | `ds.dataset_description` → `ds.description` → `''` | Dataset description fallback |
 | `fields_tree(dataset_id=None)` | List of root field dicts with `children` and `field_path` attached recursively | Manual `selectattr` + recursive macros |
-| `\| yaml_str` | *(filter)* Encodes any value as a valid YAML scalar — plain for simple strings, `|-` block scalar header for multiline (pair with `\| indent(n, first=False)` to position content), PyYAML-quoted for special characters, `''` for empty | Manual quoting / escaping in templates |
+| `\| yaml_str` | *(filter)* Encodes any value as a valid YAML scalar — plain for simple strings, `|-` block scalar for multiline or tab-containing strings (pair with `\| indent(n, first=False)` to position content), PyYAML-quoted for special characters, `''` for empty | Manual quoting / escaping in templates |
+
+#### yaml_str in detail
+
+`yaml_str` always produces a string you can place after a YAML key without breaking the document, regardless of what the value contains. The exact form depends on the content:
+
+| Input | Output form | Example |
+|---|---|---|
+| Empty string | Quoted empty | `''` |
+| Simple string (no special chars) | Plain scalar | `hello world` |
+| Contains `"`, `:`, `#`, `{`, etc. | PyYAML-quoted scalar | `'status: active'` |
+| Contains a newline or tab | `\|-` block scalar header | `\|-` followed by the content |
+
+Leading and trailing whitespace is stripped from each line of block scalar content, so accidental indentation from data entry or copy-paste is removed automatically.
+
+For block scalar output (newlines or tabs), the `\|-` header must appear immediately after the key, and the content lines must be indented more than the key. The `indent(n, first=False)` filter handles this — `n` is the number of spaces the content should be indented from column 0, and `first=False` leaves the header (`\|-`) on the same line as the key:
+
+```jinja2
+{# n = 14: the content starts 14 spaces from the left #}
+description: {{ field_desc(f) | yaml_str | indent(14, first=False) }}
+```
+
+Renders to valid YAML for any description — a short plain value stays on one line, a long value with tabs or newlines becomes a properly indented block scalar.
+
+**Always include `| indent(n, first=False)`** when rendering `yaml_str` into a YAML mapping value. Without it, block scalars will be misindented and the document will be invalid. The `n` value in nested contexts is the total number of spaces from column 0:
+
+```jinja2
+{# loop.depth0 = 2, outer indent = 6 → n = 2*2 + 4 = 8 + 4 = 12 total spaces #}
+{{ '  ' * (loop.depth0 + 6) }}  description: {{ field_desc(f) | yaml_str | indent((loop.depth0 + 6) * 2 + 4, first=False) }}
+```
 
 `fields_tree` builds a nested view of the flat `fields` list using `parent_field_id`. With `dataset_id` it returns roots for that dataset only; with no argument it returns roots across all datasets in scope. Each node carries two derived keys:
 
