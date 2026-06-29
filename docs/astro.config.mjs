@@ -71,10 +71,6 @@ export default defineConfig({
             { label: 'Troubleshooting', link: '/reference/troubleshooting' },
           ],
         },
-        {
-          label: 'Maintainers',
-          items: [{ label: 'Publishing to PyPI', link: '/maintainers/publishing' }],
-        },
         { label: '↗ Katalogue Docs', link: 'https://docs.katalogue.se', attrs: { target: '_blank' } },
       ],
     }),
