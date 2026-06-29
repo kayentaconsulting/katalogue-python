@@ -1,4 +1,7 @@
-# SDK options and results
+---
+title: SDK options and results
+description: GetOptions, OutputOptions, CatalogResult, WrittenFile, and Filter reference.
+---
 
 `client.get(resource, options)` is the single entry point for querying the catalog.
 A `GetOptions` object controls routing, filtering, sorting, and output; the call

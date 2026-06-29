@@ -1,4 +1,7 @@
-# Exporting hierarchies
+---
+title: Exporting hierarchies
+description: End-to-end recipes for include-children, split-by, and templated exports.
+---
 
 The most common real-world task is pulling a resource together with all its children
 and writing the result somewhere useful — a JSON snapshot, a set of dbt source files,

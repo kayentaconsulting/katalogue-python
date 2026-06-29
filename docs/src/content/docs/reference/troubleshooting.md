@@ -1,4 +1,7 @@
-# Troubleshooting
+---
+title: Troubleshooting
+description: Common errors and how to resolve them — auth, config, API, and usage errors.
+---
 
 Common errors and how to resolve them. The CLI and SDK raise the same underlying
 errors; the CLI maps them to [exit codes](../cli/commands.md#exit-codes) and stderr

@@ -1,4 +1,7 @@
-# CLI command reference
+---
+title: CLI command reference
+description: Every CLI command, flag, and exit code for the Katalogue CLI.
+---
 
 Every command follows the same shape:
 

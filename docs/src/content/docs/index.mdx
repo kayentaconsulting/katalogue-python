@@ -1,0 +1,35 @@
+---
+title: Katalogue SDK & CLI
+description: Python SDK and CLI for the Katalogue Data Catalog API.
+---
+
+import { Card, CardGrid, LinkButton } from '@astrojs/starlight/components';
+
+<div class="hero-section">
+  <div class="hero-text">
+    <p class="hero-tagline">Python tools for Katalogue — install the CLI for the terminal or the SDK for Python scripts and pipelines.</p>
+    <div class="hero-actions">
+      <LinkButton href="/katalogue-python/getting-started" icon="right-arrow">Getting started</LinkButton>
+      <LinkButton href="https://katalogue.se" icon="external" variant="minimal">katalogue.se</LinkButton>
+    </div>
+  </div>
+</div>
+
+<CardGrid>
+  <Card title="CLI" icon="laptop">
+    Install `katalogue` and query the catalog from any terminal. Outputs JSON, YAML, CSV, and formatted tables.
+    [CLI commands →](/katalogue-python/cli/commands)
+  </Card>
+  <Card title="SDK" icon="puzzle">
+    Import `katalogue` in Python scripts and pipelines. Filter, sort, and template results programmatically.
+    [SDK client →](/katalogue-python/sdk/client)
+  </Card>
+  <Card title="Templates" icon="document">
+    Render dbt sources, column mappings, or your own Jinja2 templates directly from the catalog.
+    [Templates guide →](/katalogue-python/guides/templates)
+  </Card>
+  <Card title="Exporting" icon="rocket">
+    Export full system hierarchies split by datasource or dataset — one file per object.
+    [Exporting guide →](/katalogue-python/guides/exporting)
+  </Card>
+</CardGrid>

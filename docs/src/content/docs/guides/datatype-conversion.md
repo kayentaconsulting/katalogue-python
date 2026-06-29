@@ -1,4 +1,7 @@
-# Datatype Converter
+---
+title: Datatype conversion
+description: Map native source types to target platform types with built-in or custom converters.
+---
 
 Datatype conversion converts native source database types (e.g. `VARCHAR(255)` from SQL Server) to target platform types (e.g. `STRING` for Databricks, `StringType()` for PySpark). When active, every field record in hierarchical exports and direct field results gains a `datatype_converted` property.
 

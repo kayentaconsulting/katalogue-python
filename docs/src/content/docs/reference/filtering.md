@@ -1,4 +1,7 @@
-# Filtering, selection, and sorting
+---
+title: Filtering, selection, and sorting
+description: Filter expressions, operators, dotted paths, property selection, and sort syntax.
+---
 
 Filtering, property selection, and sorting are the same concepts whether you use the
 CLI (`--filter`, `--properties`) or the SDK (`GetOptions`). All of it happens
