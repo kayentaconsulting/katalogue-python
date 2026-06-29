@@ -1,6 +1,7 @@
 # katalogue-cli
 
-CLI for [Katalogue](https://katalogue.se), based on the Katalogue REST API.
+Command-line interface for [Katalogue](https://katalogue.se), built on the Katalogue
+REST API. A thin wrapper over [`katalogue-sdk`](https://pypi.org/project/katalogue-sdk/).
 
 ## Installation
 
@@ -10,361 +11,33 @@ pip install katalogue-cli
 uv add katalogue-cli
 ```
 
-Before the package is published to PyPI, install directly from GitHub. The CLI depends on `katalogue-sdk`, so both must be provided together:
+## Quick start
 
 ```bash
-# with uv
-uv pip install \
-  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk" \
-  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-cli"
+# Store credentials once (client secret goes to your OS keychain)
+katalogue auth login
 
-# or with pip
-pip install \
-  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-sdk" \
-  "git+https://github.com/kayentaconsulting/katalogue-python.git#subdirectory=packages/katalogue-cli"
-```
+# ...or use environment variables
+export KATALOGUE_CLIENT_ID=...
+export KATALOGUE_CLIENT_SECRET=...
+export KATALOGUE_URL=https://your-instance.katalogue.se
 
-**For development:**
-
-```bash
-git clone <repo-url>
-cd katalogue-cli
-uv sync
-```
-
-Verify the install:
-
-```bash
-katalogue --version
-```
-
-## Configuration
-
-The CLI authenticates using [OAuth2 client credentials from Katalogue](https://docs.katalogue.se/using-katalogue/katalogue_cli_and_sdk/#granting-access-to-katalogue). Set these environment variables (or pass them as flags):
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `KATALOGUE_CLIENT_ID` | Yes | — | OAuth2 client ID |
-| `KATALOGUE_CLIENT_SECRET` | Yes | — | OAuth2 client secret |
-| `KATALOGUE_URL` | No | `https://your-instance.katalogue.se` | API base URL |
-| `KATALOGUE_TOKEN_URL` | No | `https://your-instance.katalogue.se/oidc/token` | OAuth2 token endpoint |
-
-**Precedence:** CLI flag > environment variable > default value.
-
-OAuth2 scopes are derived automatically per operation (e.g. `system.read` for system commands).
-
-## Resources
-
-The hierarchy is: **system → datasource → dataset-group → dataset → field**
-
-| Resource | Commands |
-|----------|----------|
-| `system` | `list`, `get`, `keys` |
-| `datasource` | `list`, `get`, `keys` |
-| `dataset-group` | `list`, `get`, `keys` |
-| `dataset` | `list`, `get`, `keys` |
-| `field` | `list`, `get`, `keys` |
-| `glossary` | `list`, `get`, `keys` |
-
-## Commands
-
-### list
-
-```bash
+# First call
 katalogue system list
-katalogue field list --dataset <id>
-katalogue datasource list --system <id>
-katalogue dataset-group list --datasource <id>
-katalogue dataset list --dataset-group <id>
 ```
 
-### get
-
-```bash
-katalogue system get <id>
-katalogue field get <id>
-```
-
-### keys
-
-Discover available field names for use with `--filter` and `--properties`:
-
-```bash
-katalogue field keys              # one key per line
-katalogue dataset keys --format json
-```
-
-The keys come from a live API call — they reflect what the API actually returns.
-
-## Filtering and output
-
-### --filter
-
-Filter results by any column value. Repeat for AND logic:
-
-```bash
-katalogue field list --filter is_pii=true
-katalogue field list --filter is_pii=true --filter field_type=TEXT
-katalogue system list --filter system_type=Database
-```
-
-Supported operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startswith`, `endswith`.
-String operators (`=`, `contains`, `startswith`, `endswith`) are case-insensitive.
-Boolean values are matched tolerantly: `true` and `false` match both the JSON boolean form and any casing of the string form (`"true"`, `"True"`, `"TRUE"`).
-
-```bash
-katalogue system list --filter 'system_name contains CRM'
-katalogue field list --filter 'field_name startswith user_'
-```
-
-All filtering happens client-side after the API fetch.
-
-### --properties
-
-Return only specific properties — useful for large responses or scripting:
-
-```bash
-katalogue system list --properties system_id,system_name
-katalogue field list --properties field_name,is_pii --format json
-```
-
-### --format
-
-Controls the serialization format of the output.
-
-| Format | Output | Best for |
-|--------|--------|----------|
-| `table` | Human-readable table (default for `list`) | Interactive use |
-| `json` | Pretty-printed JSON (default for `get`) | Scripting, piping to `jq` |
-| `yaml` / `yml` | YAML | Config files, readability |
-| `json-compact` / `compact` | Single-line JSON, no whitespace | Streaming, `grep` |
-| `csv` | CSV, flattened to lowest level | Spreadsheets, data analysis |
-
-```bash
-katalogue system list --format table
-katalogue system list --format json
-katalogue system list --format yaml
-katalogue field list --format csv
-katalogue field list --format json-compact | grep '"is_pii":true'
-```
-
-When `--include-children` is used with `--format csv`, hierarchical data is flattened to the lowest available level (fields if present, otherwise datasets, dataset groups, or datasources). Parent values are repeated in every child row.
-
-```bash
-katalogue system get 1 --include-children --format csv
-# -> one CSV row per field, with system/datasource/dataset columns denormalized into each row
-```
-
-### --datatype-converter
-
-Converts source database types to target platform types. Each field record in hierarchical exports and direct field responses gains a `datatype_converted` property alongside the original `datatype_fullname` or `field_datatype`.
-
-Built-in datatype converters:
-
-| Name | Source | Target |
-|------|--------|--------|
-| `sqlserver-to-databricks` | SQL Server | Databricks SQL |
-| `sqlserver-to-pyspark` | SQL Server | PySpark types |
-| `db2-to-databricks` | IBM DB2 | Databricks SQL |
-| `db2-to-pyspark` | IBM DB2 | PySpark types |
-| `postgres-to-databricks` | PostgreSQL | Databricks SQL |
-| `postgres-to-pyspark` | PostgreSQL | PySpark types |
-
-```bash
-# See datatype_converted in JSON output
-katalogue dataset get <id> --include-children --datatype-converter sqlserver-to-databricks --format json
-
-# Use datatype_converted in column-mapping template
-katalogue datasource export <id> --datatype-converter postgres-to-databricks --template column-mapping
-
-# Field list/get responses are also enriched
-katalogue field list --datatype-converter sqlserver-to-databricks --format json
-```
-
-### Add your own datatype converter
-
-Create a YAML file with `source`, `target`, and a `mappings` table:
-
-```yaml
-source: oracle
-target: snowflake
-mappings:
-  VARCHAR2: VARCHAR
-  NUMBER: "NUMBER{args}"
-  TIMESTAMP WITH TIME ZONE: TIMESTAMP_LTZ
-```
-
-`{args}` preserves the original parenthesised suffix, so `NUMBER(10,2)` stays `NUMBER(10,2)` while `NUMBER` stays `NUMBER`.
-
-Then either:
-
-- reference it directly with `--datatype-converter ./mappings/oracle_snowflake.yaml`
-- or register it in `katalogue.toml` or `[tool.katalogue.datatype_converters]` in `pyproject.toml`
-
-Repo-registered names override built-ins with the same name. Direct `.yml` paths work too. See [docs/datatype-converter.md](../../docs/datatype-converter.md) for the full reference.
-
-### --template
-
-Renders the result using a Jinja2 template. Templates control the structure and shape of the output independently of `--format`.
-You can reference built-ins, repo-registered templates, or direct `.j2` files.
-Repo-local templates are registered in `katalogue.toml` or in
-`[tool.katalogue.templates]` inside `pyproject.toml`.
-
-`katalogue.toml`:
-
-```toml
-[templates.dbt-source]
-path = "templates/dbt-source.j2"
-default_format = "yaml"
-```
-
-`pyproject.toml`:
-
-```toml
-[tool.katalogue.templates.dbt-source]
-path = "templates/dbt-source.j2"
-default_format = "yaml"
-```
-
-If a repo defines the same name as a built-in template, the repo version wins.
-
-| Template | Output | Description |
-|----------|--------|-------------|
-| `dbt-source` | YAML | dbt `sources.yml` structure |
-| `column-mapping` | YAML | Field-level column mapping |
-| `json-template` | JSON | Full hierarchical context as JSON |
-| `nested-yml` | YAML | Nested object/array fields rendered as indented YAML |
-| `customer-mapping` | depends | Repo-registered template name |
-| `./path/to/file.j2` | depends | Custom Jinja2 template file |
-
-```bash
-# Built-in templates — use natural format (YAML or JSON)
-katalogue datasource export 5 --template dbt-source
-katalogue datasource export 5 --template column-mapping
-katalogue datasource export 5 --template json-template
-
-# Custom .j2 file
-katalogue datasource export 5 --template ./my_template.j2
-```
-
-Template rendering uses the `export` command, which assembles the full hierarchy under the resource before rendering. `system`, `datasource`, `dataset-group`, and `dataset` each have an `export` subcommand.
-Custom template filenames like `my_template.json.j2` or `my_template.yml.j2` are valid.
-`my_template.j2.json` is not, because the template source must still end in `.j2`.
-
-For a full reference on writing your own templates — available context variables, field keys, Jinja2 environment, and worked examples — see [docs/custom-templates.md](../../docs/custom-templates.md).
-
-### Combining --template and --format
-
-Use `--format` alongside `--template` to convert the template's natural output to another serialization format:
-
-```bash
-# dbt-source renders YAML by default; convert to JSON
-katalogue datasource export 5 --template dbt-source --format json
-
-# Convert dbt-source YAML to compact JSON
-katalogue datasource export 5 --template dbt-source --format json-compact
-
-# json-template renders JSON by default; convert to YAML
-katalogue datasource export 5 --template json-template --format yaml
-```
-
-`--format table` cannot be combined with `--template`.
-
-## Hierarchical Retrieval
-
-Use `--include-children` on any `get` command to fetch the resource and all its descendants in a single call:
-
-```bash
-katalogue system get 1 --include-children
-katalogue datasource get 5 --include-children --format json
-katalogue datasource get 5 --include-children --format yaml
-```
-
-### Writing output to files
-
-Use `--output-file` to write the rendered output to a file instead of printing it:
-
-```bash
-# Write JSON to a file
-katalogue system get 1 --include-children --format json --output-file ./export.json
-
-# Write dbt-source YAML to a file
-katalogue datasource export 5 --template dbt-source --output-file ./sources.yml
-
-# Overwrite existing file
-katalogue datasource export 5 --template dbt-source \
-  --output-file ./sources.yml --overwrite
-```
-
-### Splitting output into multiple files
-
-Use `--split-by` with `--output-dir` to write one file per resource level:
-
-```bash
-# One JSON file per dataset
-katalogue system get 1 --include-children --format json \
-  --split-by dataset --output-dir ./out/
-
-# One dbt-source YAML file per dataset
-katalogue system export 1 --template dbt-source \
-  --split-by dataset --output-dir ./dbt/models/
-
-# One file per datasource, converted to JSON
-katalogue system export 1 --template dbt-source --format json \
-  --split-by datasource --output-dir ./out/
-```
-
-Valid `--split-by` levels depend on the root resource:
-
-| Root resource | Valid split levels |
-|---------------|--------------------|
-| `system` | `system`, `datasource`, `dataset_group`, `dataset` |
-| `datasource` | `datasource`, `dataset_group`, `dataset` |
-| `dataset_group` | `dataset_group`, `dataset` |
-| `dataset` | `dataset` |
-
-**File extensions** are derived automatically: `--format yaml` → `.yaml`, `--format json` → `.json`, `--format csv` → `.csv`, built-in or repo-registered templates use their configured default format, and direct `.j2` files fall back to `.yml`.
-
-### Custom filename template
-
-```bash
-katalogue system export 1 --template dbt-source \
-  --split-by dataset --output-dir ./out \
-  --filename-template '{{ dataset.dataset_name }}.yml'
-```
-
-### Dry run
-
-Preview planned files without writing them:
-
-```bash
-katalogue system export 1 --template dbt-source \
-  --split-by dataset --output-dir ./out --dry-run
-```
-
-## Global flags
-
-| Flag | Env var | Description |
-|------|---------|-------------|
-| `--client-id` | `KATALOGUE_CLIENT_ID` | OAuth2 client ID |
-| `--client-secret` | `KATALOGUE_CLIENT_SECRET` | OAuth2 client secret |
-| `--base-url` | `KATALOGUE_URL` | API base URL |
-| `--token-url` | `KATALOGUE_TOKEN_URL` | OAuth2 token endpoint |
-| `--verbose` / `-v` | — | Show HTTP request details on stderr |
-| `--version` | — | Show version and exit |
-
-## Exit codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | API error, auth error, or missing configuration |
-| 2 | CLI usage error (bad arguments) |
-
-## Development
-
-```bash
-uv sync           # install dependencies
-uv run pytest     # run all tests
-uv run katalogue --help
-```
+Get API credentials by [creating an OAuth2 client in Katalogue](https://docs.katalogue.se/using-katalogue/katalogue_cli_and_sdk/#granting-access-to-katalogue).
+
+## Documentation
+
+Full documentation lives in the repository:
+
+- [Getting started](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/getting-started.md)
+- [Command reference](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/cli/commands.md)
+- [Output formats and file output](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/cli/output-formats.md)
+- [Filtering and selection](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/reference/filtering.md)
+- [Templates](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/templates.md)
+ · [Exporting](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/exporting.md)
+ · [Datatype conversion](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/datatype-conversion.md)
+- [Troubleshooting](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/reference/troubleshooting.md)
+- [Documentation index](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/index.md)

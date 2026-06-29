@@ -4,8 +4,8 @@ Releases are triggered manually from a tag ref. Nothing publishes automatically 
 
 ## Files
 
-- [`.github/workflows/pypi-publish.yml`](../.github/workflows/pypi-publish.yml) — entry point
-- [`.github/workflows/_pypi-publish-package.yml`](../.github/workflows/_pypi-publish-package.yml) — builds and publishes one package
+- [`.github/workflows/pypi-publish.yml`](../../.github/workflows/pypi-publish.yml) — entry point
+- [`.github/actions/pypi-publish-package/action.yml`](../../.github/actions/pypi-publish-package/action.yml) — composite action that builds and publishes one package
 
 ## How to Release
 
@@ -42,20 +42,21 @@ Running from a branch ref or a malformed tag will fail at the validation step be
 
 ## Pipeline
 
-The entry workflow runs three jobs in order:
+The entry workflow runs two jobs in order:
 
 ```
-validate-tag → publish-sdk → publish-cli
+validate-tag → publish
 ```
 
-The SDK publishes before the CLI because `katalogue-cli` depends on `katalogue-sdk`.
+The `publish` job publishes both packages in sequence — `katalogue-sdk` first, then
+`katalogue-cli`, because the CLI depends on the SDK. Each package is handled by the
+`pypi-publish-package` composite action, which:
 
-Each package job is handled by the reusable workflow, which:
+1. Builds the package with `uv build`
+2. Uploads to the target registry based on `mode`
 
-1. Checks out the repo with full history (required for `hatch-vcs` version derivation)
-2. Sets up `uv`
-3. Builds the package with `uv build`
-4. Uploads to the target registry based on `mode`
+The job checks out the repo with full history (`fetch-depth: 0`), required for
+`hatch-vcs` version derivation.
 
 ## Versioning
 
