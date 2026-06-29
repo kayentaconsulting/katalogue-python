@@ -1,20 +1,19 @@
 ---
 title: Katalogue SDK & CLI
 description: Python SDK and CLI for the Katalogue Data Catalog API.
-template: splash
-hero:
-  tagline: Python tools for Katalogue — install the CLI for the terminal or the SDK for Python scripts and pipelines.
-  actions:
-    - text: Getting started
-      link: /katalogue-python/getting-started
-      icon: right-arrow
-    - text: katalogue.se
-      link: https://katalogue.se
-      icon: external
-      variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkButton } from '@astrojs/starlight/components';
+
+<div class="hero-section">
+  <div class="hero-text">
+    <p class="hero-tagline">Python tools for Katalogue — install the CLI for the terminal or the SDK for Python scripts and pipelines.</p>
+    <div class="hero-actions">
+      <LinkButton href="/katalogue-python/getting-started" icon="right-arrow">Getting started</LinkButton>
+      <LinkButton href="https://katalogue.se" icon="external" variant="minimal">katalogue.se</LinkButton>
+    </div>
+  </div>
+</div>
 
 <CardGrid>
   <Card title="CLI" icon="laptop">

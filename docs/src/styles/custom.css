@@ -140,14 +140,6 @@ site-search button:hover svg {
   display: none;
 }
 
-/* Hide left sidebar on splash/hero pages */
-[data-has-sidebar]:has(.hero) .sidebar-pane {
-  display: none;
-}
-
-[data-has-sidebar]:has(.hero) .main-frame {
-  margin-inline-start: 0;
-}
 
 .page:has(.sidebar) .main-frame {
   background: var(--bg-color-secondary);
@@ -348,4 +340,32 @@ code {
     margin-right: 0;
     margin-left: 0;
   }
+}
+
+/* Home page hero */
+.hero-section {
+  padding: 2.5rem 0 2rem;
+}
+
+.hero-section h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+  color: var(--text-color-main);
+}
+
+.hero-tagline {
+  font-size: 1.1rem;
+  color: var(--text-color-secondary);
+  max-width: 44ch;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
