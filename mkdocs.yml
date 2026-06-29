@@ -1,5 +1,5 @@
-site_name: Katalogue
-site_description: Python CLI and SDK for the Katalogue Data Catalog API
+site_name: Katalogue SDK & CLI
+site_description: Python SDK and CLI for the Katalogue Data Catalog API
 site_url: https://kayentaconsulting.github.io/katalogue-python/
 repo_url: https://github.com/kayentaconsulting/katalogue-python
 repo_name: kayentaconsulting/katalogue-python

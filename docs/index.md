@@ -1,4 +1,4 @@
-# Katalogue documentation
+# Katalogue SDK & CLI
 
 Python tools for [Katalogue](https://katalogue.se), built on the Katalogue REST API.
 There are two packages sharing one core:
