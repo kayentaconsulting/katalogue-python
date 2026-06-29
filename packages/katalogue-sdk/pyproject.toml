@@ -29,6 +29,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://katalogue.se"
+Documentation = "https://kayentaconsulting.github.io/katalogue-python/"
 Repository = "https://github.com/kayentaconsulting/katalogue-python"
 "Bug Tracker" = "https://github.com/kayentaconsulting/katalogue-python/issues"
 
