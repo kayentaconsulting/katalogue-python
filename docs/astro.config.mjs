@@ -24,6 +24,10 @@ export default defineConfig({
       head: [
         {
           tag: 'link',
+          attrs: { rel: 'icon', type: 'image/svg+xml', href: '/katalogue-python/favicon.svg' },
+        },
+        {
+          tag: 'link',
           attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         },
         {
@@ -70,10 +74,6 @@ export default defineConfig({
             { label: 'Resources', link: '/reference/resources' },
             { label: 'Troubleshooting', link: '/reference/troubleshooting' },
           ],
-        },
-        {
-          label: 'Maintainers',
-          items: [{ label: 'Publishing to PyPI', link: '/maintainers/publishing' }],
         },
         { label: '↗ Katalogue Docs', link: 'https://docs.katalogue.se', attrs: { target: '_blank' } },
       ],
