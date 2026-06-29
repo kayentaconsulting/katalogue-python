@@ -1,4 +1,7 @@
-# Output formats and file output
+---
+title: Output formats and file output
+description: All output formats, CSV behaviour, file writing, split-by, and dry-run.
+---
 
 The CLI separates **what** the data looks like (`--format`), **how** it is shaped
 (`--template`), and **where** it goes (stdout, a file, or many files). This page

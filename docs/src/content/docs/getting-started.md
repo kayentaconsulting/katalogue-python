@@ -1,4 +1,7 @@
-# Getting started
+---
+title: Getting started
+description: Install the Katalogue CLI or SDK, configure credentials, and run your first command.
+---
 
 Katalogue ships two packages that share one core:
 

@@ -1,4 +1,7 @@
-# SDK client and authentication
+---
+title: SDK client and authentication
+description: KatalogueClient setup, credential sources, OAuth2 token caching, and error types.
+---
 
 `katalogue-sdk` is a standalone Python client for the Katalogue REST API. It has no
 Click or CLI dependency and can be used in scripts, notebooks, services, and agents.

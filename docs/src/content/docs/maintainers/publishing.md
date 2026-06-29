@@ -1,4 +1,7 @@
-# PyPI Publish Guide
+---
+title: Publishing to PyPI
+description: How to tag, trigger, and approve a release to PyPI or TestPyPI.
+---
 
 Releases are triggered manually from a tag ref. Nothing publishes automatically on push.
 

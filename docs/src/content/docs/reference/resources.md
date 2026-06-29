@@ -1,4 +1,7 @@
-# Resources reference
+---
+title: Resources reference
+description: Resource hierarchy, CLI vs SDK naming, default table columns, and response shape.
+---
 
 The catalog is a hierarchy of resources. This page describes the hierarchy, the
 default columns shown in CLI tables, the field keys the built-in tooling relies on,

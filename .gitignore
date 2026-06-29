@@ -176,5 +176,7 @@ git_ignored/
 # crash dumps
 *.stackdump
 
-# MkDocs build output
-site/
+# Astro/Starlight build output
+docs/dist/
+docs/node_modules/
+docs/.astro/
