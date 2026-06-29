@@ -46,6 +46,7 @@
   --border-radius-small: 5px;
 
   /* Astro Starlight overrides */
+  --__sl-font: 'Rubik', sans-serif;
   --sl-font: 'Rubik', sans-serif;
   --sl-color-text-accent: var(--text-color-complementary);
   --sl-color-hairline-light: var(--border-color-light);
@@ -137,6 +138,15 @@ site-search button:hover svg {
 
 .main-frame:has(.hero) .meta {
   display: none;
+}
+
+/* Hide left sidebar on splash/hero pages */
+[data-has-sidebar]:has(.hero) .sidebar-pane {
+  display: none;
+}
+
+[data-has-sidebar]:has(.hero) .main-frame {
+  margin-inline-start: 0;
 }
 
 .page:has(.sidebar) .main-frame {

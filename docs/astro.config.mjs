@@ -15,10 +15,20 @@ export default defineConfig({
           href: 'https://github.com/kayentaconsulting/katalogue-python',
         },
       ],
+      logo: {
+        light: './src/assets/logo-light.svg',
+        dark: './src/assets/logo-dark.svg',
+        replacesTitle: true,
+        alt: 'Katalogue SDK & CLI',
+      },
       head: [
         {
           tag: 'link',
           attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        },
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         },
         {
           tag: 'link',
