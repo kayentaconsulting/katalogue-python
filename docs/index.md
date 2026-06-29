@@ -44,4 +44,4 @@ The CLI is a thin wrapper over the SDK — same authentication, same capabilitie
 ---
 
 Source and issues: [github.com/kayentaconsulting/katalogue-python](https://github.com/kayentaconsulting/katalogue-python).
-Contributions welcome — see [CONTRIBUTING.md](../CONTRIBUTING.md).
+Contributions welcome — see [CONTRIBUTING.md](https://github.com/kayentaconsulting/katalogue-python/blob/main/CONTRIBUTING.md).

@@ -1,0 +1,66 @@
+site_name: Katalogue
+site_description: Python CLI and SDK for the Katalogue Data Catalog API
+site_url: https://kayentaconsulting.github.io/katalogue-python/
+repo_url: https://github.com/kayentaconsulting/katalogue-python
+repo_name: kayentaconsulting/katalogue-python
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - CLI:
+      - Commands: cli/commands.md
+      - Output & file output: cli/output-formats.md
+  - SDK:
+      - Client & authentication: sdk/client.md
+      - Options & results: sdk/options.md
+  - Guides:
+      - Exporting hierarchies: guides/exporting.md
+      - Templates: guides/templates.md
+      - Datatype conversion: guides/datatype-conversion.md
+  - Reference:
+      - Filtering & selection: reference/filtering.md
+      - Resources: reference/resources.md
+      - Troubleshooting: reference/troubleshooting.md
+  - Maintainers:
+      - Publishing to PyPI: maintainers/publishing.md

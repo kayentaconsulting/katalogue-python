@@ -4,8 +4,8 @@ Releases are triggered manually from a tag ref. Nothing publishes automatically 
 
 ## Files
 
-- [`.github/workflows/pypi-publish.yml`](../../.github/workflows/pypi-publish.yml) — entry point
-- [`.github/actions/pypi-publish-package/action.yml`](../../.github/actions/pypi-publish-package/action.yml) — composite action that builds and publishes one package
+- [`.github/workflows/pypi-publish.yml`](https://github.com/kayentaconsulting/katalogue-python/blob/main/.github/workflows/pypi-publish.yml) — entry point
+- [`.github/actions/pypi-publish-package/action.yml`](https://github.com/kayentaconsulting/katalogue-python/blob/main/.github/actions/pypi-publish-package/action.yml) — composite action that builds and publishes one package
 
 ## How to Release
 
