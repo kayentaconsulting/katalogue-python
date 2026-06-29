@@ -565,6 +565,26 @@ def test_helpers_registered_as_jinja_globals():
         ("a\nb\nc", lambda r: r == "|-\na\nb\nc"),
         # unicode → preserved plain
         ("Åke Söderström", lambda r: r == "Åke Söderström"),
+        # long string with colon-space → single-quote style; PyYAML wraps at spaces
+        (
+            "column type:  a long description that exceeds eighty characters and contains more words after",
+            lambda r: (
+                yaml.safe_load(f"k: {r}")["k"]
+                == "column type:  a long description that exceeds eighty characters and contains more words after"
+            ),
+        ),
+        # long string with tab char → block scalar with literal tabs
+        (
+            "FIELD_NAME\tvarchar\ttrue\ta description long enough to exceed the eighty character wrap limit",
+            lambda r: (
+                r
+                == "|-\nFIELD_NAME\tvarchar\ttrue\ta description long enough to exceed the eighty character wrap limit"
+            ),
+        ),
+        # tab char → block scalar with literal tab (not \t escape sequence)
+        ("type\tyes\tdescription", lambda r: r == "|-\ntype\tyes\tdescription"),
+        # leading whitespace on a line after newline → stripped
+        ("line1\n  line2\n   line3", lambda r: r == "|-\nline1\nline2\nline3"),
     ],
 )
 def test_yaml_str(value: str, check) -> None:
