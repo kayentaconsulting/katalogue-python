@@ -15,6 +15,20 @@ export default defineConfig({
           href: 'https://github.com/kayentaconsulting/katalogue-python',
         },
       ],
+      head: [
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        },
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap',
+          },
+        },
+      ],
+      customCss: ['./src/styles/custom.css'],
       sidebar: [
         { label: 'Getting started', link: '/getting-started' },
         {
