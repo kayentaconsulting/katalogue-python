@@ -71,9 +71,9 @@ def dataset_desc(ds: dict[str, Any]) -> str:
 def yaml_str(value: object) -> str:
     """Render a value as the most readable valid YAML scalar.
 
-    - Multiline strings  → ``|-`` block scalar header followed by unindented
-      content lines; pair with Jinja2's ``indent(n, first=False)`` in the
-      template to position the content at the correct column.
+    - Multiline or tab-containing strings → ``|-`` block scalar header followed
+      by unindented content lines; pair with Jinja2's ``indent(n, first=False)``
+      in the template to position the content at the correct column.
     - Simple strings     → plain scalar (no quotes)
     - Strings with special YAML chars → quoted scalar via PyYAML
     - Empty string       → ''
@@ -81,10 +81,13 @@ def yaml_str(value: object) -> str:
     s = str(value)
     if not s:
         return "''"
-    if "\n" in s:
-        return f"|-\n{s}"
+    if "\n" in s or "\t" in s:
+        cleaned = "\n".join(line.strip() for line in s.splitlines())
+        return f"|-\n{cleaned}"
     # yaml.dump appends '\n...\n' after plain scalars; take only the first line
-    return yaml.dump(s, allow_unicode=True, default_flow_style=False).split("\n")[0]
+    return yaml.dump(
+        s, allow_unicode=True, default_flow_style=False, width=float("inf")
+    ).split("\n")[0]
 
 
 def _build_fields_tree(
