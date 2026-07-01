@@ -36,6 +36,7 @@ Here is the basic process with all important steps to have in mind when making c
 1. Run the full quality gate before submitting:
     ```bash
     uv run ruff check --fix && uv run ruff format
+    uv run pyright
     uv run pytest -q
     ```
 1. Submit a pull request with your changes when you are done, see below.

@@ -8,8 +8,8 @@ A `GetOptions` object controls routing, filtering, sorting, and output; the call
 returns a `CatalogResult`. All filtering and sorting happen **client-side** after the
 API fetch.
 
-See [SDK client](client.md) for setup and authentication, and
-[Filtering and selection](../reference/filtering.md) for filter syntax shared with the CLI.
+See [SDK client](/katalogue-python/sdk/client) for setup and authentication, and
+[Filtering and selection](/katalogue-python/reference/filtering) for filter syntax shared with the CLI.
 
 ## Contents
 
@@ -129,7 +129,7 @@ client.get("system", GetOptions(
 ```
 
 Rendering this hierarchy through templates and splitting it into files is covered in
-the [Exporting guide](../guides/exporting.md).
+the [Exporting guide](/katalogue-python/guides/exporting).
 
 ## GetOptions reference
 
@@ -142,7 +142,7 @@ the [Exporting guide](../guides/exporting.md).
 | `sort` | `list[dict[str, str]] \| None` | Multi-column sort, e.g. `[{"name": "asc"}]` |
 | `include_children` | `bool` | Fetch resource and all descendants (default `False`) |
 | `format_descriptions_as_text` | `bool` | Convert rich-text descriptions to plain text (default `False`) |
-| `datatype_converter` | `str \| None` | Built-in name, registered name, or `.yaml`/`.yml` path — adds `datatype_converted` to each field. See [Datatype conversion](../guides/datatype-conversion.md) |
+| `datatype_converter` | `str \| None` | Built-in name, registered name, or `.yaml`/`.yml` path — adds `datatype_converted` to each field. See [Datatype conversion](/katalogue-python/guides/datatype-conversion) |
 | `output` | `OutputOptions` | Output rendering and file options |
 
 ## OutputOptions reference
@@ -150,7 +150,7 @@ the [Exporting guide](../guides/exporting.md).
 | Field | Type | Description |
 |-------|------|-------------|
 | `format` | `str \| None` | `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv` |
-| `template` | `str \| None` | Built-in template name or path to a `.j2` file. See [Templates](../guides/templates.md) |
+| `template` | `str \| None` | Built-in template name or path to a `.j2` file. See [Templates](/katalogue-python/guides/templates) |
 | `output_file` | `str \| None` | Write output to this file path |
 | `output_dir` | `str \| None` | Directory for split output files |
 | `split_by` | `str \| None` | Split level: `datasource`, `dataset_group`, `dataset` |
@@ -179,4 +179,4 @@ Validation: `split_by` requires `include_children=True` and `output_dir`;
 
 **`Filter`** — a parsed filter expression: `path`, `operator`, `value`. You can
 construct one directly or let `GetOptions(filters=[...])` parse strings for you. See
-[Filtering and selection](../reference/filtering.md).
+[Filtering and selection](/katalogue-python/reference/filtering).

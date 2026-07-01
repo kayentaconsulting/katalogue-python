@@ -36,13 +36,13 @@ Get API credentials by [creating an OAuth2 client in Katalogue](https://docs.kat
 
 ## Documentation
 
-Full documentation lives in the repository:
+Full documentation is published at
+[kayentaconsulting.github.io/katalogue-python](https://kayentaconsulting.github.io/katalogue-python/):
 
-- [Getting started](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/getting-started.md)
-- [Client and authentication](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/sdk/client.md)
-- [Options and results](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/sdk/options.md)
-- [Filtering and selection](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/reference/filtering.md)
-- [Templates](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/templates.md)
- · [Exporting](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/exporting.md)
- · [Datatype conversion](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/guides/datatype-conversion.md)
-- [Documentation index](https://github.com/kayentaconsulting/katalogue-python/blob/main/docs/index.md)
+- [Getting started](https://kayentaconsulting.github.io/katalogue-python/getting-started/)
+- [Client and authentication](https://kayentaconsulting.github.io/katalogue-python/sdk/client/)
+- [Options and results](https://kayentaconsulting.github.io/katalogue-python/sdk/options/)
+- [Filtering and selection](https://kayentaconsulting.github.io/katalogue-python/reference/filtering/)
+- [Templates](https://kayentaconsulting.github.io/katalogue-python/guides/templates/)
+ · [Exporting](https://kayentaconsulting.github.io/katalogue-python/guides/exporting/)
+ · [Datatype conversion](https://kayentaconsulting.github.io/katalogue-python/guides/datatype-conversion/)

@@ -10,7 +10,7 @@ katalogue [GLOBAL OPTIONS] <resource> <verb> [ARGS] [OPTIONS]
 ```
 
 For authentication and your first command, start with the
-[Getting started guide](../getting-started.md).
+[Getting started guide](/katalogue-python/getting-started).
 
 ## Contents
 
@@ -42,11 +42,11 @@ of being passed on every call.
 
 ## Resources and verbs
 
-The catalog is a hierarchy:
+The catalog has two hierarchies:
 
 ```
 system → datasource → dataset-group → dataset → field
-glossary   (independent)
+glossary → business-term  (linked to fields via field-description references)
 ```
 
 | Resource | `list` | `get` | `export` | `keys` |
@@ -57,6 +57,8 @@ glossary   (independent)
 | `dataset` | ✓ | ✓ | ✓ | ✓ |
 | `field` | ✓ | ✓ | — | ✓ |
 | `glossary` | ✓ | ✓ | ✓ | ✓ |
+| `business-term` | ✓ | ✓ | ✓ | ✓ |
+| `field-description` | ✓ | ✓ | ✓ | ✓ |
 
 `field` has no `export` — use `katalogue dataset export <id>` to export a dataset
 including all its fields.
@@ -72,13 +74,18 @@ katalogue dataset-group list --datasource <id>
 katalogue dataset list --dataset-group <id>
 katalogue field list --dataset <id>
 katalogue glossary list
+katalogue business-term list
+katalogue business-term list --glossary <id>
+katalogue field-description list
+katalogue field-description list --business-term <id>
+katalogue field-description list --field <id>
 ```
 
 Options:
 
 | Option | Description |
 |--------|-------------|
-| `--filter` / `-w` | Filter expression; repeat for AND logic. See [Filtering](../reference/filtering.md) |
+| `--filter` / `-w` | Filter expression; repeat for AND logic. See [Filtering](/katalogue-python/reference/filtering) |
 | `--properties` / `-p` | Comma-separated property names to include |
 | `--wide` | Show all properties in table output |
 | `--format` / `-f` | `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv`, `table` (default: `table`) |
@@ -101,8 +108,8 @@ Options:
 | `--filter` / `-w` | Filter expression (applied to child records when `--include-children` is set) |
 | `--properties` / `-p` | Comma-separated property names to include |
 | `--format` / `-f` | `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv`, `table` (default: `json`) |
-| `--template` / `-t` | Render through a template. See [Templates](../guides/templates.md) |
-| `--datatype-converter` | Convert source types. See [Datatype conversion](../guides/datatype-conversion.md) |
+| `--template` / `-t` | Render through a template. See [Templates](/katalogue-python/guides/templates) |
+| `--datatype-converter` | Convert source types. See [Datatype conversion](/katalogue-python/guides/datatype-conversion) |
 | `--include-children` | Fetch the resource and all descendants |
 | `--output-file` / `-o` | Write rendered output to a file instead of stdout |
 | `--output-dir` / `-d` | Directory for split output files |
@@ -112,7 +119,7 @@ Options:
 | `--dry-run` | Show planned output files without writing them |
 
 File output, splitting, and templated rendering are covered in detail in the
-[Exporting guide](../guides/exporting.md) and [Output formats](output-formats.md).
+[Exporting guide](/katalogue-python/guides/exporting) and [Output formats](/katalogue-python/cli/output-formats).
 
 ## `export`
 
@@ -133,8 +140,14 @@ Options are the same file/template/datatype options as `get`, with these differe
 | `--format` / `-f` | `json`, `yaml`, `yml`, `json-compact`, `compact`, `csv` (no `table`; default: `json`) |
 | `--output-dir` / `-d` | Directory to write output files (default: `.`) |
 
-Available for `system`, `datasource`, `dataset-group`, and `dataset` (and
-`glossary`). See the [Exporting guide](../guides/exporting.md) for end-to-end recipes.
+`export` is available for all resources, but capabilities differ by side of the
+catalog. Templates and `--split-by` apply only to the system-side hierarchy —
+`system`, `datasource`, `dataset-group`, and `dataset`. The glossary-side exports
+(`glossary`, `business-term`, `field-description`) write `json`, `yaml`, `compact`, or
+`csv` only: they do not support `--template` or `--split-by`, and `--filter` is
+rejected because these exports always fetch children. `glossary export` returns a
+recursive `business_terms` tree in JSON/YAML and flattens to one row per asset in CSV.
+See the [Exporting guide](/katalogue-python/guides/exporting) for end-to-end recipes.
 
 ## `keys`
 
@@ -167,7 +180,7 @@ katalogue auth logout    # clear the token cache and remove the keychain entry
 `auth login` accepts `--client-id`, `--client-secret`, `--base-url`, and
 `--token-url`; it prompts for anything omitted. If no keychain backend is available,
 set `KATALOGUE_CLIENT_SECRET` as an environment variable instead. See
-[Troubleshooting](../reference/troubleshooting.md) for common auth issues.
+[Troubleshooting](/katalogue-python/reference/troubleshooting) for common auth issues.
 
 ## Exit codes
 

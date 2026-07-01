@@ -3,7 +3,7 @@ title: Writing custom templates
 description: Jinja2 templating, built-in templates, yaml_str filter, and the indent() helper.
 ---
 
-Katalogue uses [Jinja2](https://jinja.palletsprojects.com/) for templating. Every `katalogue <resource> export` command can render its output through a template — built-in (`dbt-source`, `nested-yml`, `column-mapping`, `json-template`) or your own `.j2` file.
+Katalogue uses [Jinja2](https://jinja.palletsprojects.com/) for templating. The system-side `export` commands — `system`, `datasource`, `dataset-group`, and `dataset` — can render their output through a template, built-in (`dbt-source`, `nested-yml`, `column-mapping`, `json-template`) or your own `.j2` file. Glossary-side exports (`glossary`, `business-term`, `field-description`) support `json`/`yaml`/`compact` only.
 
 ## Contents
 
