@@ -1,4 +1,4 @@
-"""CLI commands for glossary resources."""
+"""CLI commands for field description resources."""
 
 from __future__ import annotations
 
@@ -18,18 +18,25 @@ from katalogue_cli.cli.common import (
     show_keys,
     wide_option,
 )
-from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES, PARENT_GROUP
 
 
 @click.group()
-def glossary() -> None:
-    """Manage glossary terms."""
+def field_description() -> None:
+    """Manage field descriptions."""
 
 
-@glossary.command("list")
+@field_description.command("list")
 @properties_option
 @wide_option
 @filter_option
+@click.option("--field", "field_id", default=None, help="Filter by field ID.")
+@click.option(
+    "--business-term",
+    "business_term_id",
+    default=None,
+    help="Filter by business term ID (via reference table).",
+)
 @format_option("table")
 @click.pass_context
 def list_cmd(
@@ -37,29 +44,52 @@ def list_cmd(
     properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
+    field_id: str | None,
+    business_term_id: str | None,
     fmt: str,
 ) -> None:
-    """List all glossaries."""
-    run_get(
-        ctx,
-        "glossary",
-        lambda: build_list_options(
-            filters=filters,
-            properties=properties,
-            fmt=fmt,
-            default_properties=DEFAULT_PROPERTIES["glossary"],
+    """List field descriptions. Optionally filter by field or business term."""
+    if business_term_id is not None:
+        run_get(
+            ctx,
+            "field_description",
+            lambda: build_list_options(
+                filters=filters,
+                properties=properties,
+                fmt=fmt,
+                reference_parent_resource="business_term",
+                reference_parent_id=business_term_id,
+                default_properties=DEFAULT_PROPERTIES["field_description"],
+                wide=wide,
+            ),
+            fmt,
             wide=wide,
-        ),
-        fmt,
-        wide=wide,
-    )
+        )
+    else:
+        group_by = PARENT_GROUP["field_description"] if field_id else None
+        run_get(
+            ctx,
+            "field_description",
+            lambda: build_list_options(
+                filters=filters,
+                properties=properties,
+                fmt=fmt,
+                parent_id=field_id,
+                default_properties=DEFAULT_PROPERTIES["field_description"],
+                wide=wide,
+                group_by=group_by,
+            ),
+            fmt,
+            group_by=group_by,
+            wide=wide,
+        )
 
 
-@glossary.command()
+@field_description.command()
 @properties_option
 @filter_option
 @get_output_options()
-@click.argument("glossary_id")
+@click.argument("field_description_id")
 @click.pass_context
 def get(
     ctx: click.Context,
@@ -75,15 +105,15 @@ def get(
     output_file: str | None,
     overwrite: bool,
     dry_run: bool,
-    glossary_id: str,
+    field_description_id: str,
 ) -> None:
-    """Fetch and display a glossary by ID."""
+    """Fetch and display a field description by ID."""
     out_fmt = resolve_template_format(ctx, fmt, template)
     run_get(
         ctx,
-        "glossary",
+        "field_description",
         lambda: build_get_options(
-            resource_id=glossary_id,
+            resource_id=field_description_id,
             filters=filters,
             properties=properties,
             fmt=out_fmt,
@@ -102,11 +132,11 @@ def get(
     )
 
 
-@glossary.command("export")
+@field_description.command("export")
 @properties_option
 @filter_option
 @export_output_options(include_template=False)
-@click.argument("glossary_id")
+@click.argument("field_description_id")
 @click.pass_context
 def export(
     ctx: click.Context,
@@ -120,22 +150,18 @@ def export(
     filename_template: str | None,
     overwrite: bool,
     dry_run: bool,
-    glossary_id: str,
+    field_description_id: str,
 ) -> None:
-    """Export a full glossary hierarchy to file.
+    """Export a field description with its linked business terms and fields.
 
-    Writes glossary-{id}.json to the current directory by default. The JSON/YAML
-    output is a nested business-term tree (each term carries its field
-    descriptions and child terms); CSV flattens it to one row per asset.
-    Glossary-side exports support json, yaml, compact, and csv formats only —
-    not templates or --split-by.
+    Writes field_description-{id}.json to the current directory by default.
     """
     run_get(
         ctx,
-        "glossary",
+        "field_description",
         lambda: build_export_options(
-            resource="glossary",
-            resource_id=glossary_id,
+            resource="field_description",
+            resource_id=field_description_id,
             filters=filters,
             properties=properties,
             fmt=fmt,
@@ -153,7 +179,7 @@ def export(
     )
 
 
-@glossary.command("keys")
+@field_description.command("keys")
 @click.option(
     "--format",
     "fmt",
@@ -164,4 +190,4 @@ def export(
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
     """List available field names for use with --filter and --properties."""
-    show_keys(ctx, lambda c: c.list_resource("glossary"), fmt)
+    show_keys(ctx, lambda c: c.list_resource("field_description"), fmt)

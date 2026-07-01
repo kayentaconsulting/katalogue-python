@@ -23,6 +23,8 @@ class GetOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
     resource_id: int | str | None = None
     parent_id: int | str | None = None
+    reference_parent_resource: str | None = None
+    reference_parent_id: int | str | None = None
     filters: str | list[str] | list[Filter] | None = None
     properties: list[str] | None = None
     sort: list[dict[str, str]] | None = None
@@ -44,4 +46,13 @@ class GetOptions(BaseModel):
             raise ValueError("split_by requires output_dir")
         if out.output_file and out.output_dir:
             raise ValueError("output_file and output_dir are mutually exclusive")
+        if self.parent_id is not None and self.reference_parent_id is not None:
+            raise ValueError("parent_id and reference_parent_id are mutually exclusive")
+        if (
+            self.reference_parent_id is not None
+            and self.reference_parent_resource is None
+        ):
+            raise ValueError(
+                "reference_parent_resource is required when reference_parent_id is set"
+            )
         return self
