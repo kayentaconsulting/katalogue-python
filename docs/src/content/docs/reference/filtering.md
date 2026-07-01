@@ -87,7 +87,7 @@ client.get("system", GetOptions(properties=["system_id", "system_name"]))
 
 In CLI `table` output, each resource has a default set of columns; pass `--wide` to
 show all properties, or `--properties` to choose your own. See
-[Resources](resources.md) for the default columns per resource.
+[Resources](/katalogue-python/reference/resources) for the default columns per resource.
 
 ## Sorting (SDK)
 
@@ -109,4 +109,4 @@ katalogue field keys                 # one key per line
 katalogue dataset keys --format json
 ```
 
-See [Resources](resources.md) for the commonly used keys on each resource.
+See [Resources](/katalogue-python/reference/resources) for the commonly used keys on each resource.

@@ -36,6 +36,12 @@ def dataset() -> None:
     default=None,
     help="Filter by dataset group ID.",
 )
+@click.option(
+    "--business-term",
+    "business_term_id",
+    default=None,
+    help="Filter by business term ID (via reference table).",
+)
 @format_option("table")
 @click.pass_context
 def list_cmd(
@@ -44,9 +50,27 @@ def list_cmd(
     wide: bool,
     filters: tuple[str, ...],
     dataset_group_id: str | None,
+    business_term_id: str | None,
     fmt: str,
 ) -> None:
-    """List datasets. Optionally filter by dataset group."""
+    """List datasets. Optionally filter by dataset group or business term."""
+    if business_term_id is not None:
+        run_get(
+            ctx,
+            "dataset",
+            lambda: build_list_options(
+                filters=filters,
+                properties=properties,
+                fmt=fmt,
+                reference_parent_resource="business_term",
+                reference_parent_id=business_term_id,
+                default_properties=DEFAULT_PROPERTIES["dataset"],
+                wide=wide,
+            ),
+            fmt,
+            wide=wide,
+        )
+        return
     group_by = PARENT_GROUP["dataset"]
     run_get(
         ctx,

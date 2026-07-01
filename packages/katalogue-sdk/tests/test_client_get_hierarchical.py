@@ -139,10 +139,30 @@ class TestDatasourceHierarchical:
 
 class TestGlossaryHierarchical:
     def test_calls_get_glossary_export(self, client):
+        # The export endpoint wraps the payload as {"export": {"meta", "data"}},
+        # with glossary fields flat alongside an "assets" list. assemble_glossary
+        # reshapes assets into a recursive business_terms tree.
         glossary_response = {
-            "data": {
-                "glossary": {"glossary_id": "gl-1", "glossary_name": "Terms"},
-                "terms": [{"name": "Revenue"}],
+            "export": {
+                "meta": {"katalogue_version": "0.23.0"},
+                "data": {
+                    "glossary_id": "gl-1",
+                    "glossary_name": "Terms",
+                    "assets": [
+                        {
+                            "id": 1,
+                            "name": "Revenue",
+                            "asset_type": "business_term",
+                            "full_path": "",
+                        },
+                        {
+                            "id": 2,
+                            "name": "Net Revenue",
+                            "asset_type": "field_description",
+                            "full_path": "Revenue",
+                        },
+                    ],
+                },
             }
         }
         with patch.object(
@@ -154,7 +174,11 @@ class TestGlossaryHierarchical:
         mock.assert_called_once_with("gl-1")
         assert result.metadata["strategy"] == "export_endpoint"
         assert result.data["glossary"]["glossary_id"] == "gl-1"
-        assert result.data["terms"][0]["name"] == "Revenue"
+        assert result.data["glossary"]["glossary_name"] == "Terms"
+        assert "terms" not in result.data
+        revenue = result.data["business_terms"][0]
+        assert revenue["name"] == "Revenue"
+        assert revenue["field_descriptions"][0]["name"] == "Net Revenue"
 
 
 class TestHierarchicalValidation:
@@ -165,6 +189,54 @@ class TestHierarchicalValidation:
     def test_no_resource_id_raises_value_error(self, client):
         with pytest.raises(ValueError, match="resource_id"):
             client.get("system", GetOptions(include_children=True))
+
+
+class TestGlossarySideGuards:
+    """Glossary-side exports support neither templates nor hierarchical filters.
+
+    The SDK is the source of truth: reject both with a clear error rather than
+    rendering against the wrong shape (template) or silently ignoring the
+    request (filter).
+    """
+
+    @pytest.mark.parametrize(
+        "resource", ["glossary", "business_term", "field_description"]
+    )
+    def test_template_rejected(self, client, resource):
+        with pytest.raises(ValueError, match="[Tt]emplate"):
+            client.get(
+                resource,
+                GetOptions(
+                    resource_id="x-1",
+                    include_children=True,
+                    output=OutputOptions(template="dbt-source"),
+                ),
+            )
+
+    @pytest.mark.parametrize(
+        "resource", ["glossary", "business_term", "field_description"]
+    )
+    def test_filters_rejected(self, client, resource):
+        with pytest.raises(ValueError, match="[Ff]ilter"):
+            client.get(
+                resource,
+                GetOptions(
+                    resource_id="x-1",
+                    include_children=True,
+                    filters=[Filter(path="is_pii", operator="=", value=True)],
+                ),
+            )
+
+    def test_guard_does_not_over_trigger(self, client):
+        client.get_resource = Mock(
+            return_value={"business_term_id": "bt-1", "business_term_name": "Customer"}
+        )
+        client.list_by_reference_to = Mock(return_value=[])
+        result = client.get(
+            "business_term",
+            GetOptions(resource_id="bt-1", include_children=True),
+        )
+        assert result.data["resource"] == "business_term"
 
 
 class TestHierarchicalWithFilters:

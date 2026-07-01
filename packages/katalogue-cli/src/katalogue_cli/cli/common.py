@@ -229,12 +229,16 @@ def build_list_options(
     properties: list[str] | None,
     fmt: str,
     parent_id: str | None = None,
+    reference_parent_resource: str | None = None,
+    reference_parent_id: str | None = None,
     default_properties: list[str] | None = None,
     wide: bool = False,
     group_by: list[tuple[str, str]] | None = None,
 ) -> GetOptions:
     return GetOptions(
         parent_id=parent_id,
+        reference_parent_resource=reference_parent_resource,
+        reference_parent_id=reference_parent_id,
         filters=list(filters) or None,
         properties=_resolve_properties(
             properties,
@@ -417,7 +421,7 @@ def export_format_option() -> Callable[[Any], Any]:
     )
 
 
-def export_output_options() -> Callable[[Any], Any]:
+def export_output_options(*, include_template: bool = True) -> Callable[[Any], Any]:
     def decorator(func: Any) -> Any:
         func = click.option(
             "--dry-run",
@@ -456,7 +460,8 @@ def export_output_options() -> Callable[[Any], Any]:
             help="Directory to write output files.",
         )(func)
         func = datatype_converter_option(func)
-        func = template_option(func)
+        if include_template:
+            func = template_option(func)
         func = export_format_option()(func)
         return func
 

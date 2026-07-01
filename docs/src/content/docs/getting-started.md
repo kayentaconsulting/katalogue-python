@@ -67,9 +67,9 @@ katalogue system list
 ```
 
 From here:
-- Browse [the command reference](cli/commands.md)
-- Learn [filtering and property selection](reference/filtering.md)
-- Choose [output formats and write files](cli/output-formats.md)
+- Browse [the command reference](/katalogue-python/cli/commands)
+- Learn [filtering and property selection](/katalogue-python/reference/filtering)
+- Choose [output formats and write files](/katalogue-python/cli/output-formats)
 
 ## 4. First script (SDK)
 
@@ -91,16 +91,16 @@ print(result.data)
 ```
 
 From here:
-- [SDK client and authentication](sdk/client.md) — credentials, errors, token caching
-- [Options and results](sdk/options.md) — everything `get()` can do
-- [Filtering and selection](reference/filtering.md) — filter syntax
+- [SDK client and authentication](/katalogue-python/sdk/client) — credentials, errors, token caching
+- [Options and results](/katalogue-python/sdk/options) — everything `get()` can do
+- [Filtering and selection](/katalogue-python/reference/filtering) — filter syntax
 
 ## 5. Go further
 
-- [Exporting](guides/exporting.md) — pull a full hierarchy and write it to files
-- [Templates](guides/templates.md) — render dbt sources, column mappings, or your own Jinja2
-- [Datatype conversion](guides/datatype-conversion.md) — map source types to Databricks/PySpark/…
-- [Troubleshooting](reference/troubleshooting.md) — auth and configuration issues
+- [Exporting](/katalogue-python/guides/exporting) — pull a full hierarchy and write it to files
+- [Templates](/katalogue-python/guides/templates) — render dbt sources, column mappings, or your own Jinja2
+- [Datatype conversion](/katalogue-python/guides/datatype-conversion) — map source types to Databricks/PySpark/…
+- [Troubleshooting](/katalogue-python/reference/troubleshooting) — auth and configuration issues
 
-Stuck? See [Troubleshooting](reference/troubleshooting.md) or the full
-[documentation index](index.md).
+Stuck? See [Troubleshooting](/katalogue-python/reference/troubleshooting) or the full
+[documentation index](/katalogue-python/).

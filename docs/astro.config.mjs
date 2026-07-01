@@ -75,6 +75,12 @@ export default defineConfig({
             { label: 'Troubleshooting', link: '/reference/troubleshooting' },
           ],
         },
+        {
+          label: 'AI Agents',
+          items: [
+            { label: 'Using Katalogue with AI agents', link: '/ai-agents/skill' },
+          ],
+        },
         { label: '↗ Katalogue Docs', link: 'https://docs.katalogue.se', attrs: { target: '_blank' } },
       ],
     }),

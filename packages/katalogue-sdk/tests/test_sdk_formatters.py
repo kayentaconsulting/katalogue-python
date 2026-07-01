@@ -246,6 +246,83 @@ class TestFormatCsv:
         assert "systems" not in reader[0]
 
 
+# A nested glossary export: Product (with FD 205), and Customer -> ... -> List
+# Price term (also carrying FD 205). Five assets total; FD 205 is many-to-many.
+_GLOSSARY_TREE = {
+    "resource": "glossary",
+    "id": "2",
+    "glossary": {"glossary_id": 2, "glossary_name": "CIM"},
+    "business_terms": [
+        {
+            "id": 14,
+            "name": "Product",
+            "asset_type": "business_term",
+            "full_path": "",
+            "field_descriptions": [
+                {
+                    "id": 205,
+                    "name": "List Price",
+                    "asset_type": "field_description",
+                    "full_path": "Product",
+                }
+            ],
+            "business_terms": [],
+        },
+        {
+            "id": 15,
+            "name": "Customer",
+            "asset_type": "business_term",
+            "full_path": "",
+            "field_descriptions": [],
+            "business_terms": [
+                {
+                    "id": 17,
+                    "name": "List Price",
+                    "asset_type": "business_term",
+                    "full_path": "Customer::Sales Order::List Price",
+                    "field_descriptions": [
+                        {
+                            "id": 205,
+                            "name": "List Price",
+                            "asset_type": "field_description",
+                            "full_path": "Customer::Sales Order::List Price",
+                        }
+                    ],
+                    "business_terms": [],
+                }
+            ],
+        },
+    ],
+    "field_descriptions": [],
+}
+
+
+class TestFormatCsvGlossary:
+    def test_one_row_per_asset(self):
+        out = format_csv(_GLOSSARY_TREE)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        assert len(reader) == 5
+
+    def test_carries_glossary_and_path_columns(self):
+        out = format_csv(_GLOSSARY_TREE)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        row = reader[0]
+        assert row["glossary_name"] == "CIM"
+        assert "path" in row
+        assert "business_terms" not in row
+        assert "field_descriptions" not in row
+
+    def test_many_to_many_fd_produces_two_rows_with_distinct_path(self):
+        out = format_csv(_GLOSSARY_TREE)
+        reader = list(csv.DictReader(io.StringIO(out)))
+        fd_paths = sorted(
+            r["path"]
+            for r in reader
+            if r["asset_type"] == "field_description" and r["id"] == "205"
+        )
+        assert fd_paths == ["Customer::Sales Order::List Price", "Product"]
+
+
 class TestFormatResultset:
     def test_fmt_none_returns_python_object(self):
         data = [{"id": 1}]

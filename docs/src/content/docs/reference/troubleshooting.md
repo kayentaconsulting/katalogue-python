@@ -4,7 +4,7 @@ description: Common errors and how to resolve them — auth, config, API, and us
 ---
 
 Common errors and how to resolve them. The CLI and SDK raise the same underlying
-errors; the CLI maps them to [exit codes](../cli/commands.md#exit-codes) and stderr
+errors; the CLI maps them to [exit codes](/katalogue-python/cli/commands#exit-codes) and stderr
 messages.
 
 ## Contents
@@ -82,7 +82,7 @@ A CLI argument combination is invalid. Notably:
 - `--output-file` cannot be combined with `--split-by`
 - `--split-by` writes to `--output-dir` and requires fetching children
 
-See [Output formats](../cli/output-formats.md) for valid combinations.
+See [Output formats](/katalogue-python/cli/output-formats) for valid combinations.
 
 ## Seeing what's happening
 
@@ -93,4 +93,4 @@ katalogue -v system list
 ```
 
 In the SDK, catch the typed exceptions to inspect failures — see
-[Error handling](../sdk/client.md#error-handling).
+[Error handling](/katalogue-python/sdk/client#error-handling).

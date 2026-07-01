@@ -144,7 +144,13 @@ def test_split_single_dataset_root(tmp_path):
 def test_split_invalid_split_by_raises():
     with pytest.raises(ValueError, match="glossary"):
         OutputPipeline().process(
-            {"resource": "glossary", "id": "1", "glossary": {}, "terms": []},
+            {
+                "resource": "glossary",
+                "id": "1",
+                "glossary": {},
+                "business_terms": [],
+                "field_descriptions": [],
+            },
             OutputOptions(
                 template="column-mapping", split_by="dataset", output_dir="/tmp"
             ),

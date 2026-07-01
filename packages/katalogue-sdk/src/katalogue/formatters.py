@@ -130,6 +130,47 @@ def _prefix_system(system: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _flatten_glossary_for_csv(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten a nested glossary export to one CSV row per asset.
+
+    Walks the ``business_terms`` tree (plus any root-level orphan
+    ``field_descriptions``) depth-first, emitting a row for every business term
+    and field description. Glossary metadata is denormalized into each row and
+    the node's ``full_path`` is surfaced as a ``path`` column. A field
+    description attached to several terms yields one row per attachment.
+    """
+    glossary = data.get("glossary") or {}
+    glossary_cols = {
+        "glossary_id": glossary.get("glossary_id"),
+        "glossary_name": glossary.get("glossary_name"),
+    }
+
+    rows: list[dict[str, Any]] = []
+
+    def emit(asset: dict[str, Any]) -> None:
+        fields = {
+            k: v
+            for k, v in asset.items()
+            if k not in ("business_terms", "field_descriptions", "full_path")
+        }
+        merged = {**glossary_cols, "path": asset.get("full_path") or "", **fields}
+        rows.append({k: _scalar(v) for k, v in merged.items()})
+
+    def walk(term: dict[str, Any]) -> None:
+        emit(term)
+        for fd in term.get("field_descriptions") or []:
+            emit(fd)
+        for child in term.get("business_terms") or []:
+            walk(child)
+
+    for root in data.get("business_terms") or []:
+        walk(root)
+    for orphan in data.get("field_descriptions") or []:
+        emit(orphan)
+
+    return rows
+
+
 def _flatten_for_csv(data: Any) -> list[dict[str, Any]]:
     """Flatten catalog data to a list of dicts for CSV serialization.
 
@@ -162,6 +203,11 @@ def _flatten_for_csv(data: Any) -> list[dict[str, Any]]:
             if isinstance(data.get(key), dict):
                 return [{k: _scalar(v) for k, v in data[key].items()}]
         return [{k: _scalar(v) for k, v in data.items()}]
+
+    # Glossary exports carry a nested business_terms tree, not the system-side
+    # datasets/fields collections — flatten it to one row per asset.
+    if data.get("resource") == "glossary":
+        return _flatten_glossary_for_csv(data)
 
     fields = data.get("fields") or []
     datasets = data.get("datasets") or []

@@ -5,7 +5,7 @@ description: All output formats, CSV behaviour, file writing, split-by, and dry-
 
 The CLI separates **what** the data looks like (`--format`), **how** it is shaped
 (`--template`), and **where** it goes (stdout, a file, or many files). This page
-covers formats and file output; templating has its own [guide](../guides/templates.md).
+covers formats and file output; templating has its own [guide](/katalogue-python/guides/templates).
 
 ## Contents
 
@@ -49,6 +49,16 @@ dataset groups, or datasources). Parent values are repeated in every child row.
 ```bash
 katalogue system get 1 --include-children --format csv
 # → one CSV row per field, with system/datasource/dataset columns denormalized into each row
+```
+
+`glossary export --format csv` flattens the nested `business_terms` tree instead: one
+row per asset (business term or field description), with the term hierarchy in a `path`
+column and glossary metadata denormalized into each row. A field description linked to
+several terms produces one row per link.
+
+```bash
+katalogue glossary export 2 --format csv
+# → one CSV row per business term / field description, with a path column
 ```
 
 ## Writing output to a file
@@ -105,7 +115,7 @@ katalogue system export 1 --template dbt-source \
   --filename-template '{{ dataset.dataset_name }}.yml'
 ```
 
-See [Filename templates](../guides/templates.md#filename-templates) for the available
+See [Filename templates](/katalogue-python/guides/templates#filename-templates) for the available
 context variables.
 
 ## Dry run

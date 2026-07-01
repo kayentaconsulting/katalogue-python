@@ -30,6 +30,8 @@ _PARENT_RESOURCE: dict[str, str] = {
     "dataset_group": "datasource",
     "dataset": "dataset_group",
     "field": "dataset",
+    "business_term": "glossary",
+    "field_description": "field",
 }
 
 # Maps each resource to the field name that holds its parent's ID.
@@ -39,12 +41,30 @@ _PARENT_ID_FIELD: dict[str, str] = {
     "dataset_group": "datasource_id",
     "dataset": "dataset_group_id",
     "field": "dataset_id",
+    "business_term": "glossary_id",
+    "field_description": "field_id",
 }
 
 _VALID_RESOURCES: frozenset[str] = frozenset(
-    {"system", "datasource", "dataset_group", "dataset", "field", "glossary"}
+    {
+        "system",
+        "datasource",
+        "dataset_group",
+        "dataset",
+        "field",
+        "glossary",
+        "business_term",
+        "field_description",
+    }
 )
 _VALID_SORT_DIRECTIONS: frozenset[str] = frozenset({"asc", "desc"})
+
+# Resources whose hierarchical export is rooted on the glossary side. Their flat
+# shape has no datasets/fields collections, so templates and hierarchical filters
+# (both of which assume the system-side shape) do not apply.
+_GLOSSARY_SIDE_RESOURCES: frozenset[str] = frozenset(
+    {"glossary", "business_term", "field_description"}
+)
 
 
 class AuthError(Exception):
@@ -213,6 +233,27 @@ class KatalogueClient:
         url = f"{self._base_url}/api/{resource}/{parent_resource}/{quote(str(parent_id), safe='')}"
         return self._request("GET", url, scope=f"{resource}.read")
 
+    def list_by_reference_from(
+        self, from_resource: str, from_id: int | str
+    ) -> list[dict[str, Any]]:
+        url = (
+            f"{self._base_url}/api/reference/get_by_from_id"
+            f"/{quote(from_resource, safe='')}"
+            f"/{quote(str(from_id), safe='')}"
+        )
+        return self._request("GET", url, scope=f"{from_resource}.read")
+
+    def list_by_reference_to(
+        self, from_resource: str, to_resource: str, to_id: int | str
+    ) -> list[dict[str, Any]]:
+        url = (
+            f"{self._base_url}/api/reference/get_by_to_id"
+            f"/{quote(to_resource, safe='')}"
+            f"/{quote(str(to_id), safe='')}"
+            f"/{quote(from_resource, safe='')}"
+        )
+        return self._request("GET", url, scope=f"{from_resource}.read")
+
     def get(
         self,
         resource: str,
@@ -265,7 +306,14 @@ class KatalogueClient:
 
         resource_id = options.resource_id
         parent_id = options.parent_id
-        if resource_id is not None:
+        if options.reference_parent_id is not None:
+            assert options.reference_parent_resource is not None
+            raw = self.list_by_reference_to(
+                resource, options.reference_parent_resource, options.reference_parent_id
+            )
+            data = unwrap_list(raw)
+            strategy = "reference"
+        elif resource_id is not None:
             raw: Any = self.get_resource(resource, resource_id)
             data: Any = raw
             if parent_id is not None:
@@ -330,15 +378,25 @@ class KatalogueClient:
         """Dispatch to hierarchical assembly for include_children=True."""
         from katalogue.exporting import (
             apply_hierarchical_filters,
+            assemble_business_term_references,
             assemble_dataset,
             assemble_dataset_group,
             assemble_datasource,
+            assemble_field_description_references,
             assemble_glossary,
             assemble_system,
         )
 
         _HIERARCHICAL_RESOURCES = frozenset(
-            {"system", "datasource", "dataset_group", "dataset", "glossary"}
+            {
+                "system",
+                "datasource",
+                "dataset_group",
+                "dataset",
+                "field_description",
+                "glossary",
+                "business_term",
+            }
         )
         if resource not in _HIERARCHICAL_RESOURCES:
             raise ValueError(
@@ -348,6 +406,22 @@ class KatalogueClient:
         if options.resource_id is None:
             raise ValueError("include_children=True requires resource_id to be set")
 
+        # Glossary-side exports return a term/description-rooted shape that has no
+        # datasets/fields collections, so system-side templates can't render it and
+        # the hierarchical filter pruner has nothing to act on. Reject both rather
+        # than emit a broken render or silently ignore the filter.
+        if resource in _GLOSSARY_SIDE_RESOURCES:
+            if options.output.template:
+                raise ValueError(
+                    f"Templates are not supported for {resource} exports. "
+                    "Use --format json, yaml, or compact."
+                )
+            if options.filters:
+                raise ValueError(
+                    f"Filters are not supported with include_children for {resource}. "
+                    "Filter the flat list instead (omit include_children)."
+                )
+
         resource_id = options.resource_id
 
         assemblers = {
@@ -355,7 +429,9 @@ class KatalogueClient:
             "datasource": assemble_datasource,
             "dataset_group": assemble_dataset_group,
             "dataset": assemble_dataset,
+            "field_description": assemble_field_description_references,
             "glossary": assemble_glossary,
+            "business_term": assemble_business_term_references,
         }
         strategy = "export_endpoint"
 

@@ -2,7 +2,7 @@
 
 import json
 
-from katalogue import CatalogResult, WrittenFile
+from katalogue import CatalogResult
 from katalogue.client.api import ApiError
 from katalogue_cli.cli.main import cli
 
@@ -76,10 +76,36 @@ class TestGlossaryGet:
         assert json.loads(result.output)["glossary_name"] == "Business Terms"
         assert _options(mock_client).resource_id == "1"
 
-    def test_include_children_split_output(self, runner, cli_auth, mock_client):
+    def test_include_children_writes_file(self, runner, cli_auth, mock_client):
         mock_client.get.return_value = CatalogResult(
             data={},
-            output_files=[WrittenFile(path="out/glossary.yml")],
+            output_file="out/glossary-1.json",
+        )
+        result = runner.invoke(
+            cli,
+            [
+                *cli_auth,
+                "glossary",
+                "get",
+                "1",
+                "--include-children",
+                "--format",
+                "json",
+                "--output-file",
+                "out/glossary-1.json",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "out/glossary-1.json" in result.output
+        assert _options(mock_client).include_children is True
+
+    def test_include_children_template_rejected(self, runner, cli_auth, mock_client):
+        # The SDK rejects templates for glossary-side exports; the CLI maps the
+        # resulting error to a non-zero exit. (Previously this combination was
+        # silently accepted because the mock bypassed the SDK.)
+        mock_client.get.side_effect = ValueError(
+            "Templates are not supported for glossary exports. "
+            "Use --format json, yaml, or compact."
         )
         result = runner.invoke(
             cli,
@@ -91,16 +117,10 @@ class TestGlossaryGet:
                 "--include-children",
                 "--template",
                 "column-mapping",
-                "--split-by",
-                "dataset",
-                "--output-dir",
-                "out",
-                "--dry-run",
             ],
         )
-        assert result.exit_code == 0
-        assert "Would write 1 files" in result.output
-        assert _options(mock_client).include_children is True
+        assert result.exit_code == 2
+        assert "templates are not supported" in result.output.lower()
 
     def test_api_error(self, runner, cli_auth, mock_client):
         mock_client.get.side_effect = ApiError("Not found")

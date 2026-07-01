@@ -6,8 +6,8 @@ description: KatalogueClient setup, credential sources, OAuth2 token caching, an
 `katalogue-sdk` is a standalone Python client for the Katalogue REST API. It has no
 Click or CLI dependency and can be used in scripts, notebooks, services, and agents.
 
-For installation and a first script, see [Getting started](../getting-started.md).
-For the full options/result model reference, see [Options and results](options.md).
+For installation and a first script, see [Getting started](/katalogue-python/getting-started).
+For the full options/result model reference, see [Options and results](/katalogue-python/sdk/options).
 
 ## Contents
 
@@ -55,7 +55,7 @@ client = KatalogueClient()  # reads KATALOGUE_CLIENT_ID / _SECRET / _URL from th
 ```
 
 `client.get()` is the single high-level entry point — see
-[Options and results](options.md) for everything it can do:
+[Options and results](/katalogue-python/sdk/options) for everything it can do:
 
 ```python
 from katalogue import KatalogueClient, GetOptions
@@ -158,12 +158,14 @@ system
   └── datasource
         └── dataset_group
               └── dataset
-                    └── field
-glossary   (independent)
+                    └── field ──(field_description_id)──> field_description
+                                                                 │
+glossary                                             (many-to-many reference table)
+  └── business_term ───────────────────────────────────────────┘
 ```
 
-Note the SDK uses underscores (`dataset_group`), while the CLI uses hyphens
-(`dataset-group`).
+Note the SDK uses underscores (`dataset_group`, `business_term`, `field_description`),
+while the CLI uses hyphens (`dataset-group`, `business-term`, `field-description`).
 
 ## Error handling
 
@@ -234,6 +236,13 @@ client.get_system_export(1)
 
 client.get_glossary_export(1)
 # -> {"meta": {...}, "data": {"glossary": {...}, "terms": [...], ...}}
+
+# Reference table traversal — cross-hierarchy links
+client.list_by_reference_to("field_description", "business_term", bt_id)
+# -> given a business_term id, returns linked field_descriptions
+
+client.list_by_reference_from("field_description", fd_id)
+# -> given a field_description id, returns linked business_terms
 ```
 
 Prefer `get()` for everyday use — it adds routing, filtering, sorting, and output

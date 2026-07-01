@@ -20,7 +20,7 @@ _SINGULAR_KEYS: frozenset[str] = frozenset(
 )
 # List collection keys present in the flat shape.
 _LIST_KEYS: frozenset[str] = frozenset(
-    {"datasources", "dataset_groups", "datasets", "fields", "terms"}
+    {"datasources", "dataset_groups", "datasets", "fields", "business_terms"}
 )
 # Metadata keys always preserved regardless of field selection.
 _META_KEYS: frozenset[str] = frozenset({"resource", "id"})
@@ -282,22 +282,161 @@ def assemble_dataset(
     return _assemble_via_system_export(client, "dataset", resource_id)
 
 
+def assemble_business_term_references(
+    client: "KatalogueClient", resource_id: int | str
+) -> dict[str, Any]:
+    bt = _unwrap_single(
+        client.get_resource("business_term", resource_id), "business_term"
+    )
+    fds_raw = client.list_by_reference_to(
+        "field_description", "business_term", resource_id
+    )
+    fds = _unwrap_list(fds_raw, "reference")
+
+    for fd in fds:
+        fd_id = fd.get("field_description_id")
+        fd["fields"] = (
+            _unwrap_list(
+                client.list_by_parent("field", "field_description", fd_id), "field"
+            )
+            if fd_id is not None
+            else []
+        )
+
+    return {
+        "resource": "business_term",
+        "id": str(resource_id),
+        **bt,
+        "field_descriptions": fds,
+    }
+
+
+def assemble_field_description_references(
+    client: "KatalogueClient", resource_id: int | str
+) -> dict[str, Any]:
+    fd = _unwrap_single(
+        client.get_resource("field_description", resource_id), "field_description"
+    )
+    refs_raw = _unwrap_list(
+        client.list_by_reference_from("field_description", resource_id), "reference"
+    )
+    linked_bts: list[dict[str, Any]] = [
+        {
+            "business_term_id": r["to_object_id"],
+            "business_term_name": r.get("name"),
+            "glossary_id": r.get("glossary_id"),
+            "glossary_name": r.get("glossary_name"),
+        }
+        for r in refs_raw
+        if r.get("to_object_name") == "business_term"
+    ]
+
+    fields = _unwrap_list(
+        client.list_by_parent("field", "field_description", resource_id), "field"
+    )
+    return {
+        "resource": "field_description",
+        "id": str(resource_id),
+        **fd,
+        "business_terms": linked_bts,
+        "fields": fields,
+    }
+
+
+def _build_glossary_tree(
+    assets: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Reshape a flat glossary ``assets`` list into a business-term hierarchy.
+
+    Business terms encode their own identity in ``full_path`` (empty for
+    top-level terms), and nest under one another via the ``::`` separator.
+    Field descriptions carry their parent term's identity path in ``full_path``.
+
+    Returns ``(business_terms, orphan_field_descriptions)`` where each business
+    term is a shallow copy with two derived keys — ``business_terms`` (child
+    terms, recursive) and ``field_descriptions`` (attached descriptions). The
+    same field description may attach to several terms (many-to-many), in which
+    case it appears once under each. Terms whose parent cannot be resolved, and
+    field descriptions matching no term, are promoted to the root so nothing is
+    silently dropped.
+    """
+
+    def identity(term: dict[str, Any]) -> str:
+        # A nested term's full_path ends with its own name; a top-level term has
+        # an empty full_path, so its identity is just its name.
+        return term.get("full_path") or str(term.get("name") or "")
+
+    term_nodes: dict[int, dict[str, Any]] = {}
+    order: list[int] = []
+    by_identity: dict[str, dict[str, Any]] = {}
+    for asset in assets:
+        if asset.get("asset_type") != "business_term":
+            continue
+        node = {**asset, "business_terms": [], "field_descriptions": []}
+        key = id(asset)
+        term_nodes[key] = node
+        order.append(key)
+        by_identity.setdefault(identity(node), node)
+
+    roots: list[dict[str, Any]] = []
+    for key in order:
+        node = term_nodes[key]
+        full_path = node.get("full_path") or ""
+        segments = full_path.split("::") if full_path else []
+        parent = (
+            by_identity.get("::".join(segments[:-1])) if len(segments) > 1 else None
+        )
+        if parent is not None and parent is not node:
+            parent["business_terms"].append(node)
+        else:
+            roots.append(node)
+
+    orphans: list[dict[str, Any]] = []
+    for asset in assets:
+        if asset.get("asset_type") != "field_description":
+            continue
+        parent = by_identity.get(asset.get("full_path") or "")
+        if parent is not None:
+            parent["field_descriptions"].append(dict(asset))
+        else:
+            orphans.append(dict(asset))
+
+    return roots, orphans
+
+
 def assemble_glossary(
     client: "KatalogueClient", resource_id: int | str
 ) -> dict[str, Any]:
     response = client.get_glossary_export(resource_id)
-    payload = response.get("data", response) if isinstance(response, dict) else response
+    # The endpoint wraps the export as {"export": {"meta": ..., "data": ...}}.
+    # Unwrap "export" then "data" to reach the glossary payload.
+    payload: Any = response
+    if isinstance(payload, dict) and isinstance(payload.get("export"), dict):
+        payload = payload["export"]
+    if isinstance(payload, dict) and "data" in payload:
+        payload = payload["data"]
+
     glossary: dict[str, Any] = {}
-    terms: list[dict[str, Any]] = []
+    assets: list[dict[str, Any]] = []
     if isinstance(payload, dict):
-        glossary = payload.get("glossary", {})
-        terms_value = payload.get("terms", [])
-        terms = terms_value if isinstance(terms_value, list) else []
+        # The endpoint returns the glossary fields flat alongside an "assets"
+        # list of terms/field descriptions. Older/nested payloads that wrap them
+        # under "glossary"/"terms" are still handled for safety.
+        if "assets" in payload or "glossary_id" in payload:
+            assets_value = payload.get("assets", [])
+            glossary = {k: v for k, v in payload.items() if k != "assets"}
+        else:
+            glossary = payload.get("glossary", {})
+            assets_value = payload.get("terms", [])
+        assets = assets_value if isinstance(assets_value, list) else []
+
+    business_terms, orphan_field_descriptions = _build_glossary_tree(assets)
     return {
         "resource": "glossary",
         "id": str(resource_id),
         "glossary": glossary,
-        "terms": terms,
+        "business_terms": business_terms,
+        "field_descriptions": orphan_field_descriptions,
     }
 
 

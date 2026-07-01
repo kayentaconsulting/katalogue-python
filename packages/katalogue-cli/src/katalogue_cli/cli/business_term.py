@@ -1,4 +1,4 @@
-"""CLI commands for glossary resources."""
+"""CLI commands for business term resources."""
 
 from __future__ import annotations
 
@@ -18,18 +18,19 @@ from katalogue_cli.cli.common import (
     show_keys,
     wide_option,
 )
-from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES
+from katalogue_cli.formatters.defaults import DEFAULT_PROPERTIES, PARENT_GROUP
 
 
 @click.group()
-def glossary() -> None:
-    """Manage glossary terms."""
+def business_term() -> None:
+    """Manage business terms."""
 
 
-@glossary.command("list")
+@business_term.command("list")
 @properties_option
 @wide_option
 @filter_option
+@click.option("--glossary", "glossary_id", default=None, help="Filter by glossary ID.")
 @format_option("table")
 @click.pass_context
 def list_cmd(
@@ -37,29 +38,34 @@ def list_cmd(
     properties: list[str] | None,
     wide: bool,
     filters: tuple[str, ...],
+    glossary_id: str | None,
     fmt: str,
 ) -> None:
-    """List all glossaries."""
+    """List business terms. Optionally filter by glossary."""
+    group_by = PARENT_GROUP["business_term"]
     run_get(
         ctx,
-        "glossary",
+        "business_term",
         lambda: build_list_options(
             filters=filters,
             properties=properties,
             fmt=fmt,
-            default_properties=DEFAULT_PROPERTIES["glossary"],
+            parent_id=glossary_id,
+            default_properties=DEFAULT_PROPERTIES["business_term"],
             wide=wide,
+            group_by=group_by,
         ),
         fmt,
+        group_by=group_by,
         wide=wide,
     )
 
 
-@glossary.command()
+@business_term.command()
 @properties_option
 @filter_option
 @get_output_options()
-@click.argument("glossary_id")
+@click.argument("business_term_id")
 @click.pass_context
 def get(
     ctx: click.Context,
@@ -75,15 +81,15 @@ def get(
     output_file: str | None,
     overwrite: bool,
     dry_run: bool,
-    glossary_id: str,
+    business_term_id: str,
 ) -> None:
-    """Fetch and display a glossary by ID."""
+    """Fetch and display a business term by ID."""
     out_fmt = resolve_template_format(ctx, fmt, template)
     run_get(
         ctx,
-        "glossary",
+        "business_term",
         lambda: build_get_options(
-            resource_id=glossary_id,
+            resource_id=business_term_id,
             filters=filters,
             properties=properties,
             fmt=out_fmt,
@@ -102,11 +108,11 @@ def get(
     )
 
 
-@glossary.command("export")
+@business_term.command("export")
 @properties_option
 @filter_option
 @export_output_options(include_template=False)
-@click.argument("glossary_id")
+@click.argument("business_term_id")
 @click.pass_context
 def export(
     ctx: click.Context,
@@ -120,22 +126,20 @@ def export(
     filename_template: str | None,
     overwrite: bool,
     dry_run: bool,
-    glossary_id: str,
+    business_term_id: str,
 ) -> None:
-    """Export a full glossary hierarchy to file.
+    """Export a business term with its linked field descriptions and fields.
 
-    Writes glossary-{id}.json to the current directory by default. The JSON/YAML
-    output is a nested business-term tree (each term carries its field
-    descriptions and child terms); CSV flattens it to one row per asset.
-    Glossary-side exports support json, yaml, compact, and csv formats only —
-    not templates or --split-by.
+    Writes business_term-{id}.json to the current directory by default.
+    Glossary-side exports support json, yaml, and compact formats only —
+    not templates.
     """
     run_get(
         ctx,
-        "glossary",
+        "business_term",
         lambda: build_export_options(
-            resource="glossary",
-            resource_id=glossary_id,
+            resource="business_term",
+            resource_id=business_term_id,
             filters=filters,
             properties=properties,
             fmt=fmt,
@@ -153,7 +157,7 @@ def export(
     )
 
 
-@glossary.command("keys")
+@business_term.command("keys")
 @click.option(
     "--format",
     "fmt",
@@ -164,4 +168,4 @@ def export(
 @click.pass_context
 def keys_cmd(ctx: click.Context, fmt: str) -> None:
     """List available field names for use with --filter and --properties."""
-    show_keys(ctx, lambda c: c.list_resource("glossary"), fmt)
+    show_keys(ctx, lambda c: c.list_resource("business_term"), fmt)

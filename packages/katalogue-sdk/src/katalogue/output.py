@@ -27,6 +27,8 @@ _VALID_SPLITS: dict[str, frozenset[str]] = {
     "dataset_group": frozenset({"dataset_group", "dataset"}),
     "dataset": frozenset({"dataset"}),
     "glossary": frozenset(),
+    "business_term": frozenset(),
+    "field_description": frozenset(),
 }
 
 _YAML_FMTS: frozenset[str] = frozenset({"yaml", "yml"})
